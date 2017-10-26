@@ -1,0 +1,13 @@
+Package: SemNetCleaner
+Title: Semantic Network Cleaner
+Version: 0.0.0.9000
+Author: Alexander Christensen
+Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
+Description: This package includes a prototype function that automatizes the cleaning, de-pluralizing, and binarizing linguistic data for semantic network analysis.
+Depends: R (>= 3.3.0)
+License: GPL (>= 3.0)
+Encoding: UTF-8
+LazyData: true
+Imports:
+    devtools
+RoxygenNote: 6.0.1.9000
