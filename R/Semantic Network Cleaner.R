@@ -7,7 +7,7 @@
 #' 
 #' data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
 #' 
-#' responsematrix<-semnetcleaner(data)
+#' rmat<-semnetcleaner(data)
 #' }
 #' @references 
 #' Hornik, K., & Murdoch, D. (2010).
@@ -75,7 +75,7 @@ semnetcleaner<-function(data)
 #' @examples
 #' \dontrun{
 #' 
-#' responsematrix <- converge("cat","abyssinian")
+#' rmat <- converge("cat","abyssinian")
 #' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
@@ -101,4 +101,20 @@ converge <- function (word, replace)
         }else{stop("word not found")}
     }else{stop("word to replace not found")}
 }
+#----
+#' Finalize Function
+#' @description Finalizes the response matrix by keeping responses that are given by two or more people
+#' @param rmat A semnetcleaner and converge filtered response matrix
+#' @return A matrix with responses given by two or more people
+#' @examples
+#' \dontrun{
+#' 
+#' finalRmat <- finalize(rmat)
+#' }
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' @export
+#Finalize Function----
+finalize <- function (rmat)
+{rmat <- k[which(colSums(k)>=2)]
+return(rmat)}
 #----

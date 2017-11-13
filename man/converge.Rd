@@ -20,7 +20,7 @@ Merge a column of binarized response data with another
 \examples{
 \dontrun{
 
-responsematrix <- converge("cat","abyssinian")
+rmat <- converge("cat","abyssinian")
 }
 }
 \author{
