@@ -1,7 +1,7 @@
 #' Semantic Network Cleaner
 #' @description An automated cleaning function for semantic network data
-#' @param data A dataset of verbal fluency or linguistic data (read in data "as.is")
-#' @return A binary matrix of responses (rows = participants, cols = responses)
+#' @param data A dataset of verbal fluency or linguistic data
+#' @return A binary matrix of responses (rows = participants, columns = responses)
 #' @examples
 #' \dontrun{
 #' 

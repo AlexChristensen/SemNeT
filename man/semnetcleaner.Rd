@@ -7,10 +7,10 @@
 semnetcleaner(data)
 }
 \arguments{
-\item{data}{A dataset of verbal fluency or linguistic data (read in data "as.is")}
+\item{data}{A dataset of verbal fluency or linguistic data}
 }
 \value{
-A binary matrix of responses (rows = participants, cols = responses)
+A binary matrix of responses (rows = participants, columns = responses)
 }
 \description{
 An automated cleaning function for semantic network data
