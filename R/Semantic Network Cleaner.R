@@ -12,7 +12,7 @@
 #' @references 
 #' Hornik, K., & Murdoch, D. (2010).
 #' Watch Your Spelling!.
-#' The R Journal, 3(2), 22-28.
+#' \emph{The R Journal}, 3(2), 22-28.
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Semantic Network Cleaner----
@@ -69,8 +69,8 @@ semnetcleaner<-function(data)
 #----
 #' Convergence Function
 #' @description Merge a column of binarized response data with another
-#' @param word The column name that will incoporate the old column's binarized responses (must be characters)
-#' @param replace The column name that should be merged with another column (must be characters)
+#' @param word The column name that will incoporate the \strong{replace} column's binarized responses (must be characters)
+#' @param replace The column name that should be merged with the \strong{word} column (must be characters)
 #' @return The response matrix with the \strong{word} column merged and the \strong{replace} column removed
 #' @examples
 #' \dontrun{

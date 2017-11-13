@@ -7,9 +7,9 @@
 converge(word, replace)
 }
 \arguments{
-\item{word}{The column name that will incoporate the old column's binarized responses (must be characters)}
+\item{word}{The column name that will incoporate the \strong{replace} column's binarized responses (must be characters)}
 
-\item{replace}{The column name that should be merged with another column (must be characters)}
+\item{replace}{The column name that should be merged with the \strong{word} column (must be characters)}
 }
 \value{
 The response matrix with the \strong{word} column merged and the \strong{replace} column removed

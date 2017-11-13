@@ -26,7 +26,7 @@ responsematrix<-semnetcleaner(data)
 \references{
 Hornik, K., & Murdoch, D. (2010).
 Watch Your Spelling!.
-The R Journal, 3(2), 22-28.
+\emph{The R Journal}, 3(2), 22-28.
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
