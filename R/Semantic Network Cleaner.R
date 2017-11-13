@@ -115,6 +115,6 @@ converge <- function (word, replace)
 #' @export
 #Finalize Function----
 finalize <- function (rmat)
-{rmat <- k[which(colSums(k)>=2)]
+{rmat <- rmat[which(colSums(rmat)>=2)]
 return(rmat)}
 #----
