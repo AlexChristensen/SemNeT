@@ -3,8 +3,12 @@
 #' @param data A dataset of verbal fluency or linguistic data (read in data "as.is")
 #' @return A binary matrix of responses (rows = participants, cols = responses)
 #' @examples
-#' \dontrun{data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)}
-#' \dontrun{responsematrix<-semnetcleaner(data)}
+#' \dontrun{
+#' 
+#' data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
+#' 
+#' responsematrix<-semnetcleaner(data)
+#' }
 #' @references 
 #' Hornik, K., & Murdoch, D. (2010).
 #' Watch Your Spelling!.
@@ -17,7 +21,6 @@ semnetcleaner<-function(data)
   #install/load packages
   if (!require("pluralize"))
   {
-    install.packages("devtools")
     devtools::install_github("hrbrmstr/pluralize")
     library(pluralize)
   }else library(pluralize)
@@ -62,5 +65,40 @@ semnetcleaner<-function(data)
   colnames(k)<-o[1,]
   k<-as.data.frame(k)
   return(k)
+}
+#----
+#' Convergence Function
+#' @description Merge a column of binarized response data with another
+#' @param word The column name that will incoporate the old column's binarized responses (must be characters)
+#' @param replace The column name that should be merged with another column (must be characters)
+#' @return The response matrix with the \strong{word} column merged and the \strong{replace} column removed
+#' @examples
+#' \dontrun{
+#' 
+#' responsematrix <- converge("cat","abyssinian")
+#' }
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' @export
+#Converge Function----
+converge <- function (word, replace)
+{
+    if(any(colnames(k)==replace))
+    {
+        if(any(colnames(k)==word))
+        {
+            for(i in 1:nrow(k))
+                if(k[i,which(colnames(k)==replace)]==1)
+                {
+                    k[i,which(colnames(k)==word)] <- 1
+                }
+            
+            #make sure appropriate response converged
+            k[which(colnames(k)==word)]
+            #remove column with spelling difference
+            k<-k[-which(colnames(k)==replace)]
+            
+            return(k)
+        }else{stop("word not found")}
+    }else{stop("word to replace not found")}
 }
 #----

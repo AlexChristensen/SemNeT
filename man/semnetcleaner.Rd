@@ -16,8 +16,12 @@ A binary matrix of responses (rows = participants, cols = responses)
 An automated cleaning function for semantic network data
 }
 \examples{
-\dontrun{data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)}
-\dontrun{responsematrix<-semnetcleaner(data)}
+\dontrun{
+
+data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
+
+responsematrix<-semnetcleaner(data)
+}
 }
 \references{
 Hornik, K., & Murdoch, D. (2010).
