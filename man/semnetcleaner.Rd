@@ -7,7 +7,7 @@
 semnetcleaner(data)
 }
 \arguments{
-\item{data}{A dataset of verbal fluency or linguistic data}
+\item{data}{A dataset of verbal fluency or linguistic data (rows = responses, columns = participants)}
 }
 \value{
 A binary matrix of responses (rows = participants, columns = responses)
