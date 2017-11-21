@@ -18,10 +18,7 @@ The response matrix with the \strong{word} column merged and the \strong{replace
 Merge a column of binarized response data with another
 }
 \examples{
-\dontrun{
-
 rmat <- converge("cat","abyssinian")
-}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

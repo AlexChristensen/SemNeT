@@ -35,8 +35,9 @@ semnetcleaner<-function(data)
   #singularize data
   w<-apply(y,c(2),pluralize::singularize)
   
-  #grab unique responses only
+  #grab unique responses only and make them all lowercase
   uni<-rbind(sort(unique(tolower(unlist(apply(w,c(2),unique))))))
+  
   uni[uni==""]<-NA
   uni[uni==" "]<-NA
   uni[uni=="  "]<-NA
@@ -47,23 +48,19 @@ semnetcleaner<-function(data)
   resp<-t(w) #transpose response
   z<-matrix(nrow=nrow(resp),ncol=length(uni)) #initialize matrix
   for (i in 1:ncol(resp)) #populate response matrix
-  {
-    z[,i]<-resp[,i]
-  }
-  o<-rbind(uni,z) #add unique response to top
+  {z[,i]<-resp[,i]}
   
   #binarize responses
-  k<-matrix(nrow=nrow(o),ncol=ncol(o))
-  for (i in 1:ncol(o))
-    for (j in 2:nrow(o))
-      k[j,]<-match(o[1,],o[j,])
+  k<-matrix(nrow=nrow(z),ncol=ncol(z))
+  for (i in 1:ncol(k))
+    for (j in 2:nrow(k))
+      k[j,]<-match(uni,z[j,])
   k[is.na(k)]<-0
-  for (i in 1:ncol(o))
-    for (j in 2:nrow(o))
+  #fill out other half of matrix
+  for (i in 1:ncol(k))
+    for (j in 2:nrow(k))
       if (k[j,i]>0){k[j,i]<-1}
-  k<-k[-1,]
-  colnames(k)<-o[1,]
-  k<-as.data.frame(k)
+  colnames(k)<- uni
   return(k)
 }
 #----
@@ -73,10 +70,7 @@ semnetcleaner<-function(data)
 #' @param replace The column name that should be merged with the \strong{word} column (must be characters)
 #' @return The response matrix with the \strong{word} column merged and the \strong{replace} column removed
 #' @examples
-#' \dontrun{
-#' 
 #' rmat <- converge("cat","abyssinian")
-#' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Converge Function----
@@ -88,18 +82,16 @@ converge <- function (word, replace)
         {
             for(i in 1:nrow(k))
                 if(k[i,which(colnames(k)==replace)]==1)
-                {
-                    k[i,which(colnames(k)==word)] <- 1
-                }
+                {k[i,which(colnames(k)==word)] <- 1}
             
-            #make sure appropriate response converged
+            #coverge word to be replaced with correct word
             k[which(colnames(k)==word)]
             #remove column with spelling difference
             k<-k[-which(colnames(k)==replace)]
             
             return(k)
-        }else{stop("word not found")}
-    }else{stop("word to replace not found")}
+        }else{stop("word not found")} #produce error if word does not exist
+    }else{stop("word to replace not found")} #produce error if word to replace does not exist
 }
 #----
 #' Finalize Function
@@ -107,10 +99,7 @@ converge <- function (word, replace)
 #' @param rmat A semnetcleaner and converge filtered response matrix
 #' @return A matrix with responses given by two or more people
 #' @examples
-#' \dontrun{
-#' 
 #' finalRmat <- finalize(rmat)
-#' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Finalize Function----

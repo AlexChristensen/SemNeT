@@ -16,10 +16,7 @@ A matrix with responses given by two or more people
 Finalizes the response matrix by keeping responses that are given by two or more people
 }
 \examples{
-\dontrun{
-
 finalRmat <- finalize(rmat)
-}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
