@@ -1,7 +1,7 @@
 #' Semantic Network Cleaner
 #' @description An automated cleaning function for semantic network data
 #' @param data A dataset of verbal fluency or linguistic data (rows = responses, columns = participants)
-#' @return A binary matrix of responses (rows = participants, columns = responses)
+#' @return A binary matrix of responses (rows = participants, columns = responses) and unique responses of the response matrix
 #' @examples
 #' \dontrun{
 #' 
@@ -61,11 +61,13 @@ semnetcleaner<-function(data)
     for (j in 2:nrow(k))
       if (k[j,i]>0){k[j,i]<-1}
   colnames(k)<- uni
+  k<-as.data.frame(k)
   return(k)
 }
 #----
 #' Convergence Function
 #' @description Merge a column of binarized response data with another
+#' @param rmat A semnetcleaner and converge filtered response matrix
 #' @param word The column name that will incoporate the \strong{replace} column's binarized responses (must be characters)
 #' @param replace The column name that should be merged with the \strong{word} column (must be characters)
 #' @return The response matrix with the \strong{word} column merged and the \strong{replace} column removed
@@ -74,22 +76,22 @@ semnetcleaner<-function(data)
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Converge Function----
-converge <- function (word, replace)
+converge <- function (rmat, word, replace)
 {
-    if(any(colnames(k)==replace))
+    if(any(colnames(rmat)==replace))
     {
-        if(any(colnames(k)==word))
+        if(any(colnames(rmat)==word))
         {
-            for(i in 1:nrow(k))
-                if(k[i,which(colnames(k)==replace)]==1)
-                {k[i,which(colnames(k)==word)] <- 1}
+            for(i in 1:nrow(rmat))
+                if(rmat[i,which(colnames(rmat)==replace)]==1)
+                {rmat[i,which(colnames(rmat)==word)] <- 1}
             
             #coverge word to be replaced with correct word
-            k[which(colnames(k)==word)]
+            rmat[which(colnames(rmat)==word)]
             #remove column with spelling difference
-            k<-k[-which(colnames(k)==replace)]
+            rmat<-rmat[-which(colnames(rmat)==replace)]
             
-            return(k)
+            return(rmat)
         }else{stop("word not found")} #produce error if word does not exist
     }else{stop("word to replace not found")} #produce error if word to replace does not exist
 }
@@ -104,6 +106,38 @@ converge <- function (word, replace)
 #' @export
 #Finalize Function----
 finalize <- function (rmat)
-{rmat <- rmat[which(colSums(rmat)>=2)]
-return(rmat)}
+{fmat <- rmat[which(colSums(rmat)>=2)]
+return(fmat)}
+#----
+#' Equate Group Responses
+#' @description An automated cleaning function for matching groups' responses
+#' @param rmatA Response matrix for group 1
+#' @param rmatB Response matrix for group 2
+#' @return A list of responses matched for group 1 (rmatA) and group 2 (rmatB)
+#' @examples
+#' \dontrun{
+#' 
+#' groupA<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
+#' groupB<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
+#' 
+#' rmatA<-semnetcleaner(groupA)
+#' rmatB<-semnetcleaner(groupB)
+#' 
+#' groups_resp_match<-equate(rmatA,rmatB)
+#' 
+#' 
+#' }
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' @export
+# Equate----
+equate<-function(rmatA,rmatB)
+{
+    if(length(colnames(rmatA))>length(colnames(rmatB)))
+    {rmatA<-rmatA[,(!is.na(match(colnames(rmatA),colnames(rmatB))))]
+    }else if(length(colnames(rmatB))>length(colnames(rmatA)))
+    {rmatB<-rmatB[,(!is.na(match(colnames(rmatB),colnames(rmatA))))]
+    }else if(all(match(colnames(rmatA),colnames(rmatB))))
+    {print("Responses match")}
+    return(list(rmatA=rmatA,rmatB=rmatB))
+}
 #----

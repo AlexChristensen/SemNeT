@@ -4,9 +4,11 @@
 \alias{converge}
 \title{Convergence Function}
 \usage{
-converge(word, replace)
+converge(rmat, word, replace)
 }
 \arguments{
+\item{rmat}{A semnetcleaner and converge filtered response matrix}
+
 \item{word}{The column name that will incoporate the \strong{replace} column's binarized responses (must be characters)}
 
 \item{replace}{The column name that should be merged with the \strong{word} column (must be characters)}

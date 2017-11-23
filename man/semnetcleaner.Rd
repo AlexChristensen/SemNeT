@@ -10,7 +10,7 @@ semnetcleaner(data)
 \item{data}{A dataset of verbal fluency or linguistic data (rows = responses, columns = participants)}
 }
 \value{
-A binary matrix of responses (rows = participants, columns = responses)
+A binary matrix of responses (rows = participants, columns = responses) and unique responses of the response matrix
 }
 \description{
 An automated cleaning function for semantic network data
