@@ -7,7 +7,7 @@
 #' 
 #' data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
 #' 
-#' rmat<-semnetcleaner(data)
+#' rmat<-semnetcleaner(trial)
 #' }
 #' @references 
 #' Hornik, K., & Murdoch, D. (2010).
@@ -65,14 +65,14 @@ semnetcleaner<-function(data)
   return(k)
 }
 #----
-#' Convergence Function
+#' Converge Responses
 #' @description Merge a column of binarized response data with another
-#' @param rmat A semnetcleaner and converge filtered response matrix
+#' @param rmat A semnetcleaner filtered response matrix
 #' @param word The column name that will incoporate the \strong{replace} column's binarized responses (must be characters)
 #' @param replace The column name that should be merged with the \strong{word} column (must be characters)
 #' @return The response matrix with the \strong{word} column merged and the \strong{replace} column removed
 #' @examples
-#' rmat <- converge("cat","abyssinian")
+#' rmat <- converge("cat","kitten")
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Converge Function----
@@ -96,9 +96,9 @@ converge <- function (rmat, word, replace)
     }else{stop("word to replace not found")} #produce error if word to replace does not exist
 }
 #----
-#' Finalize Function
+#' Finalize Response Matrix
 #' @description Finalizes the response matrix by keeping responses that are given by two or more people
-#' @param rmat A semnetcleaner and converge filtered response matrix
+#' @param rmat A semnetcleaner filtered response matrix
 #' @return A matrix with responses given by two or more people
 #' @examples
 #' finalRmat <- finalize(rmat)
@@ -111,20 +111,13 @@ return(fmat)}
 #----
 #' Equate Group Responses
 #' @description An automated cleaning function for matching groups' responses
-#' @param rmatA Response matrix for group 1
-#' @param rmatB Response matrix for group 2
+#' @param rmatA A semnetcleaner filtered response matrix for group 1
+#' @param rmatB A semnetcleaner filtered response matrix for group 2
 #' @return A list of responses matched for group 1 (rmatA) and group 2 (rmatB)
 #' @examples
 #' \dontrun{
 #' 
-#' groupA<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
-#' groupB<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
-#' 
-#' rmatA<-semnetcleaner(groupA)
-#' rmatB<-semnetcleaner(groupB)
-#' 
 #' groups_resp_match<-equate(rmatA,rmatB)
-#' 
 #' 
 #' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
@@ -140,4 +133,23 @@ equate<-function(rmatA,rmatB)
     {print("Responses match")}
     return(list(rmatA=rmatA,rmatB=rmatB))
 }
+#----
+#Trial data of verbal fluency responses----
+#' Trial data of verbal fluency responses
+#' 
+#' Trial data of animal verbal fluency responses. The columns are participants and the
+#' rows are their responses.
+#' 
+#' @docType data
+#' 
+#' @usage data(trial)
+#' 
+#' @format A 49x15 response matrix
+#' 
+#' @keywords datasets
+#' 
+#' @examples 
+#' 
+#' data(trial)
+"trial"
 #----

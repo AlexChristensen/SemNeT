@@ -7,9 +7,9 @@
 equate(rmatA, rmatB)
 }
 \arguments{
-\item{rmatA}{Response matrix for group 1}
+\item{rmatA}{A semnetcleaner filtered response matrix for group 1}
 
-\item{rmatB}{Response matrix for group 2}
+\item{rmatB}{A semnetcleaner filtered response matrix for group 2}
 }
 \value{
 A list of responses matched for group 1 (rmatA) and group 2 (rmatB)
@@ -20,14 +20,7 @@ An automated cleaning function for matching groups' responses
 \examples{
 \dontrun{
 
-groupA<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
-groupB<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
-
-rmatA<-semnetcleaner(groupA)
-rmatB<-semnetcleaner(groupB)
-
 groups_resp_match<-equate(rmatA,rmatB)
-
 
 }
 }

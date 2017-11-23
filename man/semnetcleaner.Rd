@@ -20,7 +20,7 @@ An automated cleaning function for semantic network data
 
 data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
 
-rmat<-semnetcleaner(data)
+rmat<-semnetcleaner(trial)
 }
 }
 \references{

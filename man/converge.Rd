@@ -2,12 +2,12 @@
 % Please edit documentation in R/Semantic Network Cleaner.R
 \name{converge}
 \alias{converge}
-\title{Convergence Function}
+\title{Converge Responses}
 \usage{
 converge(rmat, word, replace)
 }
 \arguments{
-\item{rmat}{A semnetcleaner and converge filtered response matrix}
+\item{rmat}{A semnetcleaner filtered response matrix}
 
 \item{word}{The column name that will incoporate the \strong{replace} column's binarized responses (must be characters)}
 
@@ -20,7 +20,7 @@ The response matrix with the \strong{word} column merged and the \strong{replace
 Merge a column of binarized response data with another
 }
 \examples{
-rmat <- converge("cat","abyssinian")
+rmat <- converge("cat","kitten")
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

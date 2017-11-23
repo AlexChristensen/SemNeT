@@ -2,12 +2,12 @@
 % Please edit documentation in R/Semantic Network Cleaner.R
 \name{finalize}
 \alias{finalize}
-\title{Finalize Function}
+\title{Finalize Response Matrix}
 \usage{
 finalize(rmat)
 }
 \arguments{
-\item{rmat}{A semnetcleaner and converge filtered response matrix}
+\item{rmat}{A semnetcleaner filtered response matrix}
 }
 \value{
 A matrix with responses given by two or more people
