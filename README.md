@@ -3,8 +3,10 @@ A prototype linguistic network cleaner that automatizes the spell checking, de-p
 
 *Important Note*
 [requires install of R packages] 
-pluarlize, which can be found atdevtools::install_github("hrbrmstr/pluralize")
+pluarlize, which can be found at devtools::install_github("hrbrmstr/pluralize")
+
 tm
+
 qdap
 
 # How To Install
