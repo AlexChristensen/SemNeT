@@ -18,18 +18,17 @@
 #Semantic Network Cleaner----
 semnetcleaner<-function(data)
 {
-  #install/load packages
-  if (!require("pluralize"))
-  {
-    devtools::install_github("hrbrmstr/pluralize")
-    library(pluralize)
-  }else library(pluralize)
-  
+  for(i in 1:ncol(data))
+  data[,i]<-trimws(data[,i])
   #perform spell check
   v<-apply(data,c(2),qdap::check_spelling_interactive)
   
   #transform data into a writeable format
   y<-as.data.frame(do.call(cbind,ifelse(v=="NULL",data,v)))
+  for(i in 1:ncol(y))
+      if(all(is.na(y[,i])))
+      {y[,i]<-data[,i]}
+  y<-na.omit(y)
   
   
   #singularize data
@@ -125,6 +124,12 @@ return(fmat)}
 # Equate----
 equate<-function(rmatA,rmatB)
 {
+    if(length(colnames(rmatA))>length(colnames(rmatB)))
+    {rmatA<-rmatA[,(!is.na(match(colnames(rmatA),colnames(rmatB))))]
+    }else if(length(colnames(rmatB))>length(colnames(rmatA)))
+    {rmatB<-rmatB[,(!is.na(match(colnames(rmatB),colnames(rmatA))))]
+    }else if(all(match(colnames(rmatA),colnames(rmatB))))
+    {print("Responses match")}
     if(length(colnames(rmatA))>length(colnames(rmatB)))
     {rmatA<-rmatA[,(!is.na(match(colnames(rmatA),colnames(rmatB))))]
     }else if(length(colnames(rmatB))>length(colnames(rmatA)))
