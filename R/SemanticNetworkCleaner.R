@@ -55,6 +55,8 @@ semnetcleaner<-function(data)
   for (i in 1:ncol(resp)) #populate response matrix
   {z[,i]<-resp[,i]}
   
+  z<-tolower(z)
+  
   #binarize responses
   k<-matrix(nrow=nrow(z),ncol=ncol(z))
   for (i in 1:ncol(k))
@@ -67,6 +69,7 @@ semnetcleaner<-function(data)
       if (k[j,i]>0){k[j,i]<-1}
   colnames(k)<- uni
   k<-as.data.frame(k)
+  k<-k[-1,]
   return(k)
 }
 #----
