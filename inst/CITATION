@@ -1,0 +1,14 @@
+citHeader("To cite SemNetCleaner in publications use:")
+
+citEntry(entry = "Manual",
+  title        = "{SemNetCleaner}: An automated cleaning tool for semantic and linguistic data",
+  author       = personList(as.person("Alexander P. Christensen")),
+  year         = "2018",
+  url          = "Retrieved from https://github.com/AlexChristensen/SemNetCleaner",
+
+  textVersion  =
+  paste("Christensen, A. P. (2018).",
+        "SemNetCleaner: An automated cleaning tool for semantic and linguistic data.",
+        "R package version 0.1.0.",
+        "Retrieved from https://github.com/AlexChristensen/SemNetCleaner")
+)

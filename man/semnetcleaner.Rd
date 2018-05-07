@@ -4,13 +4,15 @@
 \alias{semnetcleaner}
 \title{Semantic Network Cleaner}
 \usage{
-semnetcleaner(data)
+semnetcleaner(data, miss = 99)
 }
 \arguments{
-\item{data}{A dataset of verbal fluency or linguistic data (rows = responses, columns = participants)}
+\item{data}{A dataset of verbal fluency or linguistic data}
+
+\item{miss}{Value for missing data. Defaults to 99}
 }
 \value{
-A binary matrix of responses (rows = participants, columns = responses) and unique responses of the response matrix
+A list of a binary matrix of responses (binary; rows = participants, columns = responses) and cleaned response matrix (responses)
 }
 \description{
 An automated cleaning function for semantic network data

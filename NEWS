@@ -1,0 +1,9 @@
+Changes in version 0.1.0
+
+o autoConverge: created an automated converge function to eliminate the manual converge process
+
+o autoDeStr: created an automated de-string function to eliminate most manual de-stringing
+
+o fine-tuned most functions
+
+o semnetboot: moved from package NetworkToolbox
