@@ -1,5 +1,5 @@
 # SemNetCleaner
-A prototype linguistic network cleaner that automatizes the spell checking, de-pluralizing, and binarizing of linguistic data.
+Implements several functions that automatize the cleaning, de-pluralizing, binarizing, de-stringing, converging, and finalizing linguistic data for semantic network analysis.
 
 # How To Install
 devtools::install_github("AlexChristensen/SemNetCleaner")
