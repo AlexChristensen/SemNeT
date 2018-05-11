@@ -3,6 +3,7 @@
 export(autoConverge)
 export(autoDeStr)
 export(converge)
+export(cosine)
 export(destr)
 export(equate)
 export(finalize)

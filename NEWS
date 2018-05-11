@@ -1,5 +1,7 @@
 Changes in version 0.1.1
 
+o cosine: added cosine similarity
+
 o semnetboot: changed name to partboot and added the cosine similarity
 
 o plot.partboot: a function that generates "raindrop" plots for bootstrapped data
