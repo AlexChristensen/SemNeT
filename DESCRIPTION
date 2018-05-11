@@ -1,13 +1,13 @@
 Package: SemNetCleaner
-Title: An automated cleaning tool for semantic and linguistic data
-Version: 0.1.0
-Date: 2018-05-07
+Title: An Automated Cleaning Tool for Semantic and Linguistic Data
+Version: 0.1.1
+Date: 2018-05-11
 Author: Alexander Christensen
 Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
-Description: Implements several functions that automatize the cleaning, de-pluralizing, binarizing, de-stringing, converging, and finalizing linguistic data for semantic network analysis.
+Description: Implements several functions that automatize the cleaning, removal of plurals and continuous strings, making the data binary, converging, and finalizing of linguistic data for semantic network analysis. Also provides a partial bootstrapped network function and plot.
 Depends: R (>= 3.3.0)
 License: GPL (>= 3.0)
 Encoding: UTF-8
 LazyData: true
-Imports: qdap, tm, pluralize, lsa, foreach, parallel, doSNOW, NetworkToolbox
+Imports: qdap, tm, lsa, foreach, parallel, doSNOW, NetworkToolbox, ggplot2, dplyr, plyr, RColorBrewer, purrr, magrittr, grid
 RoxygenNote: 6.0.1.9000

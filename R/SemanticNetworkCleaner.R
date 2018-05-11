@@ -18,7 +18,7 @@
 #' @export
 #' @importFrom stats na.omit
 #Semantic Network Cleaner----
-semnetcleaner<-function(data, miss = 99)
+semnetcleaner <- function(data, miss = 99)
 {
   for(i in 1:ncol(data))
         data[,i]<-trimws(data[,i])    
@@ -54,7 +54,42 @@ semnetcleaner<-function(data, miss = 99)
           {y[i,j]<-""}
 
   #singularize data
-  w<-apply(y,c(2),pluralize::singularize)
+  singularize <- function(x)
+  {
+      x <- as.character(x)
+      
+      sing <- vector(length=length(x))
+      
+      if(length(x)>1)
+      {
+          for(i in 1:length(x))
+          {
+              Splural <- substring(x[i],nchar(x[i]),nchar(x[i]))
+              ESplural <- substring(x[i],nchar(x[i])-1,nchar(x[i]))
+              
+              if(ESplural=="es")
+              {sing[i] <- substring(x[i],1,nchar(x[i])-2)
+              }else{sing[i] <- x[i]}
+              if(Splural=="s")
+              {sing[i] <- substring(x[i],1,nchar(x[i])-1)
+              }else{sing[i] <- x[i]}
+          }
+      }else{
+          Splural <- substring(x,nchar(x),nchar(x))
+          ESplural <- substring(x,nchar(x)-1,nchar(x))
+      
+          if(ESplural=="es")
+          {sing <- substring(x,1,nchar(x)-2)
+          }else{sing <- x}
+          if(Splural=="s")
+          {sing <- substring(x,1,nchar(x)-1)
+          }else{sing <- x}
+      }
+      
+      return(sing)
+  }
+      
+  w<-apply(y,c(2),singularize)
   w<-tolower(w)
   
   #grab unique responses only and make them all lowercase
@@ -386,8 +421,11 @@ autoDeStr <- function (rmat, char = 10)
 #' Partial Bootstrapped Semantic Network Analysis
 #' @description Bootstraps (without replacement) the nodes in the network and computes global network characteristics
 #' @param data Cleaned response matrix
-#' @param nodes Number of nodes for partial bootstrap.
-#' Defaults to half
+#' @param paired Should bootstrapped nodes be paired?
+#' Defaults to NULL.
+#' Input a matrix, data frame or list containing another sample
+#' @param n Number of nodes for bootstrap.
+#' Defaults to round(ncol(data)/2,0) (i.g., 50\% of nodes)
 #' @param iter Number of iterations in bootstrap.
 #' Defaults to 1000
 #' @param corr Association method to use.
@@ -407,21 +445,31 @@ autoDeStr <- function (rmat, char = 10)
 #' @importFrom foreach %dopar%
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-semnetboot <- function (data, nodes,
+partboot <- function (data, paired, n,
                         iter = 1000, corr = c("cor","cosine"),
                         cores, seeds = NULL)
 {
-    if(missing(nodes))
-    {nodes<-round((ncol(data)/2),0)
-    }else(nodes<-round(nodes,0))
+    if(missing(paired))
+    {paired <- NULL}
+    
+    if(missing(n))
+    {n <- round((ncol(data)/2),0)
+    }else{n <- round(n,0)}
     
     if(missing(corr))
     {corr <- "cosine"
     }else{corr <- match.arg(corr)}
     
     if(corr=="cor")
-    {cormat <- cor(data)
-    }else{cormat <- lsa::cosine(as.matrix(data))}
+    {
+        cormat <- cor(data)
+        if(!is.null(paired))
+        {cormatP <- cor(paired)}
+    }else{
+        cormat <- lsa::cosine(as.matrix(data))
+        if(!is.null(paired))
+        {cormatP <- lsa::cosine(as.matrix(paired))}
+        }
     
     if(is.null(seeds))
     {Seeds <- vector(mode="numeric",length=iter)
@@ -452,6 +500,8 @@ semnetboot <- function (data, nodes,
                                 .packages = c("NetworkToolbox","lsa"),
                                 .options.snow = opts)%dopar%
                                 {
+                                    samps <- list()
+                                    
                                     f<-round(runif(i,min=1,max=1000000),0)
                                     if(is.null(seeds))
                                     {
@@ -461,15 +511,32 @@ semnetboot <- function (data, nodes,
                                     set.seed(seeds[i])
                                     }
                                     
-                                    mat <- data[,sample(1:full,nodes,replace=FALSE)]
+                                    rand <- sample(1:full,n,replace=FALSE)
+                                    
+                                    mat <- data[,rand]
                                     
                                     if(corr=="cor")
-                                    {cormat <- cor(mat)
-                                    }else{cormat <- lsa::cosine(as.matrix(mat))}
+                                    {cmat <- cor(mat)
+                                    }else{cmat <- lsa::cosine(as.matrix(mat))}
                                     
-                                    net <- NetworkToolbox::TMFG(cormat)$A
+                                    net <- NetworkToolbox::TMFG(cmat)$A
                                     
-                                    samps<-c(suppressWarnings(NetworkToolbox::semnetmeas(net,iter=10)),NetworkToolbox::conn(net)$total,Seed)
+                                    if(!is.null(paired))
+                                    {
+                                        matP <- paired[,rand]
+                                        
+                                        if(corr=="cor")
+                                        {cmatP <- cor(matP)
+                                        }else{cmatP <- lsa::cosine(as.matrix(matP))}
+                                        
+                                        netP <- NetworkToolbox::TMFG(cmatP)$A
+                                    }
+                                    
+                                    samps$data<-c(suppressWarnings(NetworkToolbox::semnetmeas(net,iter=10)),NetworkToolbox::conn(net)$total,Seed,rand)
+                                    if(!is.null(paired))
+                                    {samps$paired<-c(suppressWarnings(NetworkToolbox::semnetmeas(netP,iter=10)),NetworkToolbox::conn(netP)$total,Seed,rand)}
+                                    
+                                    
                                     return(samps)
                                 }
     close(pb)
@@ -477,20 +544,270 @@ semnetboot <- function (data, nodes,
     
     tru<-c(suppressWarnings(NetworkToolbox::semnetmeas(NetworkToolbox::TMFG(cormat)$A)),NetworkToolbox::conn(NetworkToolbox::TMFG(cormat)$A)$total)
     
+    truP<-c(suppressWarnings(NetworkToolbox::semnetmeas(NetworkToolbox::TMFG(cormatP)$A)),NetworkToolbox::conn(NetworkToolbox::TMFG(cormatP)$A)$total)
+    
     metrics <- matrix(0,nrow=iter,ncol=7)
+    if(!is.null(paired))
+    {metricsP <- matrix(0,nrow=iter,ncol=7)}
+    
+    Seeds <- vector(mode="numeric",length=iter)
+    removed <- list()
     
     for(i in 1:length(sampslist))
     {
-        metrics[i,] <- sampslist[[i]][1:7]
-        if(is.null(seeds))
-        {Seeds[i] <- sampslist[[i]][8]}
+        if(is.null(paired))
+        {
+            metrics[i,] <- sampslist$data[[i]][1:7]
+        }else(!is.null(paired))
+        {
+            metrics[i,] <- sampslist[[i]]$data[1:7]
+            metricsP[i,] <- sampslist[[i]]$paired[1:7]
+        }
+        
+        Seeds[i] <- sampslist[[i]]$data[8]
+        removed$nodes[[i]] <- sampslist[[i]]$data[9:(n+8)]
     }
     
     metrics<-as.data.frame(metrics)
+    colnames(metrics)<-c("ASPL","CC","Q","S","randASPL","randCC","Total Network Strength")
     
-    colnames(metrics)<-c("ASPL","CC","Q","S","randASPL","randCC","Mean Network Strength")
+    if(!is.null(paired))
+    {
+        metricsP<-as.data.frame(metricsP)
+        colnames(metricsP)<-c("ASPL","CC","Q","S","randASPL","randCC","Total Network Strength")
+    }
     
-    return(list(origmeas=tru,bootmeas=metrics,Seeds=Seeds))
+    stat.table <- data.frame(0, nrow = 5, ncol = 5)
+    if(!is.null(paired))
+    {stat.tableP <- data.frame(0, nrow = 5, ncol = 5)}
+    
+    stattable <- function (data, n)
+    {
+        stats <- list()
+        stats$mean <- mean(data)
+        stats$stdev <- sd(data)
+        stats$se <- stats$stdev/sqrt(n)
+        stats$lower <- stats$mean - (1.96 * stats$se)
+        stats$upper <- stats$mean + (1.96 * stats$se)
+        
+        return(stats)
+    }
+    
+    for(i in 1:5)
+    {
+        stat <- stattable(metrics[,i], iter)
+        
+        stat.table[i,1] <- stat$mean
+        stat.table[i,2] <- stat$stdev
+        stat.table[i,3] <- stat$se
+        stat.table[i,4] <- stat$lower
+        stat.table[i,5] <- stat$upper
+        
+        if(!is.null(paired))
+        {
+            stat <- stattable(metricsP[,i], iter)
+            
+            stat.tableP[i,1] <- stat$mean
+            stat.tableP[i,2] <- stat$stdev
+            stat.tableP[i,3] <- stat$se
+            stat.tableP[i,4] <- stat$lower
+            stat.tableP[i,5] <- stat$upper
+        }
+    }
+    
+    colnames(stat.table) <- c("mean","sd","se","lower","upper")
+    row.names(stat.table) <- c("ASPL","CC","Q","S","Total Network Strength")
+    if(!is.null(paired))
+    {
+        colnames(stat.tableP) <- c("mean","sd","se","lower","upper")
+        row.names(stat.tableP) <- c("ASPL","CC","Q","S","Total Network Strength")
+    }
+    
+    
+    if(is.null(paired))
+    {return(list(origmeas=tru,
+                 bootmeas=metrics,
+                 statData=stat.table,
+                 nodesRemoved=removed,
+                 Seeds=Seeds))
+    }else(!is.null(paired))
+    {return(list(origDataMeas=tru,
+                 bootDataMeas=metrics,
+                 statData=stat.table,
+                 nodesRemoved=removed,
+                 origPairedMeas=truP,
+                 bootPairedMeas=metricsP,
+                 statPaired=stat.tableP,
+                 nodesRemoved=removed$nodes,
+                 Seeds=Seeds))}
+}
+#----
+#' Partial Bootstrapped Semantic Network Analysis Plot
+#' @description Bootstraps (without replacement) the nodes in the network and computes global network characteristics
+#' @param object An object from \link[SemNetCleaner]{partboot}
+#' @param paired Is object from a paired \link[SemNetCleaner]{partboot}?
+#' @param CI Confidence intervals to use for plot.
+#' Defaults to .975
+#' @param labels Labels to be used in plot.
+#' Defaults to NULL.
+#' Typed responses will be requested if NULL
+#' @param measures Measures to be plotted
+#' @return Returns plots for the specified measures
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' @importFrom stats qnorm sd
+#' @export
+#Partial Bootstrapped Semantic Network Analysis----
+partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
+                           measures = c("ASPL","CC","Q","S","TotalStrength"))
+{
+    if(missing(measures))
+    {measures <- c("ASPL","CC","Q","S","TotalStrength")
+    }else{measures <- match.arg(measures,several.ok=TRUE)}
+    
+    ci <- CI
+    
+    #Names in object
+    objnames <- ls(object)
+    
+    #Extract data measures
+    if(!"bootDataMeas" %in% objnames)
+    {
+        len <- length(objnames)
+        
+        subnames <- ls(object[[1]])
+        
+        if("bootDataMeas" %in% subnames)
+        {
+            bootData <- list()
+            
+            for(i in 1:len)
+            {
+                bootData[[i]] <- object[[i]][["bootDataMeas"]]
+            }
+        }
+    }else{len <- 1
+        bootData[[i]] <- object[[i]][["bootDataMeas"]]
+        }
+    
+    #Extract paired measures
+    if(paired)
+    {
+        if(!"bootPairedMeas" %in% objnames)
+        {
+            len <- length(objnames)
+            
+            subnames <- ls(object[[1]])
+            
+            if("bootPairedMeas" %in% subnames)
+            {
+                bootPaired <- list()
+                
+                for(i in 1:len)
+                {
+                    bootPaired[[i]] <- object[[i]][["bootPairedMeas"]]
+                }
+            }
+        }else{bootPaired[[i]] <- object[[i]][["bootPairedMeas"]]}
+    }
+    
+    #Number of samples in data
+    sampsData <- vector(mode="numeric",length=len)
+    
+    for(i in 1:len)
+    {sampsData[i] <- nrow(bootData[[i]])}
+    
+    #Number of samples in paired data
+    if(paired)
+    {
+        sampsPaired <- vector(mode="numeric",length=len)
+    
+        for(i in 1:len)
+        {sampsPaired[i] <- nrow(bootPaired[[i]])}
+    }
+    
+    #Plots
+    
+    plot <- list()
+    
+    if("ASPL" %in% measures)
+    {
+        plot$aspl <- suppressWarnings(
+                    org.plot(bootData, bootPaired,
+                             sampsData, sampsPaired,
+                             len = len,
+                             measname = "Average Shortest Path Length",
+                             netmeas = "ASPL", pall = "Spectral",
+                             paired = paired, CI = ci, labels = labels)
+            )
+        
+        if(is.null(labels))
+        {labels <- plot$aspl$labels}
+    }
+    
+    
+    
+    if("CC" %in% measures)
+    {
+        plot$cc <- suppressWarnings(
+            org.plot(bootData, bootPaired,
+                     sampsData, sampsPaired,
+                     len = len,
+                     measname = "Clustering Coefficient",
+                     netmeas = "CC", pall = "Spectral",
+                     paired = paired, CI = ci, labels = labels)
+        )
+        
+        if(is.null(labels))
+        {labels <- plot$cc$labels}
+    }
+    
+    if("Q" %in% measures)
+    {
+        plot$q <- suppressWarnings(
+            org.plot(bootData, bootPaired,
+                     sampsData, sampsPaired,
+                     len = len,
+                     measname = "Modularity",
+                     netmeas = "Q", pall = "Spectral",
+                     paired = paired, CI = ci, labels = labels)
+        )
+        
+        if(is.null(labels))
+        {labels <- plot$q$labels}
+    }
+    
+    if("S" %in% measures)
+    {
+        plot$s <- suppressWarnings(
+            org.plot(bootData, bootPaired,
+                     sampsData, sampsPaired,
+                     len = len,
+                     measname = "Small-worldness",
+                     netmeas = "S", pall = "Spectral",
+                     paired = paired, CI = ci, labels = labels)
+        )
+        
+        if(is.null(labels))
+        {labels <- plot$s$labels}
+    }
+    
+    if("TotalStrength" %in% measures)
+    {
+        plot$tns <- suppressWarnings(
+            org.plot(bootData, bootPaired,
+                     sampsData, sampsPaired,
+                     len = len,
+                     measname = "Total Network Strength",
+                     netmeas = "Total Network Strength",
+                     pall = "Spectral",
+                     paired = paired, CI = ci, labels = labels)
+        )
+        
+        if(is.null(labels))
+        {labels <- plot$tns$labels}
+    }
+    
+    return(plot)
 }
 #----
 #Trial data of verbal fluency responses----

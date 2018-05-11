@@ -1,3 +1,12 @@
+Changes in version 0.1.1
+
+o semnetboot: changed name to partboot and added the cosine similarity
+
+o plot.partboot: a function that generates "raindrop" plots for bootstrapped data
+
+o org.plot: an organization function for plot.partboot (not for individual use) 
+
+
 Changes in version 0.1.0
 
 o autoConverge: created an automated converge function to eliminate the manual converge process
