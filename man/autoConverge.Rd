@@ -16,6 +16,11 @@ column removed for all variables
 \description{
 Automated \link[SemNetCleaner]{converge} function merging of columns of binarized response data with another
 }
+\examples{
+\dontrun{
+convmat <- autoConverge(rmat)
+}
+}
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
 }

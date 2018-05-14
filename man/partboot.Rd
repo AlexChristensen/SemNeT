@@ -4,8 +4,8 @@
 \alias{partboot}
 \title{Partial Bootstrapped Semantic Network Analysis}
 \usage{
-partboot(data, paired, n, iter = 1000, corr = c("cor", "cosine"), cores,
-  seeds = NULL)
+partboot(data, paired = NULL, n, iter = 1000, corr = c("cor", "cosine"),
+  cores, seeds = NULL)
 }
 \arguments{
 \item{data}{Cleaned response matrix}
@@ -38,6 +38,23 @@ and Seeds that can be used to replicate analysis
 }
 \description{
 Bootstraps (without replacement) the nodes in the network and computes global network characteristics
+}
+\examples{
+#finalize rmatA
+finalCmat <- finalize(convmat)
+#finalize rmatB
+finalRmat <- finalize(rmat)
+
+#equate rmatA and rmatB
+eq1 <- equate(finalCmat,finalRmat)
+
+#obtain respective equated response matrices
+eqCmat <- eq1$rmatA
+eqRmat <- eq1$rmatB
+
+\dontrun{
+results <- partboot(eqCmat, eqRmat, iter = 10, corr = "cosine", cores = 4)
+}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

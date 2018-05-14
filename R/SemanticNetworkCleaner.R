@@ -5,9 +5,6 @@
 #' @return A list of a binary matrix of responses (binary; rows = participants, columns = responses) and cleaned response matrix (responses)
 #' @examples
 #' \dontrun{
-#' 
-#' data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
-#' 
 #' rmat<-semnetcleaner(trial)
 #' }
 #' @references 
@@ -138,6 +135,7 @@ semnetcleaner <- function(data, miss = 99)
 #' @param replace The column name that should be merged with the \strong{word} column (must be characters)
 #' @return The response matrix with the \strong{word} column merged and the \strong{replace} column removed
 #' @examples
+#' #converge "kitten" into response of "cat"
 #' rmat <- converge(rmat,"cat","kitten")
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
@@ -167,6 +165,10 @@ converge <- function (rmat, word, replace)
 #' @param rmat A semnetcleaner filtered response matrix
 #' @return The response matrix with the \strong{word} column merged and the \strong{replace}
 #' column removed for all variables
+#' @examples
+#' \dontrun{
+#' convmat <- autoConverge(rmat)
+#' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @importFrom utils menu
 #' @export
@@ -327,8 +329,11 @@ autoConverge <- function (rmat)
 #' @description Finalizes the response matrix by keeping responses that are given by two or more people
 #' @param rmat A semnetcleaner filtered response matrix
 #' @return A matrix with responses given by two or more people
-#' @examples
-#' finalRmat <- finalize(rmat)
+#' @examples \dontrun{
+#' convmat <- autoConverge(rmat)
+#' }
+#' 
+#' finalRmat <- finalize(convmat)
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Finalize Function----
@@ -342,11 +347,17 @@ return(fmat)}
 #' @param rmatB A semnetcleaner filtered response matrix for group 2
 #' @return A list of responses matched for group 1 (rmatA) and group 2 (rmatB)
 #' @examples
-#' \dontrun{
+#' #finalize rmatA
+#' finalCmat <- finalize(convmat)
+#' #finalize rmatB
+#' finalRmat <- finalize(rmat)
+#'
+#' #equate rmatA and rmatB
+#' eq1 <- equate(finalCmat,finalRmat)
 #' 
-#' groups_resp_match<-equate(rmatA,rmatB)
-#' 
-#' }
+#' #obtain respective equated response matrices
+#' eqCmat <- eq1$rmatA
+#' eqRmat <- eq1$rmatB
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 # Equate----
@@ -373,6 +384,14 @@ equate<-function(rmatA,rmatB)
 #' @param rmat A semnetcleaner filtered response matrix
 #' @param rm.str The column number of the stringed response
 #' @return The response matrix with the string column merged into appropriate response columns and the string response removed
+#' @examples
+#' #create example stringed responses
+#' stringed <- cbind(rowSums(cbind(rmat[,c(1,2)])),convmat)
+#' #change name to stringed name
+#' colnames(stringed)[1] <- "alligator.ant"
+#' 
+#' #de-string
+#' convmat <- destr(stringed, 1)
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #De-string Function----
@@ -388,6 +407,8 @@ destr <- function (rmat, rm.str)
     
     rmat[match(replace,colnames(rmat))][which(rmat[rm.str]!=0),]<-1
     rmat<-rmat[,-rm.str]
+    
+    return(rmat)
 }
 #----
 #' Automated De-string Responses
@@ -398,6 +419,16 @@ destr <- function (rmat, rm.str)
 #' @return A question asking whether the response should be de-string-ed.
 #' If yes, \link[SemNetCleaner]{destr} will be applied.
 #' If no, the next response will be checked
+#' @examples
+#' #create example stringed responses
+#' stringed <- cbind(rowSums(cbind(rmat[,c(1,2)])),convmat)
+#' #change name to stringed name
+#' colnames(stringed)[1] <- "alligator.ant"
+#' 
+#' \dontrun{
+#' #automated de-string
+#' convmat <- destr(stringed, 10)
+#' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Automated De-string Function----
@@ -439,19 +470,32 @@ autoDeStr <- function (rmat, char = 10)
 #' @return Returns a list that includes the original semantic network measures (origmeas; ASPL, CC, Q, S),
 #' the bootstrapped semantic network measures (bootmeas),
 #' and Seeds that can be used to replicate analysis
+#' @examples
+#' #finalize rmatA
+#' finalCmat <- finalize(convmat)
+#' #finalize rmatB
+#' finalRmat <- finalize(rmat)
+#'
+#' #equate rmatA and rmatB
+#' eq1 <- equate(finalCmat,finalRmat)
+#' 
+#' #obtain respective equated response matrices
+#' eqCmat <- eq1$rmatA
+#' eqRmat <- eq1$rmatB
+#' 
+#' \dontrun{
+#' results <- partboot(eqCmat, eqRmat, iter = 10, corr = "cosine", cores = 4)
+#' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @importFrom stats cor runif
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom foreach %dopar%
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-partboot <- function (data, paired, n,
+partboot <- function (data, paired = NULL, n,
                         iter = 1000, corr = c("cor","cosine"),
                         cores, seeds = NULL)
 {
-    if(missing(paired))
-    {paired <- NULL}
-    
     if(missing(n))
     {n <- round((ncol(data)/2),0)
     }else{n <- round(n,0)}
@@ -466,9 +510,9 @@ partboot <- function (data, paired, n,
         if(!is.null(paired))
         {cormatP <- cor(paired)}
     }else{
-        cormat <- lsa::cosine(as.matrix(data))
+        cormat <- cosine(as.matrix(data))
         if(!is.null(paired))
-        {cormatP <- lsa::cosine(as.matrix(paired))}
+        {cormatP <- cosine(as.matrix(paired))}
         }
     
     if(is.null(seeds))
@@ -484,21 +528,12 @@ partboot <- function (data, paired, n,
     sampslist<-list() #initialize sample list
     
     #Parallel processing
-    if(missing(cores))
-    {
-        cores <- parallel::detectCores()
-        cores <- cores - 1 #not to overload your computer 
-    }else{cores <- cores}
     cl <- parallel::makeCluster(cores)
-    doSNOW::registerDoSNOW(cl)
-    
-        pb <- txtProgressBar(max=iter, style = 3) #progress bar
-        progress <- function(num) setTxtProgressBar(pb, num)
-        opts <- list(progress = progress)
-    
+    doParallel::registerDoParallel(cl)
+
     sampslist<-foreach::foreach(i=1:iter,
-                                .packages = c("NetworkToolbox","lsa"),
-                                .options.snow = opts)%dopar%
+                                .packages = c("NetworkToolbox","SemNetCleaner")
+                                )%dopar%
                                 {
                                     samps <- list()
                                     
@@ -517,7 +552,7 @@ partboot <- function (data, paired, n,
                                     
                                     if(corr=="cor")
                                     {cmat <- cor(mat)
-                                    }else{cmat <- lsa::cosine(as.matrix(mat))}
+                                    }else{cmat <- cosine(as.matrix(mat))}
                                     
                                     net <- NetworkToolbox::TMFG(cmat)$A
                                     
@@ -527,24 +562,23 @@ partboot <- function (data, paired, n,
                                         
                                         if(corr=="cor")
                                         {cmatP <- cor(matP)
-                                        }else{cmatP <- lsa::cosine(as.matrix(matP))}
+                                        }else{cmatP <- cosine(as.matrix(matP))}
                                         
                                         netP <- NetworkToolbox::TMFG(cmatP)$A
                                     }
                                     
-                                    samps$data<-c(suppressWarnings(NetworkToolbox::semnetmeas(net,iter=10)),NetworkToolbox::conn(net)$total,Seed,rand)
+                                    samps$data<-c(suppressWarnings(semnetmeas(net,iter=10)),Seed,rand)
                                     if(!is.null(paired))
-                                    {samps$paired<-c(suppressWarnings(NetworkToolbox::semnetmeas(netP,iter=10)),NetworkToolbox::conn(netP)$total,Seed,rand)}
-                                    
+                                    {samps$paired<-c(suppressWarnings(semnetmeas(netP,iter=10)),Seed,rand)}
                                     
                                     return(samps)
                                 }
-    close(pb)
     parallel::stopCluster(cl)
     
-    tru<-c(suppressWarnings(NetworkToolbox::semnetmeas(NetworkToolbox::TMFG(cormat)$A)),NetworkToolbox::conn(NetworkToolbox::TMFG(cormat)$A)$total)
+    tru<-suppressWarnings(semnetmeas(NetworkToolbox::TMFG(cormat)$A))
     
-    truP<-c(suppressWarnings(NetworkToolbox::semnetmeas(NetworkToolbox::TMFG(cormatP)$A)),NetworkToolbox::conn(NetworkToolbox::TMFG(cormatP)$A)$total)
+    if(!is.null(paired))
+    {truP<-suppressWarnings(semnetmeas(NetworkToolbox::TMFG(cormatP)$A))}
     
     metrics <- matrix(0,nrow=iter,ncol=7)
     if(!is.null(paired))
@@ -569,12 +603,12 @@ partboot <- function (data, paired, n,
     }
     
     metrics<-as.data.frame(metrics)
-    colnames(metrics)<-c("ASPL","CC","Q","S","randASPL","randCC","Total Network Strength")
+    colnames(metrics)<-c("ASPL","CC","Q","S","randASPL","randCC","MNS")
     
     if(!is.null(paired))
     {
         metricsP<-as.data.frame(metricsP)
-        colnames(metricsP)<-c("ASPL","CC","Q","S","randASPL","randCC","Total Network Strength")
+        colnames(metricsP)<-c("ASPL","CC","Q","S","randASPL","randCC","MNS")
     }
     
     stat.table <- data.frame(0, nrow = 5, ncol = 5)
@@ -616,11 +650,11 @@ partboot <- function (data, paired, n,
     }
     
     colnames(stat.table) <- c("mean","sd","se","lower","upper")
-    row.names(stat.table) <- c("ASPL","CC","Q","S","Total Network Strength")
+    row.names(stat.table) <- c("ASPL","CC","Q","S","MNS")
     if(!is.null(paired))
     {
         colnames(stat.tableP) <- c("mean","sd","se","lower","upper")
-        row.names(stat.tableP) <- c("ASPL","CC","Q","S","Total Network Strength")
+        row.names(stat.tableP) <- c("ASPL","CC","Q","S","MNS")
     }
     
     
@@ -642,7 +676,7 @@ partboot <- function (data, paired, n,
                  Seeds=Seeds))}
 }
 #----
-#' Partial Bootstrapped Semantic Network Analysis Plot
+#' Plot for partboot
 #' @description Bootstraps (without replacement) the nodes in the network and computes global network characteristics
 #' @param object An object from \link[SemNetCleaner]{partboot}
 #' @param paired Is object from a paired \link[SemNetCleaner]{partboot}?
@@ -653,21 +687,43 @@ partboot <- function (data, paired, n,
 #' Typed responses will be requested if NULL
 #' @param measures Measures to be plotted
 #' @return Returns plots for the specified measures
+#' @examples
+#' #finalize rmatA
+#' finalCmat <- finalize(convmat)
+#' #finalize rmatB
+#' finalRmat <- finalize(rmat)
+#'
+#' #equate rmatA and rmatB
+#' eq1 <- equate(finalCmat,finalRmat)
+#' 
+#' #obtain respective equated response matrices
+#' eqCmat <- eq1$rmatA
+#' eqRmat <- eq1$rmatB
+#' 
+#' \dontrun{
+#' results <- partboot(eqCmat, eqRmat, corr = "cosine", cores = 4)
+#' 
+#' #labels
+#' labs <- c("eqCmat","eqRmat")
+#' partboot.plot(results, paired = TRUE, labels = labs)
+#' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @importFrom stats qnorm sd
 #' @export
-#Partial Bootstrapped Semantic Network Analysis----
+#Plot: Partial Bootstrapped Semantic Network Analysis----
 partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
-                           measures = c("ASPL","CC","Q","S","TotalStrength"))
+                           measures = c("ASPL","CC","Q","S","MeanStrength"))
 {
     if(missing(measures))
-    {measures <- c("ASPL","CC","Q","S","TotalStrength")
+    {measures <- c("ASPL","CC","Q","S","MeanStrength")
     }else{measures <- match.arg(measures,several.ok=TRUE)}
     
     ci <- CI
     
     #Names in object
     objnames <- ls(object)
+    
+    bootData <- list()
     
     #Extract data measures
     if(!"bootDataMeas" %in% objnames)
@@ -678,20 +734,20 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
         
         if("bootDataMeas" %in% subnames)
         {
-            bootData <- list()
-            
             for(i in 1:len)
             {
                 bootData[[i]] <- object[[i]][["bootDataMeas"]]
             }
         }
     }else{len <- 1
-        bootData[[i]] <- object[[i]][["bootDataMeas"]]
+        bootData[[1]] <- object$bootDataMeas
         }
     
     #Extract paired measures
     if(paired)
     {
+        bootPaired <- list()
+        
         if(!"bootPairedMeas" %in% objnames)
         {
             len <- length(objnames)
@@ -700,14 +756,12 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
             
             if("bootPairedMeas" %in% subnames)
             {
-                bootPaired <- list()
-                
                 for(i in 1:len)
                 {
                     bootPaired[[i]] <- object[[i]][["bootPairedMeas"]]
                 }
             }
-        }else{bootPaired[[i]] <- object[[i]][["bootPairedMeas"]]}
+        }else{bootPaired[[1]] <- object$bootPairedMeas}
     }
     
     #Number of samples in data
@@ -740,8 +794,18 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
                              paired = paired, CI = ci, labels = labels)
             )
         
-        if(is.null(labels))
-        {labels <- plot$aspl$labels}
+        if(!is.null(plot$aspl$labels))
+        {
+            labels <- plot$aspl$labels
+            plot$aspl <- suppressWarnings(
+                org.plot(bootData, bootPaired,
+                         sampsData, sampsPaired,
+                         len = len,
+                         measname = "Average Shortest Path Length",
+                         netmeas = "ASPL", pall = "Spectral",
+                         paired = paired, CI = ci, labels = labels)
+            )
+        }
     }
     
     
@@ -757,8 +821,18 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
                      paired = paired, CI = ci, labels = labels)
         )
         
-        if(is.null(labels))
-        {labels <- plot$cc$labels}
+        if(!is.null(plot$cc$labels))
+        {
+            labels <- plot$cc$labels
+            plot$cc <- suppressWarnings(
+                org.plot(bootData, bootPaired,
+                         sampsData, sampsPaired,
+                         len = len,
+                         measname = "Clustering Coefficient",
+                         netmeas = "CC", pall = "Spectral",
+                         paired = paired, CI = ci, labels = labels)
+            )
+        }
     }
     
     if("Q" %in% measures)
@@ -772,8 +846,18 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
                      paired = paired, CI = ci, labels = labels)
         )
         
-        if(is.null(labels))
-        {labels <- plot$q$labels}
+        if(!is.null(plot$q$labels))
+        {
+            labels <- plot$q$labels
+            plot$q <- suppressWarnings(
+                org.plot(bootData, bootPaired,
+                         sampsData, sampsPaired,
+                         len = len,
+                         measname = "Modularity",
+                         netmeas = "Q", pall = "Spectral",
+                         paired = paired, CI = ci, labels = labels)
+            )
+        }
     }
     
     if("S" %in% measures)
@@ -787,24 +871,44 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
                      paired = paired, CI = ci, labels = labels)
         )
         
-        if(is.null(labels))
-        {labels <- plot$s$labels}
+        if(!is.null(plot$s$labels))
+        {
+            labels <- plot$s$labels
+            plot$s <- suppressWarnings(
+                org.plot(bootData, bootPaired,
+                         sampsData, sampsPaired,
+                         len = len,
+                         measname = "Small-worldness",
+                         netmeas = "S", pall = "Spectral",
+                         paired = paired, CI = ci, labels = labels)
+            )
+        }
     }
     
-    if("TotalStrength" %in% measures)
+    if("MeanStrength" %in% measures)
     {
-        plot$tns <- suppressWarnings(
+        plot$mns <- suppressWarnings(
             org.plot(bootData, bootPaired,
                      sampsData, sampsPaired,
                      len = len,
-                     measname = "Total Network Strength",
-                     netmeas = "Total Network Strength",
+                     measname = "Mean Network Strength",
+                     netmeas = "MNS",
                      pall = "Spectral",
                      paired = paired, CI = ci, labels = labels)
         )
         
-        if(is.null(labels))
-        {labels <- plot$tns$labels}
+        if(!is.null(plot$mns$labels))
+        {
+            labels <- plot$mns$labels
+            plot$mns <- suppressWarnings(
+                org.plot(bootData, bootPaired,
+                         sampsData, sampsPaired,
+                         len = len,
+                         measname = "Mean Network Strength",
+                         netmeas = "MNS", pall = "Spectral",
+                         paired = paired, CI = ci, labels = labels)
+            )
+        }
     }
     
     return(plot)
@@ -847,4 +951,23 @@ partboot.plot <- function (object, paired = FALSE, CI = .975, labels = NULL,
 #' 
 #' data(rmat)
 "rmat"
+#----
+#Coverged trial data of verbal fluency responses----
+#' Converged trial data of verbal fluency responses
+#' 
+#' Converged trial data of animal verbal fluency responses. The columns are responses and the
+#' rows are the participants.
+#' 
+#' @docType data
+#' 
+#' @usage data(convmat)
+#' 
+#' @format A 15x95 response matrix
+#' 
+#' @keywords datasets
+#' 
+#' @examples 
+#' 
+#' data(convmat)
+"convmat"
 #----

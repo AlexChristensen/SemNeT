@@ -36,6 +36,9 @@ Returns plots for the specified measures
 \description{
 A function used in \link[SemNetCleaner]{partboot}. Not to be used individually
 }
+\examples{
+###NOT FOR INDIVIDUAL USE###
+}
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
 }

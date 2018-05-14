@@ -12,6 +12,8 @@
 #' @param CI Confidence interval to be used
 #' @param labels Labels to be used in plot.
 #' @return Returns plots for the specified measures
+#' @examples
+#' ###NOT FOR INDIVIDUAL USE###
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @import dplyr
 #' @import ggplot2
@@ -291,7 +293,7 @@ org.plot <- function (bootData, bootPaired,
         g <- ggplot2::ggplot(data = meas, ggplot2::aes(y = V2, x = V1, fill = V1)) +
             geom_flat_violin(position = ggplot2::position_nudge(x = .2, y = 0), alpha = 1) +
             ggplot2::geom_point(ggplot2::aes(y = V2, color = V1), position = ggplot2::position_jitter(width = .15), size = .5, alpha = 1) +
-            ggplot2::geom_errorbar(data = summ, ggplot2::aes(ymin = lower, ymax = upper, y = mean), position = ggplot2::position_nudge(x = 0.3), width = 0) +
+            ggplot2::geom_errorbar(data = summ, ggplot2::aes(ymin = lower, ymax = upper, y = mean), position = ggplot2::position_nudge(x = 0.3), width = .2) +
             ggplot2::geom_point(data = summ, ggplot2::aes(x = V1, y = mean), position = ggplot2::position_nudge(x = 0.3), size = 2.5) +
             ggplot2::expand_limits(x = 5.25) +
             ggplot2::guides(fill = FALSE) +
@@ -305,18 +307,17 @@ org.plot <- function (bootData, bootPaired,
         if(is.null(labels))
         {
             g <- g + ggplot2::labs(x = "Percent of Nodes Remaining",
-                 y = paste(measname,"(",netmeas,")",sep=""),
+                 y = paste(measname," (",netmeas,")",sep=""),
                  title = paste("Boostrapped Node-drop Results: ",netmeas,sep=""),
                  subtitle = paste(n, "Samples"))
+            print(g)
         }else{
             g <- g + ggplot2::labs(x = "Percent of Nodes Remaining",
-                          y = paste(measname,"(",netmeas,")",sep=""),
+                          y = paste(measname," (",netmeas,")",sep=""),
                           title = paste("Boostrapped Node-drop Results: ",netmeas,sep=""),
                           subtitle = paste(n, "Samples")) +
                 ggplot2::scale_x_discrete(labels=labels)
         }
-        
-        print(g)
         
         #labels function
             if(is.null(labels))
@@ -326,6 +327,8 @@ org.plot <- function (bootData, bootPaired,
                     if(ans==1)
                     {
                         labels <- paste(summ[,1])
+                        
+                        labels <- labels[order(labels)]
                         
                         num <- length(labels)
                         

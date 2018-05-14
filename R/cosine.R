@@ -15,6 +15,9 @@ cosine <- function (data)
         for(j in 1:n)
     {mat[i,j] <- sum(data[,i]*data[,j])/(sqrt(sum(data[,i]^2))*sqrt(sum(data[,j]^2)))}
     
+    colnames(mat) <- colnames(data)
+    row.names(mat) <- colnames(data)
+    
     return(mat)
 }
 #----

@@ -20,6 +20,7 @@ The response matrix with the \strong{word} column merged and the \strong{replace
 Merge a column of binarized response data with another
 }
 \examples{
+#converge "kitten" into response of "cat"
 rmat <- converge(rmat,"cat","kitten")
 }
 \author{

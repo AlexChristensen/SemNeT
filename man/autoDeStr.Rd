@@ -20,6 +20,17 @@ If no, the next response will be checked
 \description{
 Automated de-string responses after performing semnetcleaner
 }
+\examples{
+#create example stringed responses
+stringed <- cbind(rowSums(cbind(rmat[,c(1,2)])),convmat)
+#change name to stringed name
+colnames(stringed)[1] <- "alligator.ant"
+
+\dontrun{
+#automated de-string
+convmat <- destr(stringed, 10)
+}
+}
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
 }

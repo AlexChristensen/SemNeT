@@ -16,7 +16,11 @@ A matrix with responses given by two or more people
 Finalizes the response matrix by keeping responses that are given by two or more people
 }
 \examples{
-finalRmat <- finalize(rmat)
+\dontrun{
+convmat <- autoConverge(rmat)
+}
+
+finalRmat <- finalize(convmat)
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

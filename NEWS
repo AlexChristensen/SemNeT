@@ -4,9 +4,15 @@ o cosine: added cosine similarity
 
 o semnetboot: changed name to partboot and added the cosine similarity
 
+o semnetmeas: moved from NetworkToolbox
+
 o plot.partboot: a function that generates "raindrop" plots for bootstrapped data
 
-o org.plot: an organization function for plot.partboot (not for individual use) 
+o org.plot: an organization function for plot.partboot (not for individual use)
+
+o convert2cytoscape: added a function to convert a network matrix into a sparse matrix for Cytoscape visualization
+
+o added new examples with corresponding data files
 
 
 Changes in version 0.1.0

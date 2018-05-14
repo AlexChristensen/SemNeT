@@ -18,11 +18,17 @@ A list of responses matched for group 1 (rmatA) and group 2 (rmatB)
 An automated cleaning function for matching groups' responses
 }
 \examples{
-\dontrun{
+#finalize rmatA
+finalCmat <- finalize(convmat)
+#finalize rmatB
+finalRmat <- finalize(rmat)
 
-groups_resp_match<-equate(rmatA,rmatB)
+#equate rmatA and rmatB
+eq1 <- equate(finalCmat,finalRmat)
 
-}
+#obtain respective equated response matrices
+eqCmat <- eq1$rmatA
+eqRmat <- eq1$rmatB
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

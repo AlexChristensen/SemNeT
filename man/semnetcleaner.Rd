@@ -19,9 +19,6 @@ An automated cleaning function for semantic network data
 }
 \examples{
 \dontrun{
-
-data<-read.csv(file.choose(),header=FALSE,sep=",",as.is=TRUE)
-
 rmat<-semnetcleaner(trial)
 }
 }
