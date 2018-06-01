@@ -28,7 +28,7 @@ eq1 <- equate(finalCmat,finalRmat)
 eqCmat <- eq1$rmatA
 eqRmat <- eq1$rmatB
 
-\dontrun{
+\donttest{
 results <- partboot(eqCmat, eqRmat, corr = "cosine", cores = 4)
 
 partboot.test(results, paired = TRUE, labels = labs)

@@ -4,10 +4,12 @@
 \alias{cosine}
 \title{Cosine Similarity}
 \usage{
-cosine(data)
+cosine(data, addConstant = 0)
 }
 \arguments{
 \item{data}{A binarized dataset of verbal fluency or linguistic data}
+
+\item{addConstant}{A constant to be added to the cosine similarity matrix}
 }
 \value{
 A cosine similarity matrix

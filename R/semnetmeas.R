@@ -14,15 +14,13 @@
 #' See \link[NetworkToolbox]{smallworldness} for other options
 #' @return Returns a values for ASPL, CC, Q, and S
 #' @examples
-#' \dontrun{
 #' lowO <- subset(NetworkToolbox::animals, Group==1)[-1]
 #' 
 #' cosL <- cosine(lowO)
 #' 
-#' A <- NetworkToolbox::TMFG(cosL)
+#' A <- NetworkToolbox::TMFG(cosL)$A
 #' 
-#' globmeas<-semnetmeas(A)
-#' }
+#' globmeas <- semnetmeas(A)
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #Semantic Network Measures----

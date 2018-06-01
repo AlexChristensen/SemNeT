@@ -1,3 +1,10 @@
+Changes in version 0.1.2
+
+o autoConverge: significantly improved interface
+
+o separated all function files into individual files
+
+
 Changes in version 0.1.1
 
 o cosine: added cosine similarity
