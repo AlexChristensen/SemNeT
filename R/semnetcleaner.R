@@ -158,7 +158,10 @@ semnetcleaner <- function(data, miss = 99, partBY = c("row","col"))
   for(i in 1:part)
   {
       no.match <- which(is.na(match(data[i,],w[i,])))
-      changed[[ids[i]]] <- cbind(data[i,no.match],w[i,no.match])
+      chn <- cbind(data[i,no.match],w[i,no.match])
+      chn <- as.data.frame(chn)
+      colnames(chn) <- c("from","to")
+      changed[[ids[i]]] <- chn
   }
 
   return(list(binary=k,responses=w,changed=changed))
