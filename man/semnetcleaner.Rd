@@ -4,12 +4,16 @@
 \alias{semnetcleaner}
 \title{Semantic Network Cleaner}
 \usage{
-semnetcleaner(data, miss = 99)
+semnetcleaner(data, miss = 99, partBY = c("row", "col"))
 }
 \arguments{
 \item{data}{A dataset of verbal fluency or linguistic data}
 
 \item{miss}{Value for missing data. Defaults to 99}
+
+\item{partBY}{Participants are by row or by column?
+Set to "row" for by row.
+Set to "col" for by column}
 }
 \value{
 A list of a binary matrix of responses (binary; rows = participants, columns = responses) and cleaned response matrix (responses)

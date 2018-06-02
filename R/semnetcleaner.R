@@ -2,6 +2,9 @@
 #' @description An automated cleaning function for semantic network data
 #' @param data A dataset of verbal fluency or linguistic data
 #' @param miss Value for missing data. Defaults to 99
+#' @param partBY Participants are by row or by column?
+#' Set to "row" for by row.
+#' Set to "col" for by column
 #' @return A list of a binary matrix of responses (binary; rows = participants, columns = responses) and cleaned response matrix (responses)
 #' @examples
 #' \donttest{
@@ -15,23 +18,31 @@
 #' @export
 #' @importFrom stats na.omit
 #Semantic Network Cleaner----
-semnetcleaner <- function(data, miss = 99)
+semnetcleaner <- function(data, miss = 99, partBY = c("row","col"))
 {
+  #remove white space
   for(i in 1:ncol(data))
         data[,i]<-trimws(data[,i])    
       
+  #convert missing value to NA
   for(i in 1:nrow(data))
       for(j in 1:ncol(data))
           if(is.na(data[i,j])){next
           }else if(data[i,j]==miss){data[i,j]<-NA} 
   
-  if(nrow(data)<ncol(data))
+  #make participants by row
+  if(partBY=="col")
   {data<-t(data)}
+  
+  #grab subject ids
+  ids <- row.names(data)
     
   #perform spell check
   v<-apply(data,c(2),qdap::check_spelling_interactive)
   
+  #initialize spell checkd matrix
   y<-matrix(NA,nrow=nrow(data),ncol=ncol(data))
+  
   #transform data into a writeable format
   if(is.list(v))
   {for(i in 1:length(v))
@@ -49,7 +60,7 @@ semnetcleaner <- function(data, miss = 99)
       for(j in 1:ncol(y))
           if(is.na(y[i,j]))
           {y[i,j]<-""}
-
+  
   #singularize data
   singularize <- function(x)
   {
@@ -89,42 +100,67 @@ semnetcleaner <- function(data, miss = 99)
   w<-apply(y,c(2),singularize)
   w<-tolower(w)
   
+  #transfer ids
+  row.names(w) <- ids
+  
   #grab unique responses only and make them all lowercase
   uni<-rbind(sort(unique(tolower(unlist(apply(w,c(2),unique))))))
-  
+
+  #removing missing response from unique responses
   uni[uni==""]<-NA
   uni[uni==" "]<-NA
   uni[uni=="  "]<-NA
   while(any(is.na(uni)))
     for (i in 1:length(uni))
       if(is.na(uni[i])){uni<-uni[-i]}
+  
+  
   #attach unique responses to response matrix
-  if(nrow(w)<ncol(w))
-  {resp<-t(w)
-  }else{resp<-w} #transpose response
-  z<-matrix(nrow=nrow(resp),ncol=length(uni)) #initialize matrix
-  for (i in 1:ncol(resp)) #populate response matrix
-  {z[,i]<-resp[,i]}
+  z<-matrix(nrow=nrow(w),ncol=length(uni)) #initialize matrix
   
-  z<-tolower(z)
-  
-  #binarize responses
+  #populate response matrix
+  for (i in 1:ncol(w))
+  {z[,i]<-w[,i]}
+ 
+  #initialize binary matrix
   k<-matrix(nrow=nrow(z),ncol=ncol(z))
+  
+  #match given responses to unique responses
       for (j in 1:nrow(k))
           if(any(!is.na(match(uni,z[j,]))))
           {k[j,]<-match(uni,z[j,])}
   k[is.na(k)]<-0
-  #fill out other half of matrix
+  
+  #binarize matrix
   for (i in 1:ncol(k))
     for (j in 1:nrow(k))
       if (k[j,i]!=0){k[j,i]<-1}
+  #column names to unique responses
   colnames(k)<- uni
+  #row names to ids
+  row.names(k) <- ids
+  
+  #check for subjects with no responses
   if(any(rowSums(k)==0))
   {warning(paste(length(which(rowSums(k)==0))),
   " rows were removed for zero responses\nrow(s): ",paste(which(rowSums(k)==0),collapse = ", "),
-  "\nsubject id(s): ",paste(colnames(data)[which(rowSums(k)==0)],collapse = ", "))
+  "\nsubject id(s): ",paste(row.names(k)[which(rowSums(k)==0)],collapse = ", "))
   k<-k[-which(rowSums(k)==0),]}
+  
+  #convert to data frame
   k<-as.data.frame(k)
-  return(list(binary=k,responses=w))
+  
+  
+  #changed responses
+  part <- length(ids)
+  changed <- list()
+  changed[["all ids"]] <- ids
+  for(i in 1:part)
+  {
+      no.match <- which(is.na(match(data[i,],w[i,])))
+      changed[[ids[i]]] <- cbind(data[i,no.match],w[i,no.match])
+  }
+
+  return(list(binary=k,responses=w,changed=changed))
 }
 #----

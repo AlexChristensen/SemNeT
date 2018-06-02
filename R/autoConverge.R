@@ -20,11 +20,14 @@ autoConverge <- function (rmat)
     
     name <- colnames(rmat)
     
+    ids <- row.names(rmat)
+    
     repmat <- rmat
     
     output <- list()
     output$converged <- matrix(NA,nrow=n,ncol=2)
     colnames(output$converged) <- c("from","to")
+    output$participant[["all ids"]] <- ids
     
     for(i in n:1)
     {

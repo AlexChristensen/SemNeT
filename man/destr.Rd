@@ -4,12 +4,15 @@
 \alias{destr}
 \title{De-string Responses}
 \usage{
-destr(rmat, rm.str)
+destr(rmat, column, sep)
 }
 \arguments{
 \item{rmat}{A semnetcleaner filtered response matrix}
 
-\item{rm.str}{The column number of the stringed response}
+\item{column}{The column number or name of the stringed response}
+
+\item{sep}{Separating string character (e.g., " ", ".", ",").
+Must be input as a character}
 }
 \value{
 The response matrix with the string column merged into appropriate response columns and the string response removed

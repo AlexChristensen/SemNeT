@@ -4,6 +4,10 @@ o autoConverge: significantly improved interface
 
 o separated all function files into individual files
 
+o semnetcleaner: added argument to input participants by row or column; ids now included for output; added output to show what spellcheck changed
+
+o destr: improved functionality to allow selection of separating variable
+
 
 Changes in version 0.1.1
 
