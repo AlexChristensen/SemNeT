@@ -1,7 +1,7 @@
 Package: SemNetCleaner
 Title: An Automated Cleaning Tool for Semantic and Linguistic Data
 Version: 0.1.2
-Date: 2018-06-01
+Date: 2018-06-19
 Author: Alexander P. Christensen, Yoed N. Kenett
 Maintainer: Alexander P. Christensen <alexpaulchristensen@gmail.com>
 Description: Implements several functions that automatize the cleaning, removal of plurals and continuous strings, making the data binary, converging, and finalizing of linguistic data for semantic network analysis. Also provides a partial bootstrapped network function and plot.

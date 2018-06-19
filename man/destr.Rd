@@ -27,7 +27,7 @@ stringed <- cbind(rowSums(cbind(rmat[,c(1,2)])),convmat)
 colnames(stringed)[1] <- "alligator.ant"
 
 #de-string
-convmat <- destr(stringed, 1)
+convmat <- destr(stringed, 1, ".")
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

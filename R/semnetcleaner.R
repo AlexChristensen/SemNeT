@@ -18,7 +18,8 @@
 #' @export
 #' @importFrom stats na.omit
 #Semantic Network Cleaner----
-semnetcleaner <- function(data, miss = 99, partBY = c("row","col"))
+semnetcleaner <- function(data, miss = 99,
+                          partBY = c("row","col"))
 {
   #remove white space
   for(i in 1:ncol(data))
@@ -32,10 +33,10 @@ semnetcleaner <- function(data, miss = 99, partBY = c("row","col"))
   
   #make participants by row
   if(partBY=="col")
-  {data<-t(data)}
-  
-  #grab subject ids
-  ids <- row.names(data)
+  {
+      data<-t(data)
+      ids <- colnames(data)
+  }else{ids <- row.names(data)}
     
   #perform spell check
   v<-apply(data,c(2),qdap::check_spelling_interactive)

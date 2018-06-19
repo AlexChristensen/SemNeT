@@ -6,7 +6,11 @@ o separated all function files into individual files
 
 o semnetcleaner: added argument to input participants by row or column; ids now included for output; added output to show what spellcheck changed
 
-o destr: improved functionality to allow selection of separating variable
+o destr: improved functionality to allow selection of separating character
+
+o randwalk: added a function to simulate random walks on the network to examine spontaenous spreading activation
+
+o bin2resp: a function to change cleaned binary response data back into character data for each participant
 
 
 Changes in version 0.1.1

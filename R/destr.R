@@ -12,7 +12,7 @@
 #' colnames(stringed)[1] <- "alligator.ant"
 #' 
 #' #de-string
-#' convmat <- destr(stringed, 1)
+#' convmat <- destr(stringed, 1, ".")
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' @export
 #De-string Function----
