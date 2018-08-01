@@ -4,17 +4,17 @@
 \alias{org.plot}
 \title{Organization function for partboot.plot}
 \usage{
-org.plot(bootData, bootPaired, sampsData, sampsPaired, len, measname, netmeas,
-  pall, paired, CI, labels)
+org.plot(bootData, bootPaired, sampsData, sampsPaired, len, measname,
+  netmeas, pall, paired, CI, labels)
 }
 \arguments{
-\item{bootData}{bootData from \link[SemNetCleaner]{partboot}}
+\item{bootData}{bootData from \link[SemNeT]{partboot}}
 
-\item{bootPaired}{bootPaired from \link[SemNetCleaner]{partboot}}
+\item{bootPaired}{bootPaired from \link[SemNeT]{partboot}}
 
-\item{sampsData}{sampsData from \link[SemNetCleaner]{partboot}}
+\item{sampsData}{sampsData from \link[SemNeT]{partboot}}
 
-\item{sampsPaired}{sampsPaired from \link[SemNetCleaner]{partboot}}
+\item{sampsPaired}{sampsPaired from \link[SemNeT]{partboot}}
 
 \item{len}{Number of samples in data list}
 
@@ -34,7 +34,7 @@ org.plot(bootData, bootPaired, sampsData, sampsPaired, len, measname, netmeas,
 Returns plots for the specified measures
 }
 \description{
-A function used in \link[SemNetCleaner]{partboot}. Not to be used individually
+A wrapper function used in \link[SemNeT]{partboot}. Not to be used individually
 }
 \examples{
 ###NOT FOR INDIVIDUAL USE###

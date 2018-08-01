@@ -27,6 +27,7 @@
 #' rw.results <- randwalk(eqCmat,eqRmat)
 #' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' Yoed Kenett <yoedkenett@gmail.com>
 #' @importFrom stats wilcox.test
 #' @export
 #Random Walks

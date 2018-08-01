@@ -1,9 +1,9 @@
 #' Organization function for partboot.plot
-#' @description A function used in \link[SemNetCleaner]{partboot}. Not to be used individually
-#' @param bootData bootData from \link[SemNetCleaner]{partboot}
-#' @param bootPaired bootPaired from \link[SemNetCleaner]{partboot}
-#' @param sampsData sampsData from \link[SemNetCleaner]{partboot}
-#' @param sampsPaired sampsPaired from \link[SemNetCleaner]{partboot}
+#' @description A wrapper function used in \link[SemNeT]{partboot}. Not to be used individually
+#' @param bootData bootData from \link[SemNeT]{partboot}
+#' @param bootPaired bootPaired from \link[SemNeT]{partboot}
+#' @param sampsData sampsData from \link[SemNeT]{partboot}
+#' @param sampsPaired sampsPaired from \link[SemNeT]{partboot}
 #' @param len Number of samples in data list
 #' @param measname Full network measure name
 #' @param netmeas Abbreviated network measure name

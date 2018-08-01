@@ -84,7 +84,7 @@ partboot <- function (data, paired = NULL, n, weighted = FALSE,
     doParallel::registerDoParallel(cl)
     
     sampslist<-foreach::foreach(i=1:iter,
-                                .packages = c("NetworkToolbox","SemNetCleaner")
+                                .packages = c("NetworkToolbox","SemNeT")
     )%dopar%
     {
         samps <- list()

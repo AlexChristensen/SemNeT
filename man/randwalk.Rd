@@ -46,4 +46,5 @@ rw.results <- randwalk(eqCmat,eqRmat)
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
+Yoed Kenett <yoedkenett@gmail.com>
 }

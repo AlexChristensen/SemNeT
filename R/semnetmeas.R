@@ -14,9 +14,9 @@
 #' See \link[NetworkToolbox]{smallworldness} for other options
 #' @return Returns a values for ASPL, CC, Q, and S
 #' @examples
-#' lowO <- subset(NetworkToolbox::animals, Group==1)[-1]
+#' fin <- finalize(convmat)
 #' 
-#' cosL <- cosine(lowO)
+#' cosL <- cosine(fin)
 #' 
 #' A <- NetworkToolbox::TMFG(cosL)$A
 #' 

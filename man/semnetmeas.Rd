@@ -30,9 +30,9 @@ small-worldness (S; defaults to "rand"),
 and mean network strength (MNS)
 }
 \examples{
-lowO <- subset(NetworkToolbox::animals, Group==1)[-1]
+fin <- finalize(convmat)
 
-cosL <- cosine(lowO)
+cosL <- cosine(fin)
 
 A <- NetworkToolbox::TMFG(cosL)$A
 
