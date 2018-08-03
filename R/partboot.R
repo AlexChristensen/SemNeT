@@ -52,6 +52,9 @@ partboot <- function (data, paired = NULL, n, weighted = FALSE,
     {n <- round((ncol(data)/2),0)
     }else{n <- round(n,0)}
     
+    if(missing(paired))
+    {paired <- NULL}
+    
     if(missing(corr))
     {corr <- "cosine"
     }else{corr <- match.arg(corr)}
@@ -219,7 +222,7 @@ partboot <- function (data, paired = NULL, n, weighted = FALSE,
         bootlist$nodesRemoved <- removed
         bootlist$Seeds <- Seeds
         
-    }else(!is.null(paired))
+    }else if(!is.null(paired))
     {
         bootlist$origDataMeas <- tru
         bootlist$bootDataMeas <- metrics
