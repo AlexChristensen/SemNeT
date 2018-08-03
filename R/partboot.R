@@ -141,10 +141,9 @@ partboot <- function (data, paired = NULL, n, weighted = FALSE,
     
     for(i in 1:length(sampslist))
     {
-        if(is.null(paired))
-        {
-            metrics[i,] <- sampslist$data[[i]][1:7]
-        }else(!is.null(paired))
+        metrics[i,] <- sampslist[[i]]$data[1:7]
+        
+        if(!is.null(paired))
         {
             metrics[i,] <- sampslist[[i]]$data[1:7]
             metricsP[i,] <- sampslist[[i]]$paired[1:7]
@@ -164,6 +163,7 @@ partboot <- function (data, paired = NULL, n, weighted = FALSE,
     }
     
     stat.table <- data.frame(0, nrow = 5, ncol = 5)
+    
     if(!is.null(paired))
     {stat.tableP <- data.frame(0, nrow = 5, ncol = 5)}
     
