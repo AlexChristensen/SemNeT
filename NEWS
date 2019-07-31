@@ -1,3 +1,9 @@
+Changes in version 1.0.0
+
+o serious, and I mean serious, revamp of functions (all for the better)
+
+o moved most functions over to 'SemNetCleaner' and now only consists of methods and measures for semantic network analysis
+
 Changes in version 0.9.9
 
 o animals.database: a database for animals was added
