@@ -1,57 +1,50 @@
 #' Semantic Network Measures
 #' @description Computes the average shortest path length (ASPL),
-#' clustering coefficient(CC),
-#' modularity (Q),
-#' small-worldness (S; defaults to "rand"),
-#' and mean network strength (MNS)
-#' @param A An adjacency matrix of network A
-#' @param iter Number of iterations for the small-worldness measure
-#' @param weighted Should weighted measures be computed?
-#' Defaults to FALSE.
-#' Set to TRUE for weighted measures
-#' @param swm Method for computing small-worldness.
-#' Defaults to "rand".
-#' See \link[NetworkToolbox]{smallworldness} for other options
-#' @return Returns a values for ASPL, CC, Q, and S
+#' clustering coefficient(CC), and modularity (Q) of the network
+#' 
+#' @param A Matrix or data frame.
+#' An adjacency matrix of a network
+#' 
+#' @param weighted Boolean.
+#' Should weighted measures be computed?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} for weighted measures
+#' 
+#' @return Returns a values for ASPL, CC, and Q
+#' 
 #' @examples
-#' fin <- finalize(convmat)
+#' # Finalize convmat
+#' fin <- SemNetCleaner::finalize(SemNetCleaner::convmat)
 #' 
-#' cosL <- cosine(fin)
+#' # Compute cosine similarity
+#' cosL <- similarity(fin, method = "cosine")
 #' 
+#' # Construct network
 #' A <- NetworkToolbox::TMFG(cosL)$A
 #' 
+#' # Compute global network measures
 #' globmeas <- semnetmeas(A)
+#' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
 #' @export
 #Semantic Network Measures----
-semnetmeas <- function (A, iter,
-                        weighted = FALSE,
-                        swm = "rand")
+semnetmeas <- function (A, weighted = FALSE)
 {
-    if(missing(iter))
-    {iter<-100
-    }else{iter<-iter}
+    # Average shortest path length
+    aspl <- NetworkToolbox::pathlengths(A, weighted = weighted)$ASPL
+    # Clustering coefficient
+    cc <- NetworkToolbox::clustcoeff(A, weighted = weighted)$CC
+    # Modularity
+    ## Using igraph because it doesn't get stuck in while loop
+    q <- max(igraph::cluster_louvain(NetworkToolbox::convert2igraph(A))$modularity)
     
-    aspl<-NetworkToolbox::pathlengths(A, weighted = weighted)$ASPL
-    if(swm=="rand")
-    {cc<-NetworkToolbox::clustcoeff(A, weighted = weighted)$CC
-    }else if(swm=="HG")
-    {cc<-NetworkToolbox::transitivity(A)}
-    q<-NetworkToolbox::louvain(A)$Q
-    s<-NetworkToolbox::smallworldness(A,iter=iter,method=swm,progBar = FALSE)
-    swm<-s$swm
-    mns <- NetworkToolbox::conn(A)$mean
-    raspl<-s$rASPL
-    rCC<-s$lrCCt
+    # Vector of measures
+    sn.meas <- c(aspl,cc,q)
     
-    semnetmeas<-cbind(aspl,cc,q,swm,mns,raspl,rCC)
+    # Name measures
+    names(sn.meas)<-c("ASPL","CC","Q")
     
-    semnetmeas<-as.data.frame(semnetmeas)
-    
-    colnames(semnetmeas)<-c("ASPL","CC","Q","S","MNS","randASPL","randCC")
-    
-    semnetmeas<-as.matrix(semnetmeas)
-    
-    return(semnetmeas)
+    return(sn.meas)
 }
 #----

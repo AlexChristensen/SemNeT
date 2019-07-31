@@ -1,180 +1,285 @@
 #' Partial Bootstrapped Semantic Network Analysis
+#' 
 #' @description Bootstraps (without replacement) the nodes in the network and computes global network characteristics
-#' @param data Cleaned response matrix
-#' @param paired Should bootstrapped nodes be paired?
-#' Defaults to NULL.
-#' Input a matrix, data frame or list containing another sample
-#' @param weighted Should weighted ASPL and CC be used?
-#' Defaults to FALSE.
-#' Set to TRUE for weighted ASPL and CC
-#' @param n Number of nodes for bootstrap.
-#' Defaults to round(ncol(data)/2,0) (i.g., 50\% of nodes)
-#' @param iter Number of iterations in bootstrap.
-#' Defaults to 1000
-#' @param corr Association method to use.
-#' Defaults to "cosine"
-#' @param cores Number of computer processing cores to use for bootstrapping samples.
+#' 
+#' @param data Matrix or data frame.
+#' Cleaned response matrix
+#' 
+#' @param paired Matrix or data frame.
+#' Input for a second network to be paired with \code{data}.
+#' Defaults to \code{NULL}.
+#' Input a matrix or data frame containing another sample
+#' 
+#' @param percent Numeric.
+#' Percent of nodes to remain in the network.
+#' Defaults to \code{.50}
+#' 
+#' @param sim Character.
+#' Similarity measure to use.
+#' Defaults to \code{"cosine"}.
+#' See \code{\link[SemNeT]{similarity}} for other options
+#' 
+#' @param weighted Boolean.
+#' Should weighted ASPL and CC be used?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} for weighted ASPL and CC
+#' 
+#' @param iter Numeric.
+#' Number of iterations in bootstrap.
+#' Defaults to \code{1000}
+#' 
+#' @param cores Numeric.
+#' Number of computer processing cores to use for bootstrapping samples.
 #' Defaults to \emph{n} - 1 total number of cores.
 #' Set to any number between 1 and maxmimum amount of cores on your computer
-#' @param seeds Seeds used in previous run.
-#' Defaults to NULL.
-#' Input a vector from previous run to replicate analyses
-#' @return Returns a list that includes the original semantic network measures (origmeas; ASPL, CC, Q, S),
-#' the bootstrapped semantic network measures (bootmeas),
-#' and Seeds that can be used to replicate analysis
-#' @examples
-#' #finalize rmatA
-#' finalCmat <- finalize(convmat)
-#' #finalize rmatB
-#' finalRmat <- finalize(rmat)
-#'
-#' #equate rmatA and rmatB
-#' eq1 <- equate(finalCmat,finalRmat)
+#' (see \code{parellel::detectCores()})
 #' 
-#' #obtain respective equated response matrices
+#' @return Returns a list containing:
+#' 
+#' \item{dataMeas}{A matrix for the network input in the \code{data}
+#' arugment, where columns are the semantic network measures
+#' from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
+#' bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
+#' 
+#' \item{dataSumm}{Summary statistics across the bootrapped samples for the
+#' network input in the \code{data} argument}
+#' 
+#' \item{percent}{Outputs the percent used from the \code{percent} argument}
+#' 
+#' \item{iter}{Outputs the number of bootstrapped samples
+#' used from the \code{iter} argument}
+#' 
+#' If a \code{paired} network is input, then also returns:
+#' 
+#' \item{pairedMeas}{A matrix for the network input in the \code{paired}
+#' arugment, where columns are the semantic network measures
+#' from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
+#' bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
+#' 
+#' \item{pairedSumm}{Summary statistics across the bootrapped samples for the
+#' network input in the \code{paired} argument}
+#' 
+#' @examples
+#' # Finalize rmatA
+#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+#' # Finalize rmatB
+#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
+#'
+#' # Equate rmatA and rmatB
+#' eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
+#' 
+#' # Obtain respective equated response matrices
 #' eqCmat <- eq1$rmatA
 #' eqRmat <- eq1$rmatB
 #' 
-#' \donttest{
-#' results <- partboot(eqCmat, eqRmat, iter = 10, corr = "cosine", cores = 4)
+#' \dontrun{
+#' 
+#' # Run partial bootstrap networks
+#' results <- partboot(data = eqCmat, paired = eqRmat,
+#' percent = .5, iter = 10, sim = "cosine", cores = 4)
+#' 
 #' }
+#' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
-#' @importFrom stats cor runif
-#' @importFrom utils setTxtProgressBar txtProgressBar
-#' @importFrom foreach %dopar%
+#' 
+#' @importFrom stats sd cor dist pnorm runif
+#' 
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-partboot <- function (data, paired = NULL, n, weighted = FALSE,
-                      iter = 1000, corr = c("cor","cosine"),
-                      cores, seeds = NULL)
+partboot <- function (data, paired = NULL, percent, sim, weighted = FALSE,
+                      iter = 1000, cores)
 {
-    if(missing(n))
-    {n <- round((ncol(data)/2),0)
-    }else{n <- round(n,0)}
-    
+    ####Missing arguments####
     if(missing(paired))
     {paired <- NULL}
     
-    if(missing(corr))
-    {corr <- "cosine"
-    }else{corr <- match.arg(corr)}
+    if(missing(sim))
+    {sim <- "cosine"
+    }else{sim <- sim}
     
-    if(corr=="cor")
-    {
-        cormat <- cor(data)
-        if(!is.null(paired))
-        {cormatP <- cor(paired)}
-    }else{
-        cormat <- cosine(as.matrix(data))
-        if(!is.null(paired))
-        {cormatP <- cosine(as.matrix(paired))}
-    }
+    cormat <- similarity(data, method = sim)
     
-    if(is.null(seeds))
-    {Seeds <- vector(mode="numeric",length=iter)
-    }else{
-        seeds<-as.vector(seeds)
-        Seeds <- seeds
-        iter <- length(seeds)
-    }
+    if(!is.null(paired))
+    {cormatP <- similarity(paired, method = sim)}
     
+    if(missing(cores))
+    {cores <- parallel::detectCores() - 1
+    }else{cores <- cores}
+    ####Missing arguments####
+    
+    #Number of nodes in full data
     full <- ncol(data)
     
-    sampslist<-list() #initialize sample list
+    #Initialize count
+    count <- 0
+    
+    #Initialize data list(s)
+    datalist <- list()
+    
+    if(!is.null(paired))
+    {datalist.p <- list()}
+    
+    #######################
+    #### GENERATE DATA ####
+    #######################
+    
+    repeat{
+        
+        #Increase count
+        count <- count + 1
+        
+        #Randomly sample nodes
+        rand <- sample(full, (full*percent), replace=FALSE)
+        
+        #Input into data list
+        datalist[[count]] <- data[,rand]
+        
+        #Input into paired list
+        if(!is.null(paired))
+        {datalist.p[[count]] <- paired[,rand]}
+        
+        if(count == iter)
+        {break}
+    }
+
+    ############################
+    #### COMPUTE SIMILARITY ####
+    ############################
+    
+    #Let user know simliairity is being computed
+    message("Computing similarity measures...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
-    doParallel::registerDoParallel(cl)
-    
-    sampslist<-foreach::foreach(i=1:iter,
-                                .packages = c("NetworkToolbox","SemNeT")
-    )%dopar%
-    {
-        samps <- list()
         
-        f<-round(runif(i,min=1,max=1000000),0)
-        if(is.null(seeds))
-        {
-            Seed <- sample(f,1)
-            set.seed(Seed)
-        }else{Seed <- seeds[i]
-        set.seed(seeds[i])
-        }
+    #Export datalist
+    parallel::clusterExport(cl = cl, varlist = c("datalist"), envir = environment())
         
-        rand <- sample(1:full,n,replace=FALSE)
-        
-        mat <- data[,rand]
-        
-        if(corr=="cor")
-        {cmat <- cor(mat)
-        }else{cmat <- cosine(mat,.01)}
-        
-        net <- NetworkToolbox::TMFG(cmat)$A
-        
-        if(!is.null(paired))
-        {
-            matP <- paired[,rand]
-            
-            if(corr=="cor")
-            {cmatP <- cor(matP)
-            }else{cmatP <- cosine(matP,.01)}
-            
-            netP <- NetworkToolbox::TMFG(cmatP)$A
-        }
-        
-        samps$data<-c(suppressWarnings(semnetmeas(net,iter=10,weighted=weighted)),Seed,rand)
-        if(!is.null(paired))
-        {samps$paired<-c(suppressWarnings(semnetmeas(netP,iter=10,weighted=weighted)),Seed,rand)}
-        
-        return(samps)
-    }
+    #Compute similarity
+    dataSim <- pbapply::pblapply(X = datalist,
+                                      cl = cl,
+                                      FUN = similarity,
+                                      method = sim)
+    #Stop Cluster
     parallel::stopCluster(cl)
     
-    tru<-suppressWarnings(semnetmeas(NetworkToolbox::TMFG(cormat)$A,weighted=weighted))
-    
     if(!is.null(paired))
-    {truP<-suppressWarnings(semnetmeas(NetworkToolbox::TMFG(cormatP)$A,weighted=weighted))}
-    
-    metrics <- matrix(0,nrow=iter,ncol=7)
-    if(!is.null(paired))
-    {metricsP <- matrix(0,nrow=iter,ncol=7)}
-    
-    Seeds <- vector(mode="numeric",length=iter)
-    removed <- list()
-    
-    for(i in 1:length(sampslist))
     {
-        metrics[i,] <- sampslist[[i]]$data[1:7]
+        #Parallel processing
+        cl <- parallel::makeCluster(cores)
         
-        if(!is.null(paired))
+        #Export datalist
+        parallel::clusterExport(cl = cl, varlist = c("datalist.p"), envir = environment())
+        
+        pairedSim <- pbapply::pblapply(X = datalist.p,
+                                        cl = cl,
+                                        FUN = similarity,
+                                        method = sim)
+        #Stop Cluster
+        parallel::stopCluster(cl)
+    }
+    
+    ############################
+    #### CONSTRUCT NETWORKS ####
+    ############################
+    
+    #Let user know networks are being computed
+    message("Constructing networks...\n", appendLF = FALSE)
+    
+    #Parallel processing
+    cl <- parallel::makeCluster(cores)
+    
+    #Export datalist
+    parallel::clusterExport(cl = cl, varlist = c("dataSim"), envir = environment())
+    
+    #Compute similarity
+    dataNet <- pbapply::pblapply(X = dataSim,
+                                  cl = cl,
+                                  FUN = NetworkToolbox::TMFG)
+    #Stop Cluster
+    parallel::stopCluster(cl)
+    
+    if(!is.null(paired))
+    {
+        #Parallel processing
+        cl <- parallel::makeCluster(cores)
+        
+        #Export datalist
+        parallel::clusterExport(cl = cl, varlist = c("pairedSim"), envir = environment())
+        
+        #Compute similarity
+        pairedNet <- pbapply::pblapply(X = pairedSim,
+                                     cl = cl,
+                                     FUN = NetworkToolbox::TMFG)
+        #Stop Cluster
+        parallel::stopCluster(cl)
+    }
+    
+    #Grab networks
+    if(is.null(paired))
+    {
+        #Initialize semantic network list
+        dataSemnet <- list()
+        
+        #Grab network only
+        for(i in 1:iter)
+        {dataSemnet[[i]] <- dataNet[[i]]$A}
+    }else{
+        
+        #Initialize semantic network list
+        dataSemnet <- list()
+        pairedSemnet <- list()
+        
+        #Grab network only
+        for(i in 1:iter)
         {
-            metrics[i,] <- sampslist[[i]]$data[1:7]
-            metricsP[i,] <- sampslist[[i]]$paired[1:7]
+            dataSemnet[[i]] <- dataNet[[i]]$A
+            pairedSemnet[[i]] <- pairedNet[[i]]$A
         }
-        
-        Seeds[i] <- sampslist[[i]]$data[8]
-        removed$nodes[[i]] <- sampslist[[i]]$data[9:(n+8)]
     }
     
-    metrics<-as.data.frame(metrics)
-    colnames(metrics)<-c("ASPL","CC","Q","S","randASPL","randCC","MNS")
+    ##############################
+    #### COMPUTING STATISTICS ####
+    ##############################
+    
+    #Let user know networks are being computed
+    message("Computing statistics...\n", appendLF = FALSE)
+    
+    #Parallel processing
+    cl <- parallel::makeCluster(cores)
+    
+    #Export datalist
+    parallel::clusterExport(cl = cl, varlist = c("dataSemnet"), envir = environment())
+    
+    #Compute similarity
+    dataMeas <- pbapply::pbsapply(X = dataSemnet,
+                                 cl = cl,
+                                 FUN = semnetmeas)
+    #Stop Cluster
+    parallel::stopCluster(cl)
     
     if(!is.null(paired))
     {
-        metricsP<-as.data.frame(metricsP)
-        colnames(metricsP)<-c("ASPL","CC","Q","S","randASPL","randCC","MNS")
+        #Parallel processing
+        cl <- parallel::makeCluster(cores)
+        
+        #Export datalist
+        parallel::clusterExport(cl = cl, varlist = c("pairedSemnet"), envir = environment())
+        
+        #Compute similarity
+        pairedMeas <- pbapply::pbsapply(X = pairedSemnet,
+                                       cl = cl,
+                                       FUN = semnetmeas)
+        #Stop Cluster
+        parallel::stopCluster(cl)
     }
     
-    stat.table <- data.frame(0, nrow = 5, ncol = 5)
-    
-    if(!is.null(paired))
-    {stat.tableP <- data.frame(0, nrow = 5, ncol = 5)}
-    
-    stattable <- function (data, n)
+    #Compute summary statistics
+    summ.table <- function (data, n)
     {
         stats <- list()
-        stats$mean <- mean(data)
-        stats$stdev <- sd(data)
+        stats$mean <- rowMeans(data)
+        stats$stdev <- apply(data,1,sd)
         stats$se <- stats$stdev/sqrt(n)
         stats$lower <- stats$mean - (1.96 * stats$se)
         stats$upper <- stats$mean + (1.96 * stats$se)
@@ -182,58 +287,20 @@ partboot <- function (data, paired = NULL, n, weighted = FALSE,
         return(stats)
     }
     
-    for(i in 1:5)
-    {
-        stat <- stattable(metrics[,i], iter)
-        
-        stat.table[i,1] <- stat$mean
-        stat.table[i,2] <- stat$stdev
-        stat.table[i,3] <- stat$se
-        stat.table[i,4] <- stat$lower
-        stat.table[i,5] <- stat$upper
-        
-        if(!is.null(paired))
-        {
-            stat <- stattable(metricsP[,i], iter)
-            
-            stat.tableP[i,1] <- stat$mean
-            stat.tableP[i,2] <- stat$stdev
-            stat.tableP[i,3] <- stat$se
-            stat.tableP[i,4] <- stat$lower
-            stat.tableP[i,5] <- stat$upper
-        }
-    }
-    
-    colnames(stat.table) <- c("mean","sd","se","lower","upper")
-    row.names(stat.table) <- c("ASPL","CC","Q","S","MNS")
-    if(!is.null(paired))
-    {
-        colnames(stat.tableP) <- c("mean","sd","se","lower","upper")
-        row.names(stat.tableP) <- c("ASPL","CC","Q","S","MNS")
-    }
-    
+    #Return results
     bootlist <- list()
     
-    if(is.null(paired))
+    bootlist$dataMeas <- dataMeas
+    bootlist$dataSumm <- summ.table(dataMeas, iter)
+    
+    if(!is.null(paired))
     {
-        bootlist$origmeas <- tru
-        bootlist$bootmeas <- metrics
-        bootlist$statData <- stat.table
-        bootlist$nodesRemoved <- removed
-        bootlist$Seeds <- Seeds
-        
-    }else if(!is.null(paired))
-    {
-        bootlist$origDataMeas <- tru
-        bootlist$bootDataMeas <- metrics
-        bootlist$statData <- stat.table
-        bootlist$nodesRemoved <- removed
-        bootlist$origPairedMeas <- truP
-        bootlist$bootPairedMeas <- metricsP
-        bootlist$statPaired <- stat.tableP
-        bootlist$nodesRemoved <- removed$nodes
-        bootlist$Seeds <- Seeds
+        bootlist$pairedMeas <- pairedMeas
+        bootlist$pairedSumm <- summ.table(pairedMeas, iter)
     }
+    
+    bootlist$percent <- percent
+    bootlist$iter <- iter
     
     class(bootlist) <- "partboot"
     

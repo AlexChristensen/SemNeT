@@ -1,93 +1,97 @@
 #' Organization function for partboot.plot
+#' 
 #' @description A wrapper function used in \link[SemNeT]{partboot}. Not to be used individually
-#' @param bootData bootData from \link[SemNeT]{partboot}
-#' @param bootPaired bootPaired from \link[SemNeT]{partboot}
-#' @param sampsData sampsData from \link[SemNeT]{partboot}
-#' @param sampsPaired sampsPaired from \link[SemNeT]{partboot}
-#' @param len Number of samples in data list
-#' @param measname Full network measure name
-#' @param netmeas Abbreviated network measure name
-#' @param pall Color palette to be used from \code{\link{RColorBrewer}}
-#' @param paired Is samples paired?
-#' @param CI Confidence interval to be used
-#' @param labels Labels to be used in plot.
+#' 
+#' @param input List.
+#' Input data from \link[SemNeT]{partboot}
+#' 
+#' @param paired Numeric.
+#' \code{1} equals single sample.
+#' \code{2} equals paired samples
+#' 
+#' @param len Numeric.
+#' Number of bootstrapped samples (percentages)
+#' 
+#' @param measures Character.
+#' Network measures to be entered
+#' 
+#' @param groups Character.
+#' Names for the group(s)
+#' 
+#' @param netmeas Character.
+#' Abbreviated network measure name that should be plotted
+#' 
 #' @return Returns plots for the specified measures
+#' 
 #' @examples
-#' ###NOT FOR INDIVIDUAL USE###
+#' #### NOT INTENDED FOR INDIVIDUAL USE ####
+#' #### WRAPPER FUNCTION ####
+#' 
+#' # Finalize rmatA
+#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+#' # Finalize rmatB
+#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
+#'
+#' # Equate rmatA and rmatB
+#' eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
+#' 
+#' # Obtain respective equated response matrices
+#' eqCmat <- eq1$rmatA
+#' eqRmat <- eq1$rmatB
+#' 
+#' \dontrun{
+#' 
+#' # Run partial bootstrap networks
+#' results <- partboot(data = eqCmat, paired = eqRmat,
+#' percent = .50, iter = 1000, sim = "cosine", cores = 4)
+#' 
+#' # Plot
+#' plot(results, groups = c("eqCmat","eqRmat"))
+#' 
+#' }
+#' 
+#' @references
+#' Allen, M., Poggiali, D., Whitaker, K., Marshall, T. R., Kievit, R. (2018).
+#' Raincloud plots: A multi-platform tool for robust data visualization.
+#' \emph{PeerJ Preprints}, \emph{6}, e27137v1.
+#' \href{https://doi.org/10.7287/peerj.preprints.27137v1}{10.7287/peerj.preprints.27137v1}
+#' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
 #' @import dplyr
 #' @import ggplot2
 #' @importFrom magrittr %>%
 #' @importFrom stats qnorm
+#' 
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-
-org.plot <- function (bootData, bootPaired,
-                      sampsData, sampsPaired, len,
-                      measname, netmeas, pall,
-                      paired, CI, labels)
-
+org.plot <- function (input, paired, len, measures, groups, netmeas)
 {
-    #set variables for binding check
-    #FIGURE OUT HOW TO PASS THESE THROUGH CHECK
-    V1 <- NULL
-    V2 <- NULL
-    V4 <- NULL
-    group <- NULL
-    y <- NULL
-    x <- NULL
-    width <- NULL
-    violinwidth <- NULL
-    xmax <- NULL
-    xmaxv <- NULL
-    xminv <- NULL
+    #CRAN CHECKS
+    group <- NULL; y <- NULL; x <- NULL; width <- NULL
+    violinwidth <- NULL; xmax <- NULL; xminv <- NULL
+    xmaxv <- NULL; percent <- NULL
     
+    #Missing arguments
+    if(missing(measures))
+    {measures <- c("ASPL","CC","Q")
+    }else{measures <- match.arg(measures,several.ok=TRUE)}
     
-    if(missing(bootPaired))
-    {bootPaired <- NULL}
+    ###########################
+    #### FLAT VIOLIN PLOTS ####
+    ###########################
     
-    if(missing(sampsPaired))
-    {sampsPaired <- NULL}
-    
-    if(missing(labels))
-    {labels <- NULL}
-    
-    ###Raindrop plot functions
-    ###Huge thank you to Hadley Wickham and Micah Allen
-    ###Code taken from: 
-    ###https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R
-    
-    raincloud_theme = ggplot2::theme(
-        text = ggplot2::element_text(size = 10),
-        axis.title.x = ggplot2::element_text(size = 16),
-        axis.title.y = ggplot2::element_text(size = 16),
-        axis.text = ggplot2::element_text(size = 14),
-        axis.text.x = ggplot2::element_text(angle = 45, vjust = 0.5),
-        legend.title=ggplot2::element_text(size=16),
-        legend.text=ggplot2::element_text(size=16),
-        legend.position = "right",
-        plot.title = ggplot2::element_text(lineheight=.8, face="bold", size = 16),
-        panel.border = ggplot2::element_blank(),
-        panel.grid.minor = ggplot2::element_blank(),
-        panel.grid.major = ggplot2::element_blank(),
-        axis.line.x = ggplot2::element_line(colour = 'black', size=0.5, linetype='solid'),
-        axis.line.y = ggplot2::element_line(colour = 'black', size=0.5, linetype='solid')
-    )
+    #SEE: https://pdfs.semanticscholar.org/a38b/df3803b1cd00d57f69516be1d60a3c8688c9.pdf
+    #AND: https://github.com/RainCloudPlots/RainCloudPlots
     
     "%||%" <- function(a, b) {
         if (!is.null(a)) a else b
     }
     
-    ##from ggplot2
-    ggname <- function (prefix, grob) {
-        grob$name <- grid::grobName(grob, prefix)
-        grob
-    }
-    
     geom_flat_violin <- function(mapping = NULL, data = NULL, stat = "ydensity",
                                  position = "dodge", trim = TRUE, scale = "area",
                                  show.legend = NA, inherit.aes = TRUE, ...) {
-        ggplot2::layer(
+        layer(
             data = data,
             mapping = mapping,
             stat = stat,
@@ -104,246 +108,152 @@ org.plot <- function (bootData, bootPaired,
     }
     
     GeomFlatViolin <-
-        ggplot2::ggproto("GeomFlatViolin", ggplot2::Geom,
+        ggproto("GeomFlatViolin", Geom,
                 setup_data = function(data, params) {
                     data$width <- data$width %||%
-                        params$width %||% (ggplot2::resolution(data$x, FALSE) * 0.9)
+                        params$width %||% (resolution(data$x, FALSE) * 0.9)
                     
                     # ymin, ymax, xmin, and xmax define the bounding rectangle for each group
                     data %>%
                         group_by(group) %>%
-                        dplyr::mutate(ymin = min(y),
-                               ymax = max(y),
-                               xmin = x,
-                               xmax = x + width / 2)
-                    
+                        mutate(
+                            ymin = min(y),
+                            ymax = max(y),
+                            xmin = x,
+                            xmax = x + width / 2
+                        )
                 },
                 
                 draw_group = function(data, panel_scales, coord) {
                     # Find the points for the line to go all the way around
-                    data <- transform(data, xminv = x,
-                                      xmaxv = x + violinwidth * (xmax - x))
+                    data <- transform(data,
+                                      xminv = x,
+                                      xmaxv = x + violinwidth * (xmax - x)
+                    )
                     
                     # Make sure it's sorted properly to draw the outline
-                    newdata <- rbind(plyr::arrange(transform(data, x = xminv), y),
-                                     plyr::arrange(transform(data, x = xmaxv), -y))
+                    newdata <- rbind(
+                        plyr::arrange(transform(data, x = xminv), y),
+                        plyr::arrange(transform(data, x = xmaxv), -y)
+                    )
                     
                     # Close the polygon: set first and last point the same
                     # Needed for coord_polar and such
-                    newdata <- rbind(newdata, newdata[1,])
+                    newdata <- rbind(newdata, newdata[1, ])
                     
-                    ggname("geom_flat_violin", ggplot2::GeomPolygon$draw_panel(newdata, panel_scales, coord))
+                    #ggname("geom_flat_violin", ggplot2::GeomPolygon$draw_panel(newdata, panel_scales, coord))
+                    ggplot2::GeomPolygon$draw_panel(newdata, panel_scales, coord)
                 },
                 
-                draw_key = ggplot2::draw_key_polygon,
+                draw_key = draw_key_polygon,
                 
-                default_aes = ggplot2::aes(weight = 1, colour = "grey20", fill = "white", size = 0.5,
-                                  alpha = NA, linetype = "solid"),
+                default_aes = aes(
+                    weight = 1, colour = "grey20", fill = "white", size = 0.5,
+                    alpha = NA, linetype = "solid"
+                ),
                 
                 required_aes = c("x", "y")
         )
     
+    ###############################
+    #### SET UP DATA FOR PLOTS ####
+    ###############################
     
-    #Sample sort
-    totalData <- sum(sampsData)
-    if(paired)
+    # Initialize Percent and Iterations
+    perc <- vector("numeric", length = len)
+    it <- perc
+    iter <- input[[1]]$iter
+    
+    for(i in 1:len)
     {
-        totalPaired <- sum(sampsPaired)
-        cases <- totalData + totalPaired
-        n <- (cases/len)/2
-        meas <- as.data.frame(matrix(0, nrow = cases, ncol = 2))
-        meas2 <- as.data.frame(matrix(0, nrow = cases/2, ncol = 4))
-    }else{
-        cases <- totalData
-        n <- cases/len
-        meas <- as.data.frame(matrix(0, nrow = cases, ncol = 2))
-        meas2 <- as.data.frame(matrix(0, nrow = cases, ncol = 2))
+        perc[i] <- input[[i]]$percent
+        it[i] <- input[[i]]$iter
     }
-
-        if(!paired)
-        {
-            ends <- cumsum(sampsData)
-            starts <- ends - (sampsData) + 1
+    
+    plot.mat <- matrix(NA, nrow = sum(it)*paired, ncol = 2 + length(measures))
+    colnames(plot.mat) <- c("group","percent",measures)
+    
+    #Grab measures
+    meas <- matrix(NA, nrow = 1, ncol = length(measures))
+    
+    for(i in 1:len)
+    {meas <- rbind(meas,t(input[[i]]$dataMeas))}
+    
+    meas <- meas[-1,]
+    
+    if(paired == 2)
+    {
+        for(i in 1:len)
+        {meas <- rbind(meas,t(input[[i]]$pairedMeas))}
+    }
+    
+    plot.mat[,"group"] <- rep(1:paired, each = len * iter)
+    
+    plot.mat[,"percent"] <- rep(rep(perc, each = iter),paired)
+    plot.mat[,3:(2+length(measures))] <- meas
+    
+    #Convert to data frame
+    plot.mat <- as.data.frame(plot.mat, stringsAsFactors = TRUE)
+    
+    #Select network measure of interest
+    plot.mat.select <- plot.mat[,c("group","percent",netmeas)]
+    colnames(plot.mat.select)[3] <- "netmeas"
+    plot.mat.select$group <- as.factor(as.character(plot.mat.select$group))
+    plot.mat.select$percent <- as.factor(as.character(plot.mat.select$percent))
+    
+    
+    ##############
+    #### PLOT ####
+    ##############
+    
+    # Label Setups
+    ## Measures
+    if(netmeas=="ASPL")
+    {full.meas <- "Average Shortest Path Length"
+    }else if(netmeas=="CC")
+    {full.meas <- "Clustering Coefficient"
+    }else if(netmeas=="Q")
+    {full.meas <- "Modularity"}
+    
+    ##Groups
+    if(is.null(groups))
+    {
+        groups <- "Data"
         
-            for(i in 1:length(sampsData))
-            {
-                meas[starts[i]:ends[i],2] <- bootData[[i]][netmeas]
-            
-                meas2 <- meas
-            }
+        if(paired == 2)
+        {groups <- c(groups,"Paired")}
+    }
+    
+    # Rainclouds for repeated measures, continued
+    pl <- ggplot(plot.mat.select, aes(x = percent, y = netmeas, fill = group)) +
         
-            for(i in 1:length(sampsData))
-            {
-                meas[starts[i]:ends[i],1] <- as.numeric(rep(i, sampsData[i]))
-                meas2[starts[i]:ends[i],1] <- as.numeric(rep(i, sampsData[i]))
-            }
-            
-            meas<-meas[order(meas[,1],decreasing=TRUE),]
-            meas2<-meas[order(meas2[,1],decreasing=TRUE),]
-            
-            meas[,1] <- as.factor(meas[,1])
-            meas2[,1] <- as.factor(meas2[,1])
-            
-            summ <- plyr::ddply(meas2, "V1", plyr::summarise,
-                                mean = mean(V2),
-                                sd = sd(V2),
-                                se = sd(V2)/sqrt(n))
-            
-            lower <- vector(mode="numeric",length=len)
-            upper <- vector(mode="numeric",length=len)
-            
-            for(i in 1:len)
-            {
-                subbs <- subset(meas2,meas2$V1==i)
-                lower[i] <- mean(subbs$V2) - (qnorm(CI)*sd(subbs$V2)/sqrt(nrow(subbs)))
-                upper[i] <- mean(subbs$V2) + (qnorm(CI)*sd(subbs$V2)/sqrt(nrow(subbs)))
-            }
-            
-            summ <- as.data.frame(cbind(summ,lower,upper))
-            
-        }else{
-            sampsComb <- c(sampsData,sampsPaired)
+        geom_flat_violin(aes(fill = group),position = position_nudge(x = 0.05, y = 0),
+                        adjust = 1.5, trim = FALSE, alpha = .5, colour = NA) +
         
-            ends <- cumsum(sampsComb)
+        geom_point(aes(x = as.numeric(percent)-.125, y = netmeas, colour = group),
+                   position = position_jitter(width = .05), alpha = .7, size = 1, shape = 20) +
         
-            starts <- ends - (sampsComb) + 1
+        geom_boxplot(aes(x = percent, y = netmeas, fill = group),outlier.shape = NA,
+                     alpha = .5, width = .1, colour = "black") +
         
-            endsData <- cumsum(sampsData)
-            startsData <- endsData - (sampsData) + 1
+        scale_colour_brewer(name = "Groups", labels = groups, palette = "Dark2") +
         
-            endsPaired <- cumsum(sampsPaired)
-            startsPaired <- endsPaired - (sampsPaired) + 1
+        scale_fill_brewer(name = "Groups", labels = groups, palette = "Dark2") +
         
-            is.even <- function(x) x %% 2 == 0
+        labs(title = paste("Bootstrapped Node-drop Results:",netmeas,sep=" "),
+             subtitle = paste(iter,"Samples",sep = " "),
+             x = "Percent of Nodes Remaining (%)",
+             y = paste(full.meas," (",netmeas,")",sep="")) +
         
-            for(i in 1:length(sampsComb))
-            {
-                if(!is.even(i))
-                {
-                    meas[starts[i]:ends[i],2] <- bootData[[ceiling(i/2)]][netmeas]
-                    meas2[startsData[ceiling(i/2)]:endsData[ceiling(i/2)],2] <- bootData[[ceiling(i/2)]][netmeas]
-                }else{
-                    meas[starts[i]:ends[i],2] <- bootPaired[[i/2]][netmeas]
-                    meas2[startsPaired[i/2]:endsPaired[i/2],4] <- bootPaired[[ceiling(i/2)]][netmeas]
-                }
-            }
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"),
+              plot.title = element_text(face = "bold"),
+              axis.title.x = element_text(face = "bold"),
+              axis.title.y = element_text(face = "bold"),
+              legend.title = element_text(face = "bold")) +
         
-            tot <- sampsData + sampsPaired
-            totEN <- cumsum(tot)
-            totST <- totEN - (tot) + 1
-        
-            for(i in 1:length(tot))
-            {
-                meas[totST[i]:totEN[i],1] <- c(rep(as.numeric(paste(i,1,sep=".")), tot[i]/2),rep(as.numeric(paste(i,2,sep=".")), tot[i]/2))
-                
-                meas2[startsData[i]:endsData[i],1] <- rep(as.numeric(paste(i,1,sep=".")), sampsData[i])
-                meas2[startsData[i]:endsData[i],3] <- rep(as.numeric(paste(i,2,sep=".")), sampsData[i])
-            }
-            
-            meas[,1] <- as.factor(meas[,1])
-            meas2[,1] <- as.factor(meas2[,1])
-
-            sum1 <- plyr::ddply(meas2, "V1", plyr::summarise,
-                            mean = mean(V2),
-                            sd = sd(V2),
-                            se = sd(V2)/sqrt(n))
-        
-            sum2 <- plyr::ddply(meas2, "V3", plyr::summarise,
-                            mean = mean(V4),
-                            sd = sd(V4),
-                            se = sd(V4)/sqrt(n))
-                            
-            lower.1 <- vector(mode="numeric",length=len)
-            upper.1 <- vector(mode="numeric",length=len)
-            lower.2 <- vector(mode="numeric",length=len)
-            upper.2 <- vector(mode="numeric",length=len)
-            
-            for(i in 1:len)
-            {
-                subbs <- subset(meas2,meas2$V1==as.numeric(paste(i,1,sep=".")))
-                lower.1[i] <- mean(subbs$V2) - (qnorm(CI)*sd(subbs$V2)/sqrt(nrow(subbs)))
-                upper.1[i] <- mean(subbs$V2) + (qnorm(CI)*sd(subbs$V2)/sqrt(nrow(subbs)))
-                lower.2[i] <- mean(subbs$V4) - (qnorm(CI)*sd(subbs$V4)/sqrt(nrow(subbs)))
-                upper.2[i] <- mean(subbs$V4) + (qnorm(CI)*sd(subbs$V4)/sqrt(nrow(subbs)))
-            }
-            
-            
-            colnames(sum2)[1] <- colnames(sum1)[1]
-        
-            sum1[,1] <- as.numeric(sum1[,1])
-            if(all(sum1[,1]%%1==0))
-            {
-                for(i in 1:(nrow(sum1)))
-                {sum1[i,1] <- rep(as.numeric(paste(i,1,sep="."),nrow(sum1)))}
-            }
-            sum2[,1] <- as.numeric(sum2[,1])
-        
-            sum1 <- as.data.frame(cbind(sum1,lower.1,upper.1))
-            
-            sum2 <- as.data.frame(cbind(sum2,lower.2,upper.2))
-            
-            colnames(sum1)[5:6] <- c("lower","upper")
-            colnames(sum2)[5:6] <- c("lower","upper")
-            
-            summ <- rbind(sum1,sum2)
-        
-            summ[,1] <- as.factor(summ[,1])
-        }
-        
-        g <- ggplot2::ggplot(data = meas, ggplot2::aes(y = V2, x = V1, fill = V1)) +
-            geom_flat_violin(position = ggplot2::position_nudge(x = .2, y = 0), alpha = 1) +
-            ggplot2::geom_point(ggplot2::aes(y = V2, color = V1), position = ggplot2::position_jitter(width = .15), size = .5, alpha = 1) +
-            ggplot2::geom_errorbar(data = summ, ggplot2::aes(ymin = lower, ymax = upper, y = mean), position = ggplot2::position_nudge(x = 0.3), width = .2) +
-            ggplot2::geom_point(data = summ, ggplot2::aes(x = V1, y = mean), position = ggplot2::position_nudge(x = 0.3), size = 2.5) +
-            ggplot2::expand_limits(x = 5.25) +
-            ggplot2::guides(fill = FALSE) +
-            ggplot2::guides(color = FALSE) +
-            ggplot2::scale_color_brewer(palette = pall) +
-            ggplot2::scale_fill_brewer(palette = pall) +
-            ggplot2::coord_flip() +
-            ggplot2::theme_bw() +
-            raincloud_theme
-        
-        if(is.null(labels))
-        {
-            g <- g + ggplot2::labs(x = "Percent of Nodes Remaining",
-                 y = paste(measname," (",netmeas,")",sep=""),
-                 title = paste("Boostrapped Node-drop Results: ",netmeas,sep=""),
-                 subtitle = paste(n, "Samples"))
-            print(g)
-        }else{
-            g <- g + ggplot2::labs(x = "Percent of Nodes Remaining",
-                          y = paste(measname," (",netmeas,")",sep=""),
-                          title = paste("Boostrapped Node-drop Results: ",netmeas,sep=""),
-                          subtitle = paste(n, "Samples")) +
-                ggplot2::scale_x_discrete(labels=labels)
-        }
-        
-        #labels function
-            if(is.null(labels))
-            {
-                ans <- menu(c("Yes","No"),title="Define y-axis labels?")
-                {
-                    if(ans==1)
-                    {
-                        labels <- paste(summ[,1])
-                        
-                        labels <- labels[order(labels)]
-                        
-                        num <- length(labels)
-                        
-                        resp <- vector(length=num)
-                        
-                        for(i in 1:length(labels))
-                        {resp[i] <- readline(paste("New label for ",labels[i],":"))}
-                        
-                        labels <- resp
-                        
-                        g <- g + ggplot2::scale_x_discrete(labels=labels)
-                    }
-                }
-            }
-            
-            return(list(plot = g, labels = labels))
+        coord_flip()
+    
+    return(pl)
 }
 #----
