@@ -4,31 +4,27 @@
 \alias{org.plot}
 \title{Organization function for partboot.plot}
 \usage{
-org.plot(bootData, bootPaired, sampsData, sampsPaired, len, measname,
-  netmeas, pall, paired, CI, labels)
+org.plot(input, paired, len, measures, groups, netmeas)
 }
 \arguments{
-\item{bootData}{bootData from \link[SemNeT]{partboot}}
+\item{input}{List.
+Input data from \link[SemNeT]{partboot}}
 
-\item{bootPaired}{bootPaired from \link[SemNeT]{partboot}}
+\item{paired}{Numeric.
+\code{1} equals single sample.
+\code{2} equals paired samples}
 
-\item{sampsData}{sampsData from \link[SemNeT]{partboot}}
+\item{len}{Numeric.
+Number of bootstrapped samples (percentages)}
 
-\item{sampsPaired}{sampsPaired from \link[SemNeT]{partboot}}
+\item{measures}{Character.
+Network measures to be entered}
 
-\item{len}{Number of samples in data list}
+\item{groups}{Character.
+Names for the group(s)}
 
-\item{measname}{Full network measure name}
-
-\item{netmeas}{Abbreviated network measure name}
-
-\item{pall}{Color palette to be used from \code{\link{RColorBrewer}}}
-
-\item{paired}{Is samples paired?}
-
-\item{CI}{Confidence interval to be used}
-
-\item{labels}{Labels to be used in plot.}
+\item{netmeas}{Character.
+Abbreviated network measure name that should be plotted}
 }
 \value{
 Returns plots for the specified measures
@@ -37,7 +33,38 @@ Returns plots for the specified measures
 A wrapper function used in \link[SemNeT]{partboot}. Not to be used individually
 }
 \examples{
-###NOT FOR INDIVIDUAL USE###
+#### NOT INTENDED FOR INDIVIDUAL USE ####
+#### WRAPPER FUNCTION ####
+
+# Finalize rmatA
+finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+# Finalize rmatB
+finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
+
+# Equate rmatA and rmatB
+eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
+
+# Obtain respective equated response matrices
+eqCmat <- eq1$rmatA
+eqRmat <- eq1$rmatB
+
+\dontrun{
+
+# Run partial bootstrap networks
+results <- partboot(data = eqCmat, paired = eqRmat,
+percent = .50, iter = 1000, sim = "cosine", cores = 4)
+
+# Plot
+plot(results, groups = c("eqCmat","eqRmat"))
+
+}
+
+}
+\references{
+Allen, M., Poggiali, D., Whitaker, K., Marshall, T. R., Kievit, R. (2018).
+Raincloud plots: A multi-platform tool for robust data visualization.
+\emph{PeerJ Preprints}, \emph{6}, e27137v1.
+\href{https://doi.org/10.7287/peerj.preprints.27137v1}{10.7287/peerj.preprints.27137v1}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

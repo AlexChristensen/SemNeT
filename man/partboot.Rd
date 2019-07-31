@@ -4,61 +4,92 @@
 \alias{partboot}
 \title{Partial Bootstrapped Semantic Network Analysis}
 \usage{
-partboot(data, paired = NULL, n, weighted = FALSE, iter = 1000,
-  corr = c("cor", "cosine"), cores, seeds = NULL)
+partboot(data, paired = NULL, percent, sim, weighted = FALSE,
+  iter = 1000, cores)
 }
 \arguments{
-\item{data}{Cleaned response matrix}
+\item{data}{Matrix or data frame.
+Cleaned response matrix}
 
-\item{paired}{Should bootstrapped nodes be paired?
-Defaults to NULL.
-Input a matrix, data frame or list containing another sample}
+\item{paired}{Matrix or data frame.
+Input for a second network to be paired with \code{data}.
+Defaults to \code{NULL}.
+Input a matrix or data frame containing another sample}
 
-\item{n}{Number of nodes for bootstrap.
-Defaults to round(ncol(data)/2,0) (i.g., 50\% of nodes)}
+\item{percent}{Numeric.
+Percent of nodes to remain in the network.
+Defaults to \code{.50}}
 
-\item{weighted}{Should weighted ASPL and CC be used?
-Defaults to FALSE.
-Set to TRUE for weighted ASPL and CC}
+\item{sim}{Character.
+Similarity measure to use.
+Defaults to \code{"cosine"}.
+See \code{\link[SemNeT]{similarity}} for other options}
 
-\item{iter}{Number of iterations in bootstrap.
-Defaults to 1000}
+\item{weighted}{Boolean.
+Should weighted ASPL and CC be used?
+Defaults to \code{FALSE}.
+Set to \code{TRUE} for weighted ASPL and CC}
 
-\item{corr}{Association method to use.
-Defaults to "cosine"}
+\item{iter}{Numeric.
+Number of iterations in bootstrap.
+Defaults to \code{1000}}
 
-\item{cores}{Number of computer processing cores to use for bootstrapping samples.
+\item{cores}{Numeric.
+Number of computer processing cores to use for bootstrapping samples.
 Defaults to \emph{n} - 1 total number of cores.
-Set to any number between 1 and maxmimum amount of cores on your computer}
-
-\item{seeds}{Seeds used in previous run.
-Defaults to NULL.
-Input a vector from previous run to replicate analyses}
+Set to any number between 1 and maxmimum amount of cores on your computer
+(see \code{parellel::detectCores()})}
 }
 \value{
-Returns a list that includes the original semantic network measures (origmeas; ASPL, CC, Q, S),
-the bootstrapped semantic network measures (bootmeas),
-and Seeds that can be used to replicate analysis
+Returns a list containing:
+
+\item{dataMeas}{A matrix for the network input in the \code{data}
+arugment, where columns are the semantic network measures
+from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
+bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
+
+\item{dataSumm}{Summary statistics across the bootrapped samples for the
+network input in the \code{data} argument}
+
+\item{percent}{Outputs the percent used from the \code{percent} argument}
+
+\item{iter}{Outputs the number of bootstrapped samples
+used from the \code{iter} argument}
+
+If a \code{paired} network is input, then also returns:
+
+\item{pairedMeas}{A matrix for the network input in the \code{paired}
+arugment, where columns are the semantic network measures
+from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
+bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
+
+\item{pairedSumm}{Summary statistics across the bootrapped samples for the
+network input in the \code{paired} argument}
 }
 \description{
 Bootstraps (without replacement) the nodes in the network and computes global network characteristics
 }
 \examples{
-#finalize rmatA
-finalCmat <- finalize(convmat)
-#finalize rmatB
-finalRmat <- finalize(rmat)
+# Finalize rmatA
+finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+# Finalize rmatB
+finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
 
-#equate rmatA and rmatB
-eq1 <- equate(finalCmat,finalRmat)
+# Equate rmatA and rmatB
+eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
 
-#obtain respective equated response matrices
+# Obtain respective equated response matrices
 eqCmat <- eq1$rmatA
 eqRmat <- eq1$rmatB
 
-\donttest{
-results <- partboot(eqCmat, eqRmat, iter = 10, corr = "cosine", cores = 4)
+\dontrun{
+
+# Run partial bootstrap networks
+results <- partboot(data = eqCmat, paired = eqRmat,
+percent = .5, iter = 10, sim = "cosine", cores = 4)
+
 }
+
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

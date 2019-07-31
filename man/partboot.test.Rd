@@ -4,35 +4,73 @@
 \alias{partboot.test}
 \title{Test for partboot}
 \usage{
-partboot.test(object)
+partboot.test(..., groups = NULL)
 }
 \arguments{
-\item{object}{An object from \link[SemNeT]{partboot}}
+\item{...}{Objects from \code{\link[SemNeT]{partboot}}}
+
+\item{groups}{Character.
+Labels for groups in the order they were entered
+in \code{\link[SemNeT]{partboot}} (e.g.,
+\code{data} = first,
+\code{paired} = second)}
 }
 \value{
-Returns test statistics for specified measures
+Returns a list containing the objects:
+
+\item{ASPL}{Test statistics for each percentage of nodes remaining for ASPL}
+
+\item{CC}{Test statistics for each percentage of nodes remaining for CC}
+
+\item{Q}{Test statistics for each percentage of nodes remaining for Q}
+
+The matrix in each object has the following columns:
+
+\item{t-statistic}{Statistic from the \code{\link{t.test}}}
+
+\item{df}{Degrees of freedom}
+
+\item{p-value}{\emph{p}-value with values equal to \code{0} being \emph{p} < .001}
+
+\item{d}{Cohen's \emph{d}}
+
+\item{CI95.lower}{Lower bound of the 95 percent confidence interval}
+
+\item{CI95.upper}{Upper bound of the 95 percent confidence interval}
+
+\item{Direction}{Direction of the effect. The argument \code{groups} will
+specify specifically which group is higher or lower on the measure. If no
+groups are input, then \code{"d"} and \code{"p"} are used to represent
+\code{data} and \code{paired} samples from \code{\link[SemNeT]{partboot}}, respectively}
+
+Row names refer to the percentage of nodes remaining in bootstrapped networks
 }
 \description{
 Bootstraps (without replacement) the nodes in the network and computes global network characteristics
 }
 \examples{
-#finalize rmatA
-finalCmat <- finalize(convmat)
+# Finalize rmatA
+finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
 #finalize rmatB
-finalRmat <- finalize(rmat)
+finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
 
-#equate rmatA and rmatB
-eq1 <- equate(finalCmat,finalRmat)
+# Equate rmatA and rmatB
+eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
 
-#obtain respective equated response matrices
+# Obtain respective equated response matrices
 eqCmat <- eq1$rmatA
 eqRmat <- eq1$rmatB
 
-\donttest{
+\dontrun{
+
+# Run partial bootstrap networks
 results <- partboot(eqCmat, eqRmat, corr = "cosine", cores = 4)
 
-partboot.test(results, paired = TRUE, labels = labs)
+# Compute results
+partboot.test(results)
+
 }
+
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

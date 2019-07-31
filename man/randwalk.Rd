@@ -4,47 +4,71 @@
 \alias{randwalk}
 \title{Random Walk Simulation}
 \usage{
-randwalk(A, B, reps = 20, steps = 10, iter = 10000)
+randwalk(A, B, reps = 20, steps = 10, iter = 10000,
+  short.res = TRUE, cores)
 }
 \arguments{
-\item{A}{Adjacency matrix of a semantic network}
+\item{A}{Matrix or data frame.
+Adjacency matrix of a semantic network}
 
-\item{B}{A comparison adjacency matrix of a semantic network}
+\item{B}{Matrix or data frame.
+A comparison adjacency matrix of a semantic network}
 
-\item{reps}{Number of repetitions of increments in 10 steps.
-Defaults to 20}
+\item{reps}{Numeric.
+Number of repetitions of increments in 10 steps.
+Defaults to \code{20}}
 
-\item{steps}{Number of random steps to begin with.
-Defaults to 10}
+\item{steps}{Numeric.
+Number of random steps to begin with.
+Defaults to \code{10}}
 
-\item{iter}{Number of iterations for each random walk}
+\item{iter}{Numeric.
+Number of iterations for each random walk}
+
+\item{short.res}{Boolean.
+Should shorten results (p-values only) be produced?
+Defaults to \code{TRUE}}
+
+\item{cores}{Numeric.
+Number of computer processing cores to use for bootstrapping samples.
+Defaults to \emph{n} - 1 total number of cores.
+Set to any number between 1 and maxmimum amount of cores on your computer}
 }
 \value{
 A result matrix containing the means and standard deviations for
-several measures as well as p-values for a Mann-Whitney U test
+several measures as well as \emph{p}-values for a Mann-Whitney U test
 }
 \description{
 Simulates random walks over two networks to examine the characteristics
-of spontaneous spreading activation
+of spontaneous spreading activation (see Kenett & Austerweil, 2016)
 }
 \examples{
-#finalize rmatA
-finalCmat <- finalize(convmat)
-#finalize rmatB
-finalRmat <- finalize(rmat)
+# Finalize rmatA
+finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+# Finalize rmatB
+finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
 
-#equate rmatA and rmatB
-eq1 <- equate(finalCmat,finalRmat)
+# Equate rmatA and rmatB
+eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
 
-#obtain respective equated response matrices
+# Obtain respective equated response matrices
 eqCmat <- eq1$rmatA
 eqRmat <- eq1$rmatB
 
-\donttest{
+\dontrun{
+
+# Run random walk analysis
 rw.results <- randwalk(eqCmat,eqRmat)
+
 }
+
+}
+\references{
+Kenett, Y. N., & Austerweil, J. L. (2016).
+Examining search processes in low and high creative individuals with random walks.
+In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society}. Austin, TX.
+Retrieved from: \href{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}
 }
 \author{
-Alexander Christensen <alexpaulchristensen@gmail.com>
-Yoed Kenett <yoedkenett@gmail.com>
+Alexander Christensen <alexpaulchristensen@gmail.com> and Yoed Kenett <yoedkenett@gmail.com>
 }

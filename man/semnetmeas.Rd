@@ -4,39 +4,37 @@
 \alias{semnetmeas}
 \title{Semantic Network Measures}
 \usage{
-semnetmeas(A, iter, weighted = FALSE, swm = "rand")
+semnetmeas(A, weighted = FALSE)
 }
 \arguments{
-\item{A}{An adjacency matrix of network A}
+\item{A}{Matrix or data frame.
+An adjacency matrix of a network}
 
-\item{iter}{Number of iterations for the small-worldness measure}
-
-\item{weighted}{Should weighted measures be computed?
-Defaults to FALSE.
-Set to TRUE for weighted measures}
-
-\item{swm}{Method for computing small-worldness.
-Defaults to "rand".
-See \link[NetworkToolbox]{smallworldness} for other options}
+\item{weighted}{Boolean.
+Should weighted measures be computed?
+Defaults to \code{FALSE}.
+Set to \code{TRUE} for weighted measures}
 }
 \value{
-Returns a values for ASPL, CC, Q, and S
+Returns a values for ASPL, CC, and Q
 }
 \description{
 Computes the average shortest path length (ASPL),
-clustering coefficient(CC),
-modularity (Q),
-small-worldness (S; defaults to "rand"),
-and mean network strength (MNS)
+clustering coefficient(CC), and modularity (Q) of the network
 }
 \examples{
-fin <- finalize(convmat)
+# Finalize convmat
+fin <- SemNetCleaner::finalize(SemNetCleaner::convmat)
 
-cosL <- cosine(fin)
+# Compute cosine similarity
+cosL <- similarity(fin, method = "cosine")
 
+# Construct network
 A <- NetworkToolbox::TMFG(cosL)$A
 
+# Compute global network measures
 globmeas <- semnetmeas(A)
+
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
