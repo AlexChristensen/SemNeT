@@ -55,18 +55,17 @@ Computes several measures of similarity
 (see Choi, Cha, & Tappert, 2010 for additional measures)
 }
 \examples{
-# Binarized data
-bin <- ifelse(as.matrix(NetworkToolbox::neoOpen)>3,1,0)
+# Simulate Datasets
+one <- sim.fluency(10)
 
-# Similarity measure ("cosine")
-similarity(bin, method = "cosine")
+# Compute similarity matrix
+cos <- similarity(one, method = "cosine")
 
 }
 \references{
 Choi, S. S., Cha, S. H., & Tappert, C. C. (2010).
 A survey of binary similarity and distance measures.
 \emph{Journal of Systemics, Cybernetics and Informatics}, \emph{8}, 43-48.
-Retrieved from: \href{https://pdixon.public.iastate.edu/stat415/Choi.pdf}{https://pdixon.public.iastate.edu/stat415/Choi.pdf}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

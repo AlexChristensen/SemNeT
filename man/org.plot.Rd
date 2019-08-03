@@ -36,28 +36,16 @@ A wrapper function used in \link[SemNeT]{partboot}. Not to be used individually
 #### NOT INTENDED FOR INDIVIDUAL USE ####
 #### WRAPPER FUNCTION ####
 
-# Finalize rmatA
-finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-# Finalize rmatB
-finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-
-# Equate rmatA and rmatB
-eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
-
-# Obtain respective equated response matrices
-eqCmat <- eq1$rmatA
-eqRmat <- eq1$rmatB
-
-\dontrun{
-
+# Simulate Dataset
+one <- sim.fluency(20)
+\donttest{
 # Run partial bootstrap networks
-results <- partboot(data = eqCmat, paired = eqRmat,
-percent = .50, iter = 1000, sim = "cosine", cores = 4)
-
-# Plot
-plot(results, groups = c("eqCmat","eqRmat"))
-
+one.result <- partboot(data = one, percent = .50, iter = 1000,
+sim = "cosine", cores = 2)
 }
+# Plot
+org.plot(input = list(one.result), paired = 1,
+len = 1, groups = "One", netmeas = "ASPL")
 
 }
 \references{

@@ -26,28 +26,15 @@ Returns plots for the specified measures
 Bootstraps (without replacement) the nodes in the network and computes global network characteristics
 }
 \examples{
-# Finalize rmatA
-finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-# Finalize rmatB
-finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-
-# Equate rmatA and rmatB
-eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
-
-# Obtain respective equated response matrices
-eqCmat <- eq1$rmatA
-eqRmat <- eq1$rmatB
-
-\dontrun{
-
+# Simulate Dataset
+one <- sim.fluency(20)
+\donttest{
 # Run partial bootstrap networks
-results <- partboot(data = eqCmat, paired = eqRmat,
-percent = .50, iter = 1000, sim = "cosine", cores = 4)
-
-# Plot
-plot(results, groups = c("eqCmat","eqRmat"))
-
+one.result <- partboot(data = one, percent = .50, iter = 1000,
+sim = "cosine", cores = 2)
 }
+# Plot
+plot(one.result, groups = c("One"))
 
 }
 \author{

@@ -27,28 +27,16 @@
 #' #### NOT INTENDED FOR INDIVIDUAL USE ####
 #' #### WRAPPER FUNCTION ####
 #' 
-#' # Finalize rmatA
-#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-#' # Finalize rmatB
-#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-#'
-#' # Equate rmatA and rmatB
-#' eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
-#' 
-#' # Obtain respective equated response matrices
-#' eqCmat <- eq1$rmatA
-#' eqRmat <- eq1$rmatB
-#' 
-#' \dontrun{
-#' 
+#' # Simulate Dataset
+#' one <- sim.fluency(20)
+#' \donttest{
 #' # Run partial bootstrap networks
-#' results <- partboot(data = eqCmat, paired = eqRmat,
-#' percent = .50, iter = 1000, sim = "cosine", cores = 4)
-#' 
-#' # Plot
-#' plot(results, groups = c("eqCmat","eqRmat"))
-#' 
+#' one.result <- partboot(data = one, percent = .50, iter = 1000,
+#' sim = "cosine", cores = 2)
 #' }
+#' # Plot
+#' org.plot(input = list(one.result), paired = 1,
+#' len = 1, groups = "One", netmeas = "ASPL")
 #' 
 #' @references
 #' Allen, M., Poggiali, D., Whitaker, K., Marshall, T. R., Kievit, R. (2018).
@@ -231,7 +219,7 @@ org.plot <- function (input, paired, len, measures, groups, netmeas)
                         adjust = 1.5, trim = FALSE, alpha = .5, colour = NA) +
         
         geom_point(aes(x = as.numeric(percent)-.125, y = netmeas, colour = group),
-                   position = position_jitter(width = .05), alpha = .7, size = 1, shape = 20) +
+                   position = position_jitter(width = .05), alpha = .3, size = 1, shape = 20) +
         
         geom_boxplot(aes(x = percent, y = netmeas, fill = group),outlier.shape = NA,
                      alpha = .5, width = .1, colour = "black") +
@@ -242,7 +230,7 @@ org.plot <- function (input, paired, len, measures, groups, netmeas)
         
         labs(title = paste("Bootstrapped Node-drop Results:",netmeas,sep=" "),
              subtitle = paste(iter,"Samples",sep = " "),
-             x = "Percent of Nodes Remaining (%)",
+             x = "Percent of Nodes\nRemaining (%)",
              y = paste(full.meas," (",netmeas,")",sep="")) +
         
         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),

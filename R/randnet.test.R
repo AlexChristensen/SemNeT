@@ -22,34 +22,19 @@
 #' for the random network distribution
 #' 
 #' @examples 
-#' # Finalize rmatA
-#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+#' # Simulate Datasets
+#' one <- sim.fluency(10)
 #' 
-#' # Finalize rmatB
-#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
+#' # Compute similarity matrix
+#' cos <- similarity(one, method = "cosine")
 #' 
-#' # Finalize rmatC
-#' finalYmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-#'
-#' # Equate rmatA and rmatB
-#' eq <- SemNetCleaner::equate.multi(finalCmat,finalRmat,finalYmat)
-#' 
-#' # Obtain respective equated response matrices
-#' eqCmat <- eq$finalCmat
-#' eqRmat <- eq$finalRmat
-#' eqYmat <- eq$finalYmat
-#' 
-#' \dontrun{
-#' 
-#' #Compute networks
-#' Cnet <- NetworkToolbox::TMFG(similarity(eqCmat))$A
-#' Rnet <- NetworkToolbox::TMFG(similarity(eqRmat))$A
-#' Ynet <- NetworkToolbox::TMFG(similarity(eqYmat))$A
-#' 
-#' #Perform random networks test
-#' randnet.test(Cnet, Rnet, Ynet, iter = 1000)
-#' 
+#' # Compute networks using NetworkToolbox
+#' net <- NetworkToolbox::TMFG(cos)$A
+#' \donttest{
+#' # Perform random networks test
+#' randnet.test(net, iter = 1000, cores = 2)
 #' }
+#' \dontshow{randnet.test(net, iter = 1, cores = 2)}
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
@@ -105,7 +90,7 @@ randnet.test <- function (..., iter, cores)
     message("done", appendLF = TRUE)
     
     #Message for begin of network measures
-    message("Computing network measures...", appendLF = FALSE)
+    message("Computing network measures...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)

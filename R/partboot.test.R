@@ -40,27 +40,16 @@
 #' Row names refer to the percentage of nodes remaining in bootstrapped networks
 #' 
 #' @examples
-#' # Finalize rmatA
-#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-#' #finalize rmatB
-#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-#'
-#' # Equate rmatA and rmatB
-#' eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
-#' 
-#' # Obtain respective equated response matrices
-#' eqCmat <- eq1$rmatA
-#' eqRmat <- eq1$rmatB
-#' 
-#' \dontrun{
-#' 
+#' # Simulate Dataset
+#' one <- sim.fluency(20)
+#' two <- sim.fluency(20)
+#' \donttest{
 #' # Run partial bootstrap networks
-#' results <- partboot(eqCmat, eqRmat, corr = "cosine", cores = 4)
-#' 
-#' # Compute results
-#' partboot.test(results)
-#' 
+#' two.result <- partboot(data = one, paired = two, percent = .50, iter = 1000,
+#' sim = "cosine", cores = 2)
 #' }
+#' # Compute tests
+#' partboot.test(two.result, groups = c("One", "Two"))
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 

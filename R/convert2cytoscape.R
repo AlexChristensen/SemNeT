@@ -7,38 +7,26 @@
 #' 
 #' @return A sparse matrix formatted for Cytoscape
 #' 
-#' @examples 
-#' # Finalize rmatA
-#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-#' # Finalize rmatB
-#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-#'
-#' # Equate rmatA and rmatB
-#' eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
-#' 
-#' # Obtain respective equated response matrices
-#' eqCmat <- eq1$rmatA
-#' eqRmat <- eq1$rmatB
+#' @examples
+#' # Simulate Datasets
+#' one <- sim.fluency(10)
+#' two <- sim.fluency(10)
 #' 
 #' # Compute similarity matrix
-#' cosC <- similarity(eqCmat, method = "cosine")
-#' cosR <- similarity(eqRmat, method = "cosine")
+#' cos1 <- similarity(one, method = "cosine")
+#' cos2 <- similarity(two, method = "cosine")
 #' 
 #' # Compute networks using NetworkToolbox
-#' Cnet <- NetworkToolbox::TMFG(cosC)$A
-#' Rnet <- NetworkToolbox::TMFG(cosR)$A
+#' net1 <- NetworkToolbox::TMFG(cos1)$A
+#' net2 <- NetworkToolbox::TMFG(cos2)$A
 #' 
-#' # Cnovert to Cytoscape format
-#' ctyoC <- convert2cytoscape(Cnet)
-#' ctyoR <- convert2cytoscape(Rnet)
+#' # Convert to Cytoscape format
+#' cyto1 <- convert2cytoscape(net1)
+#' cyto2 <- convert2cytoscape(net2)
 #' 
-#' \dontrun{
-#' 
-#' # Export to .csv
-#' write.csv(cytoC, "netC.csv", row.names = FALSE)
-#' write.csv(cytoR, "netR.csv", row.names = FALSE)
-#' 
-#' }
+#' # Write to .csv
+#' write.csv(cyto1, file.path(tempdir(), "cyto1.csv"), row.names = FALSE)
+#' write.csv(cyto2, file.path(tempdir(), "cyto2.csv"), row.names = FALSE)
 #' 
 #' @references 
 #' 
@@ -56,6 +44,9 @@
 #Convert2Cytoscape----
 convert2cytoscape <- function (A)
 {
+    #column names
+    name <- colnames(as.data.frame(A))
+    
     #number of nodes
     n <- ncol(A)
     
@@ -64,7 +55,7 @@ convert2cytoscape <- function (A)
     
     nodeTO<-sort(c(rep(1:n,n)))
     nodeFROM<-c(rep(1:n,n))
-    nodeWEIGHT<-as.vector(A)
+    nodeWEIGHT<-as.vector(as.matrix(A))
     
     #sparse matrix
     S <- cbind(nodeTO,nodeFROM,nodeWEIGHT)
@@ -74,15 +65,17 @@ convert2cytoscape <- function (A)
         len1 <- length(which(S[,1]==i))
         len2 <- length(which(S[,2]==i))
         
-        S[which(S[,1]==i),1] <- rep(colnames(A)[i],len1)
-        S[which(S[,2]==i),2] <- rep(colnames(A)[i],len2)
+        S[which(S[,1]==i),1] <- rep(name[i],len1)
+        S[which(S[,2]==i),2] <- rep(name[i],len2)
     }
     
     #remove weights of 0
     S[,3] <- ifelse(S[,3]==0,NA,S[,3])
     
+    cyto <- na.omit(S)
     
-    cyto <- noquote(na.omit(S))
+    attr(cyto, "na.action") <- NULL
+    attr(cyto, "class") <- NULL
     
     return(cyto)
 }

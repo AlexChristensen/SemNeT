@@ -4,7 +4,7 @@
 \name{SemNeT-package}
 \alias{SemNeT}
 \alias{SemNeT-package}
-\title{NetworkToolbox--package}
+\title{SemNeT--package}
 \description{
 Implements several functions for the analysis of semantic
 networks including partial node bootstraping (Kenett, Anaki, & Faust, 2014),
@@ -37,5 +37,5 @@ Useful links:
 
 }
 \author{
-Alexander Christensen <alexpaulchristensen@gmail.com> & Yoed N. Kenett <yoedkenett@gmail.com>
+Alexander P. Christensen <alexpaulchristensen@gmail.com> & Yoed N. Kenett <yoedkenett@gmail.com>
 }

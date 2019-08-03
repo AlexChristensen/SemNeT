@@ -33,24 +33,22 @@
 #' several measures as well as \emph{p}-values for a Mann-Whitney U test
 #' 
 #' @examples
-#' # Finalize rmatA
-#' finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-#' # Finalize rmatB
-#' finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
-#'
-#' # Equate rmatA and rmatB
-#' eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
+#' # Simulate Datasets
+#' one <- sim.fluency(10)
+#' two <- sim.fluency(10)
 #' 
-#' # Obtain respective equated response matrices
-#' eqCmat <- eq1$rmatA
-#' eqRmat <- eq1$rmatB
+#' # Compute similarity matrix
+#' cos1 <- similarity(one, method = "cosine")
+#' cos2 <- similarity(two, method = "cosine")
 #' 
-#' \dontrun{
-#' 
+#' # Compute networks using NetworkToolbox
+#' net1 <- NetworkToolbox::TMFG(cos1)$A
+#' net2 <- NetworkToolbox::TMFG(cos2)$A
+#' \donttest{
 #' # Run random walk analysis
-#' rw.results <- randwalk(eqCmat,eqRmat)
-#' 
+#' rw.results <- randwalk(net1, net2, iter = 1000, cores = 2)
 #' }
+#' \dontshow{rw.results <- randwalk(net1, net2, iter = 10, cores = 2)}
 #' 
 #' @references
 #' Kenett, Y. N., & Austerweil, J. L. (2016).

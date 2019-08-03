@@ -1,4 +1,4 @@
-#' NetworkToolbox--package
+#' SemNeT--package
 #' @description Implements several functions for the analysis of semantic
 #' networks including partial node bootstraping (Kenett, Anaki, & Faust, 2014),
 #' random walk simulation (Kenett & Austerweil, 2016), and a function to compute
@@ -21,11 +21,10 @@
 #' In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society}. Austin, TX.
 #' Retrieved from: \href{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}
 #' 
-#' 
-#' @author Alexander Christensen <alexpaulchristensen@gmail.com> & Yoed N. Kenett <yoedkenett@gmail.com>
+#' @author Alexander P. Christensen <alexpaulchristensen@gmail.com> & Yoed N. Kenett <yoedkenett@gmail.com>
 #' 
 #' @importFrom utils packageDescription
 #' 
 "_PACKAGE"
 #> [1] "_PACKAGE"
-#NetworkToolbox----
+#SemNeT----

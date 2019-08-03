@@ -43,24 +43,22 @@ Simulates random walks over two networks to examine the characteristics
 of spontaneous spreading activation (see Kenett & Austerweil, 2016)
 }
 \examples{
-# Finalize rmatA
-finalCmat <- SemNetCleaner::finalize(SemNetCleaner::convmat)
-# Finalize rmatB
-finalRmat <- SemNetCleaner::finalize(SemNetCleaner::rmat)
+# Simulate Datasets
+one <- sim.fluency(10)
+two <- sim.fluency(10)
 
-# Equate rmatA and rmatB
-eq1 <- SemNetCleaner::equate(finalCmat,finalRmat)
+# Compute similarity matrix
+cos1 <- similarity(one, method = "cosine")
+cos2 <- similarity(two, method = "cosine")
 
-# Obtain respective equated response matrices
-eqCmat <- eq1$rmatA
-eqRmat <- eq1$rmatB
-
-\dontrun{
-
+# Compute networks using NetworkToolbox
+net1 <- NetworkToolbox::TMFG(cos1)$A
+net2 <- NetworkToolbox::TMFG(cos2)$A
+\donttest{
 # Run random walk analysis
-rw.results <- randwalk(eqCmat,eqRmat)
-
+rw.results <- randwalk(net1, net2, iter = 1000, cores = 2)
 }
+\dontshow{rw.results <- randwalk(net1, net2, iter = 10, cores = 2)}
 
 }
 \references{

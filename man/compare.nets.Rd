@@ -29,22 +29,20 @@ to plot networks in a layout that provides meaningful comparisons of distances
 (see Jones, Mair, & McNally, 2018)
 }
 \examples{
-# Binarized data
-bin <- ifelse(as.matrix(NetworkToolbox::neoOpen)>3,1,0)
+# Simulate Datasets
+one <- sim.fluency(10)
+two <- sim.fluency(10)
 
-# Similarity measure ("cosine")
-cos <- similarity(bin, method = "cosine")
+# Compute similarity matrix
+cos1 <- similarity(one, method = "cosine")
+cos2 <- similarity(two, method = "cosine")
 
-# Compute networks
-A <- NetworkToolbox::TMFG(bin)$A
-B <- NetworkToolbox::TMFG(cos)$A
-
-\dontrun{
+# Compute networks using NetworkToolbox
+net1 <- NetworkToolbox::TMFG(cos1)$A
+net2 <- NetworkToolbox::TMFG(cos2)$A
 
 # Compare networks
-compare.nets(A, B, "Phi", "Cosine")
-
-}
+compare.nets(net1, net2, "One", "Two")
 
 }
 \references{

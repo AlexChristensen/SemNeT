@@ -23,17 +23,17 @@ Computes the average shortest path length (ASPL),
 clustering coefficient(CC), and modularity (Q) of the network
 }
 \examples{
-# Finalize convmat
-fin <- SemNetCleaner::finalize(SemNetCleaner::convmat)
+# Simulate Datasets
+one <- sim.fluency(10)
 
-# Compute cosine similarity
-cosL <- similarity(fin, method = "cosine")
+# Compute similarity matrix
+cos <- similarity(one, method = "cosine")
 
-# Construct network
-A <- NetworkToolbox::TMFG(cosL)$A
+# Compute networks using NetworkToolbox
+net <- NetworkToolbox::TMFG(cos)$A
 
 # Compute global network measures
-globmeas <- semnetmeas(A)
+globmeas <- semnetmeas(net)
 
 }
 \author{
