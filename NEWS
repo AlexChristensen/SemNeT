@@ -4,6 +4,14 @@ o serious, and I mean serious, revamp of functions (all for the better)
 
 o moved most functions over to 'SemNetCleaner' and now only consists of methods and measures for semantic network analysis
 
+o added a 'sim.fluency' function for toy examples in CRAN checks
+
+o added two datasets 'one.result' and 'two.result' for toy examples in CRAN checks
+
+o 'partboot.plot' changed to 'plot.partboot' and added to S3 methods
+
+o 'parboot.test' now outputs a list for each network measure
+
 Changes in version 0.9.9
 
 o animals.database: a database for animals was added
