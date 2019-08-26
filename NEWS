@@ -1,3 +1,12 @@
+Changes in version 1.1.0
+
+o changed 'semnetmeas' to allow calculation of any combination of measures
+
+o 'partboot', 'partboot.test', 'plot.partboot', 'randnet.test', and 'compare.nets' now handle groups greater than 2
+
+o bug fixes
+
+
 Changes in version 1.0.0
 
 o serious, and I mean serious, revamp of functions (all for the better)
@@ -10,7 +19,7 @@ o added two datasets 'one.result' and 'two.result' for toy examples in CRAN chec
 
 o 'partboot.plot' changed to 'plot.partboot' and added to S3 methods
 
-o 'parboot.test' now outputs a list for each network measure
+o 'partboot.test' now outputs a list for each network measure
 
 Changes in version 0.9.9
 
