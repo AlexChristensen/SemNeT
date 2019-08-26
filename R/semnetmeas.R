@@ -5,6 +5,11 @@
 #' @param A Matrix or data frame.
 #' An adjacency matrix of a network
 #' 
+#' @param meas Character.
+#' Global network measures to compute.
+#' By default, computes ASPL, CC, and Q.
+#' Individual measures can be selected
+#' 
 #' @param weighted Boolean.
 #' Should weighted measures be computed?
 #' Defaults to \code{FALSE}.
@@ -29,21 +34,29 @@
 #' 
 #' @export
 #Semantic Network Measures----
-semnetmeas <- function (A, weighted = FALSE)
+semnetmeas <- function (A, meas = c("ASPL", "CC", "Q"), weighted = FALSE)
 {
+    # Full measures
+    full <- c("ASPL", "CC", "Q")
+    
     # Average shortest path length
-    aspl <- NetworkToolbox::pathlengths(A, weighted = weighted)$ASPL
+    if("ASPL" %in% meas)
+    {ASPL <- NetworkToolbox::pathlengths(A, weighted = weighted)$ASPL}
+    
     # Clustering coefficient
-    cc <- NetworkToolbox::clustcoeff(A, weighted = weighted)$CC
+    if("CC" %in% meas)
+    {CC <- NetworkToolbox::clustcoeff(A, weighted = weighted)$CC}
+    
     # Modularity
     ## Using igraph because it doesn't get stuck in while loop
-    q <- max(igraph::cluster_louvain(NetworkToolbox::convert2igraph(A))$modularity)
+    if("Q" %in% meas)
+    {Q <- max(igraph::cluster_louvain(NetworkToolbox::convert2igraph(abs(A)))$modularity)}
     
     # Vector of measures
-    sn.meas <- c(aspl,cc,q)
+    sn.meas <- unlist(lapply(full[match(meas, full)],get,envir=environment()))
     
     # Name measures
-    names(sn.meas)<-c("ASPL","CC","Q")
+    names(sn.meas) <- meas
     
     return(sn.meas)
 }

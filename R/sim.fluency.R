@@ -1,8 +1,12 @@
-#' Convert Adjacency Matrix to Cytoscape Format
+#' Simulates a verbal fluency binary response matrix
 #' 
 #' @description Simulates verbal fluency data based on the number of
-#' nodes in the desired network. Participants are 5% greater than
-#' the maximum simulated fluency response given
+#' nodes in the desired network. Participants are 5 percent greater than
+#' the maximum simulated fluency response given. The summed total of
+#' each response is simulated from a gamma distribution with a
+#' shape of .25 and rate of 1 (see \code{\link{pgamma}}). Using these
+#' sums, participants responses are simulated with a probability of giving
+#' a reponse as the total of the summed response over the number of participants.
 #' 
 #' @param nodes Numeric.
 #' Number of nodes to simulate in data

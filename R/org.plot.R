@@ -5,15 +5,14 @@
 #' @param input List.
 #' Input data from \link[SemNeT]{partboot}
 #' 
-#' @param paired Numeric.
-#' \code{1} equals single sample.
-#' \code{2} equals paired samples
-#' 
 #' @param len Numeric.
 #' Number of bootstrapped samples (percentages)
 #' 
 #' @param measures Character.
 #' Network measures to be entered
+#' 
+#' @param name Character.
+#' Name(s) of object(s) used from \link[SemNeT]{partboot}
 #' 
 #' @param groups Character.
 #' Names for the group(s)
@@ -35,7 +34,7 @@
 #' sim = "cosine", cores = 2)
 #' }
 #' # Plot
-#' org.plot(input = list(one.result), paired = 1,
+#' org.plot(input = list(one.result), name = "data",
 #' len = 1, groups = "One", netmeas = "ASPL")
 #' 
 #' @references
@@ -53,7 +52,7 @@
 #' 
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-org.plot <- function (input, paired, len, measures, groups, netmeas)
+org.plot <- function (input, len, measures, name, groups, netmeas)
 {
     #CRAN CHECKS
     group <- NULL; y <- NULL; x <- NULL; width <- NULL
@@ -158,26 +157,23 @@ org.plot <- function (input, paired, len, measures, groups, netmeas)
         it[i] <- input[[i]]$iter
     }
     
-    plot.mat <- matrix(NA, nrow = sum(it)*paired, ncol = 2 + length(measures))
+    plot.mat <- matrix(NA, nrow = sum(it)*length(name), ncol = 2 + length(measures))
     colnames(plot.mat) <- c("group","percent",measures)
     
     #Grab measures
     meas <- matrix(NA, nrow = 1, ncol = length(measures))
     
-    for(i in 1:len)
-    {meas <- rbind(meas,t(input[[i]]$dataMeas))}
+    for(j in 1:length(name))
+    {
+        for(i in 1:len)
+        {meas <- rbind(meas,t(input[[i]][[paste(name[j],"Meas",sep="")]]))}
+    }
     
     meas <- meas[-1,]
     
-    if(paired == 2)
-    {
-        for(i in 1:len)
-        {meas <- rbind(meas,t(input[[i]]$pairedMeas))}
-    }
+    plot.mat[,"group"] <- rep(1:length(name), each = len * iter)
     
-    plot.mat[,"group"] <- rep(1:paired, each = len * iter)
-    
-    plot.mat[,"percent"] <- rep(rep(perc, each = iter),paired)
+    plot.mat[,"percent"] <- rep(rep(perc, each = iter), length(name))
     plot.mat[,3:(2+length(measures))] <- meas
     
     #Convert to data frame
@@ -205,12 +201,7 @@ org.plot <- function (input, paired, len, measures, groups, netmeas)
     
     ##Groups
     if(is.null(groups))
-    {
-        groups <- "Data"
-        
-        if(paired == 2)
-        {groups <- c(groups,"Paired")}
-    }
+    {groups <- name}
     
     # Rainclouds for repeated measures, continued
     pl <- ggplot(plot.mat.select, aes(x = percent, y = netmeas, fill = group)) +

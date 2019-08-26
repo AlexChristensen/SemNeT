@@ -1,14 +1,12 @@
-#' Test for partboot
+#' Wrapper function for \code{\link[SemNeT]{partboot.test}}
 #' 
-#' @description Bootstraps (without replacement) the nodes in the network and computes global network characteristics
+#' @description Computes statistical tests for partial bootstrapped
+#' networks from \code{\link[SemNeT]{partboot}}. Automatically
+#' computes \emph{t}-tests (\code{\link{t.test}}) or ANOVA
+#' (\code{\link{aov}}) including Tukey's HSD for pairwise comparisons
+#' (\code{\link{TukeyHSD}})
 #' 
-#' @param ... Objects from \code{\link[SemNeT]{partboot}}
-#' 
-#' @param groups Character.
-#' Labels for groups in the order they were entered
-#' in \code{\link[SemNeT]{partboot}} (e.g.,
-#' \code{data} = first,
-#' \code{paired} = second)
+#' @param ... Object(s) from \code{\link[SemNeT]{partboot}}
 #' 
 #' @return Returns a list containing the objects:
 #' 
@@ -18,7 +16,9 @@
 #' 
 #' \item{Q}{Test statistics for each percentage of nodes remaining for Q}
 #' 
-#' The matrix in each object has the following columns:
+#' If two groups:
+#' 
+#' A matrix in each object has the following columns:
 #' 
 #' \item{t-statistic}{Statistic from the \code{\link{t.test}}}
 #' 
@@ -39,231 +39,172 @@
 #' 
 #' Row names refer to the percentage of nodes remaining in bootstrapped networks
 #' 
+#' If three or more groups:
+#' 
+#' A list containing two objects:
+#' 
+#' \item{ANOVA}{A matrix containing the \emph{F}-statistic, group degrees of freedom,
+#' residual degrees of freedom, \emph{p}-value, and partial eta squared {\code{p.eta.sq}}}
+#' 
+#' \item{HSD}{A matrix containing the differences between each group (\code{diff}),
+#' lower (\code{lwr}) and upper (\code{upr}) bounds of the 95% confidence interval,
+#' and the adjusted \emph{p}-value (\code{p adj})}
+#' 
 #' @examples
 #' # Simulate Dataset
 #' one <- sim.fluency(20)
 #' two <- sim.fluency(20)
 #' \donttest{
 #' # Run partial bootstrap networks
-#' two.result <- partboot(data = one, paired = two, percent = .50, iter = 1000,
+#' two.result <- partboot(one, two, percent = .50, iter = 1000,
 #' sim = "cosine", cores = 2)
 #' }
 #' # Compute tests
-#' partboot.test(two.result, groups = c("One", "Two"))
+#' partboot.test(two.result)
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
-#' @importFrom stats t.test
-#' 
 #' @export
 #Test: Partial Bootstrapped Network Statistics----
-partboot.test <- function (..., groups = NULL)
+partboot.test <- function (...)
 {
     #Obtain ... in a list
     input <- list(...)
     
-    #Get names of networks
-    name <- as.character(substitute(list(...)))
-    name <- name[-which(name=="list")]
+    #Names of groups
+    name <- unique(gsub("Summ","",gsub("Meas","",names(input[[1]]))))
     
-    #Get groups
-    if(is.null(groups))
-    {groups <- c("d","p")}
-
+    #Remove percent and iter
+    name <- na.omit(gsub("iter",NA,gsub("percent",NA,name)))
+    attr(name, "na.action") <- NULL
+    
+    #Length of groups
+    len <- length(name)
+    
+    #Initialize result list
+    res <- list()
+    
     #Number of input
-    len <- length(input)
-    
-    #Identify if input is paired
-    paired <- vector("logical", length = len)
-    for(i in 1:len)
+    if(length(input)==1)
     {
-        if(length(grep("paired",names(input[[i]])))!=0)
-        {paired[i] <- TRUE
-        }else{paired[i] <- FALSE}
-    }
-    
-    #Error there are no paired samples
-    if(all(!paired))
-    {stop("Single samples cannot be tested. Use 'randnet.test' for single samples")}
-    
-    #Identify which samples can be tested
-    if(len != length(which(paired)))
-    {
-        if(length(which(!paired))==1)
+        res <- partboot.one.test(input[[1]])
+    }else{
+        
+        if(len == 2)
         {
-            message(
-            paste("Input",paste("'",name[which(!paired)],"'", sep = ""),
-                  "did not have paired samples. Significance tests were not computed for this input.")
-            )
-        }else if(length(which(!paired))==2)
-        {
-            message(
-            paste("Inputs",paste("'",name[which(!paired)],"'", sep = "", collapse = " and "),
-                  "did not have paired samples. Significance tests were not computed for these inputs.")
-            )
+            #Initialize measure lists
+            aspl <- list()
+            cc <- list()
+            q <- list()
+            
+            #Initialize row names
+            aspl.row <- vector("character", length = length(input))
+            cc.row <- vector("character", length = length(input))
+            q.row <- vector("character", length = length(input))
+            
+            #Loop through input
+            for(i in 1:length(input))
+            {
+                #Compute tests
+                test <- partboot.one.test(input[[i]])
+                
+                #ASPL
+                aspl[[i]] <- test$ASPL
+                aspl.row[i] <- row.names(aspl[[i]])
+                aspl.col <- colnames(aspl[[i]])
+                
+                #CC
+                cc[[i]] <- test$CC
+                cc.row[i] <- row.names(cc[[i]])
+                cc.col <- colnames(cc[[i]])
+                
+                #Q
+                q[[i]] <- test$Q
+                q.row[i] <- row.names(q[[i]])
+                q.col <- colnames(q[[i]])
+            }
+            
+            #Convert to matrices
+            aspl <- t(sapply(aspl, rbind))
+            cc <- t(sapply(cc, rbind))
+            q <- t(sapply(q, rbind))
+            
+            #Name rows
+            row.names(aspl) <- aspl.row
+            row.names(cc) <- cc.row
+            row.names(q) <- q.row
+            
+            #Name columns
+            colnames(aspl) <- aspl.col
+            colnames(cc) <- cc.col
+            colnames(q) <- q.col
+            
+            #Input results
+            res$ASPL <- as.data.frame(aspl)
+            res$CC <- as.data.frame(cc)
+            res$Q <- as.data.frame(q)
+            
         }else{
             
-            start <- paste("'",name[which(!paired)][-length(which(!paired))],"'",sep = "", collapse = ", ")
-            end <- paste(", and '",name[which(!paired)][length(which(!paired))],"'",sep="")
+            #Initialize measure lists
+            aspl <- list()
+            cc <- list()
+            q <- list()
+            hsd <- list()
             
-            message(
-                paste("Inputs",paste(start,end, sep = ""),
-                  "did not have paired samples. Significance tests were not computed for these inputs.")
-            )
+            #Initialize row names
+            aspl.row <- vector("character", length = length(input))
+            cc.row <- vector("character", length = length(input))
+            q.row <- vector("character", length = length(input))
+            
+            #Loop through input
+            for(i in 1:length(input))
+            {
+                #Compute tests
+                test <- partboot.one.test(input[[i]])
+                
+                #ASPL
+                aspl[[i]] <- test$ASPL$ANOVA
+                aspl.row[i] <- row.names(aspl[[i]])
+                aspl.col <- colnames(aspl[[i]])
+                hsd$ASPL[[aspl.row[i]]] <- test$ASPL$HSD
+                
+                #CC
+                cc[[i]] <- test$CC$ANOVA
+                cc.row[i] <- row.names(cc[[i]])
+                cc.col <- colnames(cc[[i]])
+                hsd$CC[[cc.row[i]]] <- test$CC$HSD
+                
+                #Q
+                q[[i]] <- test$Q$ANOVA
+                q.row[i] <- row.names(q[[i]])
+                q.col <- colnames(q[[i]])
+                hsd$Q[[q.row[i]]] <- test$Q$HSD
+            }
+            
+            #Convert to matrices
+            aspl <- t(sapply(aspl, round, 4))
+            cc <- t(sapply(cc, round, 4))
+            q <- t(sapply(q, round, 4))
+            
+            #Name rows
+            row.names(aspl) <- aspl.row
+            row.names(cc) <- cc.row
+            row.names(q) <- q.row
+            
+            #Name columns
+            colnames(aspl) <- aspl.col
+            colnames(cc) <- cc.col
+            colnames(q) <- q.col
+            
+            #Input results
+            res$ASPL <- aspl
+            res$CC <- cc
+            res$Q <- q
+            res$HSD <- hsd
         }
     }
     
-    #Grab testing samples
-    ##Target samples
-    test.samps <- list()
-    target.samps <- which(paired)
-    
-    for(i in 1:length(which(paired)))
-    {test.samps[[i]] <- input[[target.samps[i]]]}
-    
-    #New length
-    new.len <- length(test.samps)
-    
-    #Identify percent of nodes remaining
-    perc <- vector("numeric", length = new.len)
-    
-    for(i in 1:new.len)
-    {perc[i] <- test.samps[[i]]$percent}
-    
-    ############################
-    #### SIGNIFICANCE TESTS ####
-    ############################
-    
-    #Initialize list for tests
-    tests <- list()
-    
-    ##Function for Cohen's d
-    d <- function(samp1,samp2)
-    {
-        samp1 <- as.vector(samp1)
-        samp2 <- as.vector(samp2)
-        
-        num <- (mean(samp2)-mean(samp1))
-        denom <- sqrt(((sd(samp1)^2)+(sd(samp2)^2))/2)
-        
-        cohensd <- abs(num/denom)
-        
-        return(cohensd)
-    }
-    
-    ##ASPL Tests
-    aspl <- matrix(NA, nrow = new.len, ncol = 7)
-    row.names(aspl) <- paste(perc*100,"%",sep="")
-    colnames(aspl) <- c("t-statistic", "df", "p-value", "d",
-                        "CI95.lower", "CI95.upper","Direction")
-    
-    for(i in 1:new.len)
-    {
-        #Target sample
-        target <- test.samps[[i]]
-        
-        #ASPL
-        data.aspl <- target$dataMeas["ASPL",]
-        paired.aspl <- target$pairedMeas["ASPL",]
-        
-        #t-test
-        test <- t.test(data.aspl, paired.aspl, var.equal = TRUE)
-        
-        #Input results into table
-        aspl[paste(perc[i]*100,"%",sep=""),1] <- round(as.numeric(test$statistic),3)
-        aspl[paste(perc[i]*100,"%",sep=""),2] <- round(as.numeric(test$parameter),3)
-        aspl[paste(perc[i]*100,"%",sep=""),3] <- round(as.numeric(test$p.value),3)
-        aspl[paste(perc[i]*100,"%",sep=""),4] <- round(as.numeric(d(data.aspl,paired.aspl)),3)
-        aspl[paste(perc[i]*100,"%",sep=""),5] <- round(as.numeric(test$conf.int[1]),3)
-        aspl[paste(perc[i]*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[2]),3)
-        
-        if(round(as.numeric(test$p.value),3) > .05)
-        {aspl[paste(perc[i]*100,"%",sep=""),7] <- "n.s."
-        }else{
-            aspl[paste(perc[i]*100,"%",sep=""),7] <- ifelse(sign(test$statistic)==1,
-                                                            paste(groups[1],">",groups[2],sep=" "),
-                                                            paste(groups[2],">",groups[1],sep=" ")
-            )
-        }
-    }
-    
-    ##CC Tests
-    cc <- matrix(NA, nrow = new.len, ncol = 7)
-    row.names(cc) <- paste(perc*100,"%",sep="")
-    colnames(cc) <- c("t-statistic", "df", "p-value", "d",
-                        "CI95.lower", "CI95.upper","Direction")
-    
-    for(i in 1:new.len)
-    {
-        #Target sample
-        target <- test.samps[[i]]
-        
-        #CC
-        data.cc <- target$dataMeas["CC",]
-        paired.cc <- target$pairedMeas["CC",]
-        
-        #t-test
-        test <- t.test(data.cc, paired.cc, var.equal = TRUE)
-        
-        #Input results into table
-        cc[paste(perc[i]*100,"%",sep=""),1] <- round(as.numeric(test$statistic),3)
-        cc[paste(perc[i]*100,"%",sep=""),2] <- round(as.numeric(test$parameter),3)
-        cc[paste(perc[i]*100,"%",sep=""),3] <- round(as.numeric(test$p.value),3)
-        cc[paste(perc[i]*100,"%",sep=""),4] <- round(as.numeric(d(data.cc,paired.cc)),3)
-        cc[paste(perc[i]*100,"%",sep=""),5] <- round(as.numeric(test$conf.int[1]),3)
-        cc[paste(perc[i]*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[2]),3)
-        
-        if(round(as.numeric(test$p.value),3) > .05)
-        {cc[paste(perc[i]*100,"%",sep=""),7] <- "n.s."
-        }else{
-            cc[paste(perc[i]*100,"%",sep=""),7] <- ifelse(sign(test$statistic)==1,
-                                                            paste(groups[1],">",groups[2],sep=" "),
-                                                            paste(groups[2],">",groups[1],sep=" ")
-            )
-        }
-    }
-    
-    ##Q Tests
-    q <- matrix(NA, nrow = new.len, ncol = 7)
-    row.names(q) <- paste(perc*100,"%",sep="")
-    colnames(q) <- c("t-statistic", "df", "p-value", "d",
-                      "CI95.lower", "CI95.upper","Direction")
-    
-    for(i in 1:new.len)
-    {
-        #Target sample
-        target <- test.samps[[i]]
-        
-        #Q
-        data.q <- target$dataMeas["Q",]
-        paired.q <- target$pairedMeas["Q",]
-        
-        #t-test
-        test <- t.test(data.q, paired.q, var.equal = TRUE)
-        
-        #Input results into table
-        q[paste(perc[i]*100,"%",sep=""),1] <- round(as.numeric(test$statistic),3)
-        q[paste(perc[i]*100,"%",sep=""),2] <- round(as.numeric(test$parameter),3)
-        q[paste(perc[i]*100,"%",sep=""),3] <- round(as.numeric(test$p.value),3)
-        q[paste(perc[i]*100,"%",sep=""),4] <- round(as.numeric(d(data.q,paired.q)),3)
-        q[paste(perc[i]*100,"%",sep=""),5] <- round(as.numeric(test$conf.int[1]),3)
-        q[paste(perc[i]*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[2]),3)
-        
-        if(round(as.numeric(test$p.value),3) > .05)
-        {q[paste(perc[i]*100,"%",sep=""),7] <- "n.s."
-        }else{
-            q[paste(perc[i]*100,"%",sep=""),7] <- ifelse(sign(test$statistic)==1,
-                                                            paste(groups[1],">",groups[2],sep=" "),
-                                                            paste(groups[2],">",groups[1],sep=" ")
-            )
-        }
-    }
-    
-    #Input results into list
-    tests$ASPL <- as.data.frame(aspl)
-    tests$CC <- as.data.frame(cc)
-    tests$Q <- as.data.frame(q)
-    
-    return(tests)
+    return(res)
 }
 #----

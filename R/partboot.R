@@ -2,13 +2,9 @@
 #' 
 #' @description Bootstraps (without replacement) the nodes in the network and computes global network characteristics
 #' 
-#' @param data Matrix or data frame.
-#' Cleaned response matrix
-#' 
-#' @param paired Matrix or data frame.
-#' Input for a second network to be paired with \code{data}.
-#' Defaults to \code{NULL}.
-#' Input a matrix or data frame containing another sample
+#' @param ... Matrices or data frames.
+#' Binary response matrices (e.g., \code{binary} output from
+#' \code{\link[SemNetCleaner]{textcleaner}})
 #' 
 #' @param percent Numeric.
 #' Percent of nodes to remain in the network.
@@ -73,60 +69,62 @@
 #' 
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-partboot <- function (data, paired = NULL, percent, sim, weighted = FALSE,
+partboot <- function (..., percent, sim, weighted = FALSE,
                       iter = 1000, cores)
 {
     ####Missing arguments####
-    if(missing(paired))
-    {paired <- NULL}
-    
     if(missing(sim))
     {sim <- "cosine"
     }else{sim <- sim}
-    
-    cormat <- similarity(data, method = sim)
-    
-    if(!is.null(paired))
-    {cormatP <- similarity(paired, method = sim)}
     
     if(missing(cores))
     {cores <- parallel::detectCores() - 1
     }else{cores <- cores}
     ####Missing arguments####
     
+    #Get names of networks
+    name <- as.character(substitute(list(...)))
+    name <- name[-which(name=="list")]
+    
+    #Create list of input
+    datalist <- list(...)
+    
+    #Check that all data have same number of nodes
+    if(length(unique(unlist(lapply(datalist,ncol))))!=1)
+    {stop("All datasets must have the same number of columns")}
+    
     #Number of nodes in full data
-    full <- ncol(data)
-    
-    #Initialize count
-    count <- 0
-    
-    #Initialize data list(s)
-    datalist <- list()
-    
-    if(!is.null(paired))
-    {datalist.p <- list()}
+    full <- unique(unlist(lapply(datalist,ncol)))
     
     #######################
     #### GENERATE DATA ####
     #######################
     
-    repeat{
+    for(i in 1:length(name))
+    {
+        #Initialize count
+        count <- 0
         
-        #Increase count
-        count <- count + 1
+        #Initialize new data list
+        new <- list()
         
-        #Randomly sample nodes
-        rand <- sample(full, (full*percent), replace=FALSE)
+        repeat{
+            
+            #Increase count
+            count <- count + 1
+            
+            #Randomly sample nodes
+            rand <- sample(full, (full*percent), replace=FALSE)
+            
+            #Input into data list
+            new[[count]] <- get(name[i], envir = environment())[,rand]
+            
+            if(count == iter)
+            {break}
+        }
         
-        #Input into data list
-        datalist[[count]] <- data[,rand]
-        
-        #Input into paired list
-        if(!is.null(paired))
-        {datalist.p[[count]] <- paired[,rand]}
-        
-        if(count == iter)
-        {break}
+        #Insert data list
+        assign(paste("dl.",name[i],sep=""),new)
     }
 
     ############################
@@ -140,89 +138,62 @@ partboot <- function (data, paired = NULL, percent, sim, weighted = FALSE,
     cl <- parallel::makeCluster(cores)
         
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = c("datalist"), envir = environment())
+    parallel::clusterExport(cl = cl, varlist = paste("dl.",name,sep=""), envir = environment())
+    
+    for(i in 1:length(name))
+    {
+        #Compute similarity
+        newSim <- pbapply::pblapply(X = get(paste("dl.",name[i],sep=""), envir = environment()),
+                                    cl = cl,
+                                    FUN = similarity,
+                                    method = sim)
         
-    #Compute similarity
-    dataSim <- pbapply::pblapply(X = datalist,
-                                      cl = cl,
-                                      FUN = similarity,
-                                      method = sim)
+        #Insert similarity list
+        assign(paste("sim.",name[i],sep=""),newSim)
+    }
+    
     #Stop Cluster
     parallel::stopCluster(cl)
-    
-    if(!is.null(paired))
-    {
-        #Parallel processing
-        cl <- parallel::makeCluster(cores)
-        
-        #Export datalist
-        parallel::clusterExport(cl = cl, varlist = c("datalist.p"), envir = environment())
-        
-        pairedSim <- pbapply::pblapply(X = datalist.p,
-                                        cl = cl,
-                                        FUN = similarity,
-                                        method = sim)
-        #Stop Cluster
-        parallel::stopCluster(cl)
-    }
     
     ############################
     #### CONSTRUCT NETWORKS ####
     ############################
     
     #Let user know networks are being computed
-    message("Constructing networks...\n", appendLF = FALSE)
+    message("Estimating networks...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = c("dataSim"), envir = environment())
+    parallel::clusterExport(cl = cl, varlist = paste("sim.",name,sep=""), envir = environment())
     
-    #Compute similarity
-    dataNet <- pbapply::pblapply(X = dataSim,
-                                  cl = cl,
-                                  FUN = NetworkToolbox::TMFG)
+    for(i in 1:length(name))
+    {
+        #Compute networks
+        newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                    cl = cl,
+                                    FUN = NetworkToolbox::TMFG)
+        
+        #Insert network list
+        assign(paste("net.",name[i],sep=""),newNet)
+    }
+    
     #Stop Cluster
     parallel::stopCluster(cl)
     
-    if(!is.null(paired))
-    {
-        #Parallel processing
-        cl <- parallel::makeCluster(cores)
-        
-        #Export datalist
-        parallel::clusterExport(cl = cl, varlist = c("pairedSim"), envir = environment())
-        
-        #Compute similarity
-        pairedNet <- pbapply::pblapply(X = pairedSim,
-                                     cl = cl,
-                                     FUN = NetworkToolbox::TMFG)
-        #Stop Cluster
-        parallel::stopCluster(cl)
-    }
-    
     #Grab networks
-    if(is.null(paired))
+    for(i in 1:length(name))
     {
         #Initialize semantic network list
-        dataSemnet <- list()
+        Semnet <- list()
         
-        #Grab network only
-        for(i in 1:iter)
-        {dataSemnet[[i]] <- dataNet[[i]]$A}
-    }else{
+        #Loop through networks
+        for(j in 1:iter)
+        {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]$A}
         
-        #Initialize semantic network list
-        dataSemnet <- list()
-        pairedSemnet <- list()
-        
-        #Grab network only
-        for(i in 1:iter)
-        {
-            dataSemnet[[i]] <- dataNet[[i]]$A
-            pairedSemnet[[i]] <- pairedNet[[i]]$A
-        }
+        #Insert semantic network list
+        assign(paste("Semnet.",name[i],sep=""),Semnet)
     }
     
     ##############################
@@ -236,31 +207,22 @@ partboot <- function (data, paired = NULL, percent, sim, weighted = FALSE,
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = c("dataSemnet"), envir = environment())
+    parallel::clusterExport(cl = cl, varlist = paste("Semnet.",name[i],sep=""), envir = environment())
     
-    #Compute similarity
-    dataMeas <- pbapply::pbsapply(X = dataSemnet,
-                                 cl = cl,
-                                 FUN = semnetmeas)
-    #Stop Cluster
-    parallel::stopCluster(cl)
-    
-    if(!is.null(paired))
+    for(i in 1:length(name))
     {
-        #Parallel processing
-        cl <- parallel::makeCluster(cores)
+        #Compute network measures
+        netMeas <- pbapply::pbsapply(X = get(paste("Semnet.",name[i],sep=""), envir = environment()),
+                                     cl = cl,
+                                     FUN = semnetmeas)
         
-        #Export datalist
-        parallel::clusterExport(cl = cl, varlist = c("pairedSemnet"), envir = environment())
-        
-        #Compute similarity
-        pairedMeas <- pbapply::pbsapply(X = pairedSemnet,
-                                       cl = cl,
-                                       FUN = semnetmeas)
-        #Stop Cluster
-        parallel::stopCluster(cl)
+        #Insert network measures list
+        assign(paste("meas.",name[i],sep=""),netMeas)
     }
     
+    #Stop Cluster
+    parallel::stopCluster(cl)
+        
     #Compute summary statistics
     summ.table <- function (data, n)
     {
@@ -274,18 +236,17 @@ partboot <- function (data, paired = NULL, percent, sim, weighted = FALSE,
         return(stats)
     }
     
-    #Return results
+    #Initialize bootlist
     bootlist <- list()
     
-    bootlist$dataMeas <- dataMeas
-    bootlist$dataSumm <- summ.table(dataMeas, iter)
-    
-    if(!is.null(paired))
+    #Insert results
+    for(i in 1:length(name))
     {
-        bootlist$pairedMeas <- pairedMeas
-        bootlist$pairedSumm <- summ.table(pairedMeas, iter)
+        bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
+        bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
     }
     
+    #Insert percent remaining and iterations
     bootlist$percent <- percent
     bootlist$iter <- iter
     

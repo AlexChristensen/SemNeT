@@ -38,6 +38,8 @@
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
+#' @importFrom stats dnorm
+#' 
 #' @export
 randnet.test <- function (..., iter, cores)
 {
@@ -58,32 +60,46 @@ randnet.test <- function (..., iter, cores)
     datalist <- list(...)
     
     #Number of nodes
-    nodes <- ncol(datalist[[1]])
+    nodes <- list()
+    
+    for(i in 1:length(datalist))
+    {nodes[[i]] <- ncol(datalist[[i]])}
+    
+    #Make diagonals zero
+    for(i in 1:length(datalist))
+    {diag(datalist[[i]]) <- 0}
     
     #Number of edges
-    edges <- sum(colSums(NetworkToolbox::binarize(datalist[[1]])))/2
+    edges <- list()
+    
+    for(i in 1:length(datalist))
+    {edges[[i]] <- sum(colSums(NetworkToolbox::binarize(datalist[[i]])))/2}
     
     #Initialize random networks list
-    rand.list <- list()
-    
-    #Initialize count
-    count <- 0
+    rand.list <- vector("list", length = length(name))
+    names(rand.list) <- name
     
     #Message for begin random networks
     message("Generating random networks...", appendLF = FALSE)
     
-    repeat{
+    for(i in 1:length(datalist))
+    {
+        #Initialize count
+        count <- 0
         
-        #Increase count
-        count <- count + 1
-        
-        #Generate random network
-        rand.list[[count]] <- NetworkToolbox::randnet(nodes, edges)
-        
-        #Break out of repeat when
-        #count reaches iter
-        if(count == iter)
-        {break}
+        repeat{
+            
+            #Increase count
+            count <- count + 1
+            
+            #Generate random network
+            rand.list[[i]][[count]] <- NetworkToolbox::randnet(nodes[[i]], edges[[i]])
+            
+            #Break out of repeat when
+            #count reaches iter
+            if(count == iter)
+            {break}
+        }
     }
     
     #Message for end of random networks
@@ -92,40 +108,57 @@ randnet.test <- function (..., iter, cores)
     #Message for begin of network measures
     message("Computing network measures...\n", appendLF = FALSE)
     
+    #Initialize network measures list
+    net.meas <- vector("list", length = length(name))
+    names(net.meas) <- name
+    
     #Parallel processing
     cl <- parallel::makeCluster(cores)
     
     #Export variables
-    parallel::clusterExport(cl, "rand.list", envir = environment())
+    parallel::clusterExport(cl, c("rand.list", "net.meas"), envir = environment())
     
-    #Compute network measures
-    net.meas <- pbapply::pbsapply(X = rand.list, FUN = semnetmeas, cl = cl)
+    for(i in 1:length(datalist))
+    {
+        #Compute network measures
+        net.meas[[i]] <- pbapply::pbsapply(X = rand.list[[i]], FUN = semnetmeas, cl = cl)
+    }
     
     #Stop parallel processing
     parallel::stopCluster(cl)
     
+    #Initialize result list
+    res <- vector("list", length = length(name))
+    names(res) <- name
+    
     #Compute significance tests
-    sig.mat <- matrix(0, nrow = 3, ncol = length(name)+2)
-    row.names(sig.mat) <- c("ASPL","CC","Q")
-    colnames(sig.mat) <- c(name, "M.rand", "SD.rand")
-    
-    #Insert random means and sds
-    sig.mat[,"M.rand"] <- round(rowMeans(net.meas),4)
-    sig.mat[,"SD.rand"] <- round(apply(net.meas,1,sd),4)
-    
-    for(i in 1:length(name))
+    for(i in 1:length(datalist))
     {
+        sig.mat <- matrix(0, nrow = 3, ncol = 3)
+        row.names(sig.mat) <- c("ASPL","CC","Q")
+        colnames(sig.mat) <- c(name[i], "M.rand", "SD.rand")
+        
+        #Insert random means and sds
+        sig.mat[,"M.rand"] <- round(rowMeans(net.meas[[i]]),4)
+        sig.mat[,"SD.rand"] <- round(apply(net.meas[[i]],1,sd),4)
+        
         #Compute semantic network measures for network
         meas <- semnetmeas(datalist[[i]])
         
         ##ASPL
-        sig.mat["ASPL",i] <- round(1 - pnorm(meas["ASPL"], mean = sig.mat["ASPL","M.rand"], sd = sig.mat["ASPL","SD.rand"]),4)
+        z.aspl <- (meas["ASPL"] - sig.mat["ASPL","M.rand"]) / sig.mat["ASPL","SD.rand"]
+        sig.mat["ASPL",name[i]] <- round(dnorm(z.aspl, mean = sig.mat["ASPL","M.rand"], sd = sig.mat["ASPL","SD.rand"]),4)
         ##CC
-        sig.mat["CC",i] <- round(1 - pnorm(meas["CC"], mean = sig.mat["CC","M.rand"], sd = sig.mat["CC","SD.rand"]),4)
+        z.cc <- (meas["CC"] - sig.mat["CC","M.rand"]) / sig.mat["CC","SD.rand"]
+        sig.mat["CC",name[i]] <- round(dnorm(z.cc, mean = sig.mat["CC","M.rand"], sd = sig.mat["CC","SD.rand"]),4)
         ##Q
-        sig.mat["Q",i] <- round(1 - pnorm(meas["Q"], mean = sig.mat["Q","M.rand"], sd = sig.mat["Q","SD.rand"]),4)
+        z.q <- (meas["Q"] - sig.mat["Q","M.rand"]) / sig.mat["Q","SD.rand"]
+        sig.mat["Q",name[i]] <- round(dnorm(z.q, mean = sig.mat["Q","M.rand"], sd = sig.mat["Q","SD.rand"]),4)
+    
+        #Insert results
+        res[[i]] <- sig.mat
     }
     
-    return(sig.mat)
+    return(res)
 }
 #----
