@@ -4,20 +4,17 @@
 #' to plot networks in a layout that provides meaningful comparisons of distances
 #' (see Jones, Mair, & McNally, 2018)
 #' 
-#' @param A Character.
-#' Matrix or data frame of network adjacency matrix
+#' @param ... Matrices or data frames of network adjacency matrices
 #' 
-#' @param B Character.
-#' Matrix or data frame of network adjacency matrix
+#' @param title List.
+#' Characters denoting titles of plots
 #' 
-#' @param titleA Character.
-#' Title for network \code{A}
+#' @param config Character.
+#' Defaults to \code{\link[networktools]{MDSnet}}.
+#' See \code{\link[qgraph]{qgraph}} for more options
 #' 
-#' @param titleB Character.
-#' Title for network \code{B}
-#' 
-#' @return Plots two networks with multidimensional scaling layout
-#' (see \code{\link[networktools]{MDSnet}} for more details)
+#' @return Plots networks using \code{\link[qgraph]{qgraph}}
+#' or \code{\link[networktools]{MDSnet}}
 #' 
 #' @examples
 #' # Simulate Datasets
@@ -33,7 +30,7 @@
 #' net2 <- NetworkToolbox::TMFG(cos2)$A
 #' 
 #' # Compare networks
-#' compare.nets(net1, net2, "One", "Two")
+#' compare.nets(net1, net2, title = list("One", "Two"))
 #' 
 #' @references 
 #' Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
@@ -57,36 +54,85 @@
 #' 
 #' @export
 #Compare Graphs----
-compare.nets <- function (A, B, titleA, titleB)
+compare.nets <- function (..., title, config)
 {
-    if(missing(titleA))
-    {titleA <- as.character(substitute(A))
-    }else{titleA <- titleA}
+    #Get names of networks
+    name <- as.character(substitute(list(...)))
+    name <- name[-which(name=="list")]
     
-    if(missing(titleB))
-    {titleB <- as.character(substitute(B))
-    }else{titleB <- titleB}
+    # MISSING ARGUMENTS
+    if(missing(title))
+    {
+        #Initialize title list
+        title <- list()
+        
+        for(i in 1:length(name))
+        {title[[i]] <- name[i]}
+    }else if(!is.list(title))
+    {stop("Argument 'title' only takes list objects")}
     
-    diag(A)<-0
-    diag(B)<-0
+    if(missing(config))
+    {config <- "MDS"
+    }else{config <- config}
+    # MISSING ARGUMENTS
     
-    Alayout <- qgraph::qgraph(A,DoNotPlot=TRUE)
-    Blayout <- qgraph::qgraph(B,DoNotPlot=TRUE)
+    #Create list of input
+    datalist <- list(...)
     
-    Alabels = as.factor(colnames(A))
-    Blabels = as.factor(colnames(B))
-
-    Layout <- qgraph::averageLayout(Alayout,Blayout)
-    layout(t(1:2))
+    #Initialize layout and labels list
+    layouts <- list()
+    labs <- list()
     
-    Alayout$Arguments$DoNotPlot <- FALSE
-    Blayout$Arguments$DoNotPlot <- FALSE
+    for(i in 1:length(datalist))
+    {
+        #Diagonals to zero
+        diag(datalist[[i]]) <- 0
+        
+        #Create graph layouts
+        if(config == "MDS")
+        {layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE)
+        }else{layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE,layout=config)}
+        
+        #Get labels
+        labs[[i]] <- as.factor(colnames(datalist[[i]]))
+    }
     
-    networktools::MDSnet(Alayout, layout = Layout, title = titleA,
-                   esize = 20, vsize = 4, label.prop = 1,
-                   labels = Alabels)
-    networktools::MDSnet(Blayout, layout = Layout, title = titleB,
-                   esize = 20, vsize = 4, label.prop = 1,
-                   labels = Blabels)
+    #Create average layout
+    Layout <- qgraph::averageLayout(layouts)
+    
+    #Manipulate R plot window
+    if(length(datalist) == 2)
+    {layout(t(1:2))
+    }else if(length(datalist) > 2)
+    {
+        #Find square root
+        len <- floor(sqrt(length(datalist)))
+        
+        #Change layout accordingly
+        layout(t(matrix(1:length(datalist),nrow=len)))
+    }
+    
+    #Change layout arguments to FALSE
+    for(i in 1:length(layouts))
+    {layouts[[i]]$Arguments$DoNotPlot <- FALSE}
+    
+    if(config == "MDS")
+    {
+        for(i in 1:length(datalist))
+        {
+            networktools::MDSnet(layouts[[i]], layout = Layout, title = title[[i]],
+                                 esize = 20, vsize = 4, label.prop = 1,
+                                 labels = labs[[i]])
+        }
+        
+    }else{
+        
+        for(i in 1:length(datalist))
+        {
+            qgraph::qgraph(layouts[[i]], layout = Layout, title = title[[i]],
+                           esize = 20, vsize = 4, label.prop = 1,
+                           labels = labs[[i]])
+        }
+    }
 }
 #----
