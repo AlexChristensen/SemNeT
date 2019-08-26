@@ -4,24 +4,21 @@
 \alias{compare.nets}
 \title{Plots Two Networks for Comparison}
 \usage{
-compare.nets(A, B, titleA, titleB)
+compare.nets(..., title, config)
 }
 \arguments{
-\item{A}{Character.
-Matrix or data frame of network adjacency matrix}
+\item{...}{Matrices or data frames of network adjacency matrices}
 
-\item{B}{Character.
-Matrix or data frame of network adjacency matrix}
+\item{title}{List.
+Characters denoting titles of plots}
 
-\item{titleA}{Character.
-Title for network \code{A}}
-
-\item{titleB}{Character.
-Title for network \code{B}}
+\item{config}{Character.
+Defaults to \code{\link[networktools]{MDSnet}}.
+See \code{\link[qgraph]{qgraph}} for more options}
 }
 \value{
-Plots two networks with multidimensional scaling layout
-(see \code{\link[networktools]{MDSnet}} for more details)
+Plots networks using \code{\link[qgraph]{qgraph}}
+or \code{\link[networktools]{MDSnet}}
 }
 \description{
 Uses \code{\link[qgraph]{qgraph}} and \code{\link[networktools]{MDSnet}}
@@ -42,7 +39,7 @@ net1 <- NetworkToolbox::TMFG(cos1)$A
 net2 <- NetworkToolbox::TMFG(cos2)$A
 
 # Compare networks
-compare.nets(net1, net2, "One", "Two")
+compare.nets(net1, net2, title = list("One", "Two"))
 
 }
 \references{

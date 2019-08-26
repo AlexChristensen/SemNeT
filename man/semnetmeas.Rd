@@ -4,11 +4,16 @@
 \alias{semnetmeas}
 \title{Semantic Network Measures}
 \usage{
-semnetmeas(A, weighted = FALSE)
+semnetmeas(A, meas = c("ASPL", "CC", "Q"), weighted = FALSE)
 }
 \arguments{
 \item{A}{Matrix or data frame.
 An adjacency matrix of a network}
+
+\item{meas}{Character.
+Global network measures to compute.
+By default, computes ASPL, CC, and Q.
+Individual measures can be selected}
 
 \item{weighted}{Boolean.
 Should weighted measures be computed?

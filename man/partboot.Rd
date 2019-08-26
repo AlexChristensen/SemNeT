@@ -4,17 +4,12 @@
 \alias{partboot}
 \title{Partial Bootstrapped Semantic Network Analysis}
 \usage{
-partboot(data, paired = NULL, percent, sim, weighted = FALSE,
-  iter = 1000, cores)
+partboot(..., percent, sim, weighted = FALSE, iter = 1000, cores)
 }
 \arguments{
-\item{data}{Matrix or data frame.
-Cleaned response matrix}
-
-\item{paired}{Matrix or data frame.
-Input for a second network to be paired with \code{data}.
-Defaults to \code{NULL}.
-Input a matrix or data frame containing another sample}
+\item{...}{Matrices or data frames.
+Binary response matrices (e.g., \code{binary} output from
+\code{\link[SemNetCleaner]{textcleaner}})}
 
 \item{percent}{Numeric.
 Percent of nodes to remain in the network.

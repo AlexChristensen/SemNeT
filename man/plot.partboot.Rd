@@ -12,9 +12,7 @@
 
 \item{groups}{Character.
 Labels for groups in the order they were entered
-in \code{\link[SemNeT]{partboot}} (e.g.,
-\code{data} = first,
-\code{paired} = second)}
+in \code{\link[SemNeT]{partboot}}}
 
 \item{measures}{Character.
 Measures to be plotted}
@@ -30,7 +28,7 @@ Bootstraps (without replacement) the nodes in the network and computes global ne
 one <- sim.fluency(20)
 \donttest{
 # Run partial bootstrap networks
-one.result <- partboot(data = one, percent = .50, iter = 1000,
+one.result <- partboot(one, percent = .50, iter = 1000,
 sim = "cosine", cores = 2)
 }
 # Plot

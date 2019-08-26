@@ -4,21 +4,20 @@
 \alias{org.plot}
 \title{Organization function for partboot.plot}
 \usage{
-org.plot(input, paired, len, measures, groups, netmeas)
+org.plot(input, len, measures, name, groups, netmeas)
 }
 \arguments{
 \item{input}{List.
 Input data from \link[SemNeT]{partboot}}
-
-\item{paired}{Numeric.
-\code{1} equals single sample.
-\code{2} equals paired samples}
 
 \item{len}{Numeric.
 Number of bootstrapped samples (percentages)}
 
 \item{measures}{Character.
 Network measures to be entered}
+
+\item{name}{Character.
+Name(s) of object(s) used from \link[SemNeT]{partboot}}
 
 \item{groups}{Character.
 Names for the group(s)}
@@ -44,7 +43,7 @@ one.result <- partboot(data = one, percent = .50, iter = 1000,
 sim = "cosine", cores = 2)
 }
 # Plot
-org.plot(input = list(one.result), paired = 1,
+org.plot(input = list(one.result), name = "data",
 len = 1, groups = "One", netmeas = "ASPL")
 
 }
