@@ -2,7 +2,7 @@
 % Please edit documentation in R/partboot.test.R
 \name{partboot.test}
 \alias{partboot.test}
-\title{Wrapper function for \code{\link[SemNeT]{partboot.test}}}
+\title{Statistical tests for \code{\link[SemNeT]{partboot}}}
 \usage{
 partboot.test(...)
 }
@@ -49,8 +49,8 @@ A list containing two objects:
 residual degrees of freedom, \emph{p}-value, and partial eta squared {\code{p.eta.sq}}}
 
 \item{HSD}{A matrix containing the differences between each group (\code{diff}),
-lower (\code{lwr}) and upper (\code{upr}) bounds of the 95% confidence interval,
-and the adjusted \emph{p}-value (\code{p adj})}
+lower (\code{lwr}) and upper (\code{upr}) bounds of the 95\% confidence interval,
+and the adjusted \emph{p}-value (\code{p.adj})}
 }
 \description{
 Computes statistical tests for partial bootstrapped

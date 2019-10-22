@@ -32,14 +32,14 @@ Defaults to \code{1000}}
 \item{cores}{Numeric.
 Number of computer processing cores to use for bootstrapping samples.
 Defaults to \emph{n} - 1 total number of cores.
-Set to any number between 1 and maxmimum amount of cores on your computer
+Set to any number between 1 and maximum amount of cores on your computer
 (see \code{parellel::detectCores()})}
 }
 \value{
 Returns a list containing:
 
 \item{dataMeas}{A matrix for the network input in the \code{data}
-arugment, where columns are the semantic network measures
+argument, where columns are the semantic network measures
 from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
 bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
 

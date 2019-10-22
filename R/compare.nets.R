@@ -1,8 +1,19 @@
-#' Plots Two Networks for Comparison
+#' Plots Networks for Comparison
 #' 
 #' @description Uses \code{\link[qgraph]{qgraph}} and \code{\link[networktools]{MDSnet}}
-#' to plot networks in a layout that provides meaningful comparisons of distances
-#' (see Jones, Mair, & McNally, 2018)
+#' to plot networks. Accepts any number of networks and will organize the plots
+#' in the number of side-by-side columns using the heuristic of taking the square root of the number of 
+#' input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
+#' 
+#' \strong{Examples}
+#' \itemize{
+#' \item{3 networks:}
+#' {1 x 3}
+#' \item{6 networks:}
+#' {2 x 3}
+#' \item{9 networks:}
+#' {3 x 3}
+#' }
 #' 
 #' @param ... Matrices or data frames of network adjacency matrices
 #' 
@@ -12,6 +23,30 @@
 #' @param config Character.
 #' Defaults to \code{\link[networktools]{MDSnet}}.
 #' See \code{\link[qgraph]{qgraph}} for more options
+#' 
+#' @param placement Character.
+#' How should nodes be placed when comparing groups?
+#' Defaults to \code{"default"}
+#' 
+#' \itemize{
+#' \item{\code{"match"}}
+#' {places nodes in the same position for all networks}
+#' 
+#' \item{\code{"default"}}
+#' {places nodes in the default \code{config} positions} 
+#' }
+#' 
+#' @param weighted Boolean.
+#' Should networks be plotted with weights?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} to plot networks with weights
+#' corresponding to association strength. Often, unweighted
+#' networks are more aesthetically representational of the
+#' networks
+#' 
+#' @param qgraph.args List.
+#' An argument list to be passed onto \code{\link[qgraph]{qgraph}}.
+#' See \code{\link[qgraph]{qgraph}} for possible arguments
 #' 
 #' @return Plots networks using \code{\link[qgraph]{qgraph}}
 #' or \code{\link[networktools]{MDSnet}}
@@ -30,7 +65,11 @@
 #' net2 <- NetworkToolbox::TMFG(cos2)$A
 #' 
 #' # Compare networks
-#' compare.nets(net1, net2, title = list("One", "Two"))
+#' compare.nets(net1, net2, title = list("One", "Two"), config = "spring")
+#' 
+#' # Change edge colors
+#' compare.nets(net1, net2, title = list("One", "Two"),
+#' config = "spring", qgraph.args = list(edge.color = "blue"))
 #' 
 #' @references 
 #' Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
@@ -54,7 +93,10 @@
 #' 
 #' @export
 #Compare Graphs----
-compare.nets <- function (..., title, config)
+compare.nets <- function (..., title, config,
+                          placement = c("match", "default"),
+                          weighted = FALSE,
+                          qgraph.args = list())
 {
     #Get names of networks
     name <- as.character(substitute(list(...)))
@@ -74,6 +116,10 @@ compare.nets <- function (..., title, config)
     if(missing(config))
     {config <- "MDS"
     }else{config <- config}
+    
+    if(missing(placement))
+    {placement <- "default"
+    }else{placement <- match.arg(placement)}
     # MISSING ARGUMENTS
     
     #Create list of input
@@ -85,6 +131,10 @@ compare.nets <- function (..., title, config)
     
     for(i in 1:length(datalist))
     {
+        #Change weights
+        if(!weighted)
+        {datalist[[i]] <- NetworkToolbox::binarize(datalist[[i]])}
+        
         #Diagonals to zero
         diag(datalist[[i]]) <- 0
         
@@ -97,9 +147,6 @@ compare.nets <- function (..., title, config)
         labs[[i]] <- as.factor(colnames(datalist[[i]]))
     }
     
-    #Create average layout
-    Layout <- qgraph::averageLayout(layouts)
-    
     #Manipulate R plot window
     if(length(datalist) == 2)
     {layout(t(1:2))
@@ -108,31 +155,72 @@ compare.nets <- function (..., title, config)
         #Find square root
         len <- floor(sqrt(length(datalist)))
         
+        #Remainder
+        remain <- length(datalist)%%len
+        
         #Change layout accordingly
-        layout(t(matrix(1:length(datalist),nrow=len)))
+        layout(t(matrix(1:(length(datalist)+remain),ncol=len)))
     }
     
     #Change layout arguments to FALSE
     for(i in 1:length(layouts))
     {layouts[[i]]$Arguments$DoNotPlot <- FALSE}
     
-    if(config == "MDS")
+    #Create average layout
+    if(placement == "match")
+    {Layout <- qgraph::averageLayout(layouts)
+    }else if(placement == "default")
+    {Layout <- config}
+    
+    #Default 'qgraph' arguments for 'compare.nets()'
+    if(is.list(qgraph.args))
     {
-        for(i in 1:length(datalist))
+        #Name of arguments
+        arg.name <- names(qgraph.args)
+        
+        #Check for 'compare.nets' defaults
+        ##Vertex size
+        if(!"vsize" %in% arg.name)
+        {qgraph.args$vsize <- 4}
+        ##Label proportion
+        if(!"label.prop" %in% arg.name)
+        {qgraph.args$label.prop <- 1}
+        ##Aspect
+        if(!"aspect" %in% arg.name)
+        {qgraph.args$aspect <- FALSE}
+        ##Repulsion
+        if(config == "spring")
         {
-            networktools::MDSnet(layouts[[i]], layout = Layout, title = title[[i]],
-                                 esize = 20, vsize = 4, label.prop = 1,
-                                 labels = labs[[i]])
+            if(!"repulsion" %in% arg.name)
+            {qgraph.args$repulsion <- 1.15}
+        }
+        ##Edge color
+        if(!"edge.color" %in% arg.name)
+        {
+            if(!weighted)
+            {qgraph.args$edge.color <- "black"}
         }
         
-    }else{
+    }else{stop("qgraph.args must be input as a list")}
+    
+    #Add general defaults arguments
+    qgraph.args$layout <- Layout
+    
+    for(i in 1:length(datalist))
+    {
+        #Network specific arguments
+        ##Networks
+        if(config == "MDS")
+        {qgraph.args$qgraph_net <- layouts[[i]]
+        }else{qgraph.args$input <- layouts[[i]]}
+        ##Network title and labels
+        qgraph.args$title <- title[[i]]
+        qgraph.args$labels <- labs[[i]]
         
-        for(i in 1:length(datalist))
-        {
-            qgraph::qgraph(layouts[[i]], layout = Layout, title = title[[i]],
-                           esize = 20, vsize = 4, label.prop = 1,
-                           labels = labs[[i]])
-        }
+        #Generate plot
+        ifelse(config == "MDS",
+               do.call(networktools::MDSnet, args = qgraph.args),
+               do.call(qgraph::qgraph, args = qgraph.args))
     }
 }
 #----

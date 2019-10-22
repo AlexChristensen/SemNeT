@@ -1,0 +1,15 @@
+citHeader("To cite SemNeT in publications use:")
+
+citEntry(entry = "manual",
+  title        = "{SemNeT}: Methods and measures for semantic network analysis",
+  author       = "Alexander P Christensen and Yoed N Kenett",
+  year         = "2019",
+  note	       = "R package version 1.1.1",
+  url          = "https://cran.r-project.org/package=SemNeT",
+
+  textVersion  =
+  paste("Christensen, A. P., & Kenett, Y. N. (2019).",
+        "SemNeT: Methods and measures for semantic network analysis.",
+        "R package version 1.1.1.",
+        "Retrieved from https://cran.r-project.org/package=SemNeT")
+)

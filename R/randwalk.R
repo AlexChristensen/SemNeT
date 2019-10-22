@@ -27,7 +27,7 @@
 #' @param cores Numeric.
 #' Number of computer processing cores to use for bootstrapping samples.
 #' Defaults to \emph{n} - 1 total number of cores.
-#' Set to any number between 1 and maxmimum amount of cores on your computer
+#' Set to any number between 1 and maximum amount of cores on your computer
 #' 
 #' @return A result matrix containing the means and standard deviations for
 #' several measures as well as \emph{p}-values for a Mann-Whitney U test
@@ -53,7 +53,7 @@
 #' @references
 #' Kenett, Y. N., & Austerweil, J. L. (2016).
 #' Examining search processes in low and high creative individuals with random walks.
-#' In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society}. Austin, TX.
+#' In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive science society}. Austin, TX.
 #' Retrieved from: \href{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com> and Yoed Kenett <yoedkenett@gmail.com>

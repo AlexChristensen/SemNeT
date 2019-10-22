@@ -15,7 +15,7 @@ implemented.
 \references{
 Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018).
 Remotely close associations: Openness to experience and semantic memory structure.
-\emph{European Journal of Personality}, \emph{32}, 480–492.
+\emph{European Journal of Personality}, \emph{32}, 480-492.
 doi:href{https://doi.org/10.1002/per.2157}{10.1002/per.2157}
 
 Kenett, Y. N., Anaki, D., & Faust, M. (2014).
@@ -25,7 +25,7 @@ doi:\href{https://doi.org/10.3389/fnhum.2014.00407}{10.3389/fnhum.2014.00407}
 
 Kenett, Y. N., & Austerweil, J. L. (2016).
 Examining search processes in low and high creative individuals with random walks.
-In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society}. Austin, TX.
+In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive science society}. Austin, TX.
 Retrieved from: \href{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}
 }
 \seealso{

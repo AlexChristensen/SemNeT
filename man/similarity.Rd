@@ -4,8 +4,8 @@
 \alias{similarity}
 \title{Measures of Similarity}
 \usage{
-similarity(data, method = c("angular", "cosine", "euclid", "faith",
-  "jaccard", "phi", "rr"))
+similarity(data, method = c("angular", "cor", "cosine", "euclid",
+  "faith", "jaccard", "phi", "rr"))
 }
 \arguments{
 \item{data}{Matrix or data frame.
@@ -16,11 +16,12 @@ Type of similarity measure to compute.
 
 Below are the definitions for each bin:
 
-
-\tabular{llll}{
-\tab a \tab b \tab a+b (R1)\cr
-\tab c \tab d  \tab c+d (R2)\cr
-\tab a+c (C1) \tab b+d (C2) \tab a+b+c+d (N)\cr
+\tabular{ccccc}{
+\tab 1 \tab 0 \tab \tab \cr
+1 \tab a \tab b \tab a+b \tab (R1)\cr
+0 \tab c \tab d  \tab c+d \tab (R2)\cr
+\tab a+c \tab b+d \tab a+b+c+d \tab (N) \cr
+\tab (C1) \tab (C2) \tab (N) \tab \cr
 }
     
 Options include:
@@ -39,7 +40,7 @@ Options include:
 \item{\code{"jaccard"} =}
 {\eqn{a / a + b + c}}
 
-\item{\code{"phi"} =}
+\item{\code{"phi"} and \code{"cor"} =}
 {\eqn{ad - bc / \sqrt(R1 x R2 x C1 x C2)}}
 
 \item{\code{"rr"} =}

@@ -6,7 +6,7 @@
 #' each response is simulated from a gamma distribution with a
 #' shape of .25 and rate of 1 (see \code{\link{pgamma}}). Using these
 #' sums, participants responses are simulated with a probability of giving
-#' a reponse as the total of the summed response over the number of participants.
+#' a response as the total of the summed response over the number of participants.
 #' 
 #' @param nodes Numeric.
 #' Number of nodes to simulate in data

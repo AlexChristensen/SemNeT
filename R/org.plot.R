@@ -183,8 +183,42 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
     plot.mat.select <- plot.mat[,c("group","percent",netmeas)]
     colnames(plot.mat.select)[3] <- "netmeas"
     plot.mat.select$group <- as.factor(as.character(plot.mat.select$group))
-    plot.mat.select$percent <- as.factor(as.character(plot.mat.select$percent))
     
+    #Descriptives
+    plot.mat.desc <- matrix(NA, nrow = (length(groups) * length(perc)), ncol = 6)
+    colnames(plot.mat.desc) <- c("group", "percent", "mean", "se", "lower.ci", "upper.ci")
+    
+    #Initialize count
+    count <- 0
+    
+    for(i in 1:length(groups))
+        for(j in 1:length(perc))
+        {
+            #Update count
+            count <- count + 1
+            
+            #Target
+            target.group <- which(plot.mat.select$group == i)
+            target.perc <- target.group[which(plot.mat.select$percent[target.group] == perc[j])]
+            target.data <- plot.mat.select[target.perc, "netmeas"]
+            
+            plot.mat.desc[count, "group"] <- i
+            plot.mat.desc[count, "percent"] <- perc[j]
+            plot.mat.desc[count, "mean"] <- mean(target.data)
+            plot.mat.desc[count, "se"] <- sd(target.data)
+            plot.mat.desc[count, "lower.ci"] <- plot.mat.desc[count, "se"] * 1.96
+            plot.mat.desc[count, "upper.ci"] <- plot.mat.desc[count, "se"] * 1.96
+        }
+    
+    #Convert to data frame
+    plot.desc <- as.data.frame(plot.mat.desc, stringsAsFactors = TRUE)
+    plot.desc$group <- as.factor(as.character(plot.desc$group))
+    
+    #Change to integer values
+    plot.mat.select$percent <- round(plot.mat.select$percent*100,0)
+    plot.desc$percent <- round(plot.desc$percent*100,0)
+    plot.mat.select$percent <- as.factor(as.character(plot.mat.select$percent))
+    plot.desc$percent <- as.factor(as.character(plot.desc$percent))
     
     ##############
     #### PLOT ####
@@ -214,6 +248,14 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
         
         geom_boxplot(aes(x = percent, y = netmeas, fill = group),outlier.shape = NA,
                      alpha = .5, width = .1, colour = "black") +
+        
+        geom_point(data = plot.desc, aes(x = percent, y = mean),
+                   position = position_nudge(x = -.125),
+                   colour = "black", alpha = 1) +
+        
+        #geom_errorbar(data = plot.desc, aes(x = percent, y = mean, ymin = mean - lower.ci, ymax = mean + upper.ci),
+        #              position = position_nudge(x = -.25, y = .05),
+        #              colour = "black", width = 0.1, size = 0.8, alpha = .5) +
         
         scale_colour_brewer(name = "Groups", labels = groups, palette = "Dark2") +
         

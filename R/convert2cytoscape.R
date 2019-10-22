@@ -77,6 +77,6 @@ convert2cytoscape <- function (A)
     attr(cyto, "na.action") <- NULL
     attr(cyto, "class") <- NULL
     
-    return(cyto)
+    return(noquote(cyto))
 }
 #----

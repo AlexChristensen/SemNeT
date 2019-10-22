@@ -16,7 +16,7 @@ Defaults to \code{1000}}
 
 \item{cores}{Number of computer processing cores to use for bootstrapping samples.
 Defaults to \emph{n} - 1 total number of cores.
-Set to any number between 1 and maxmimum amount of cores on your computer}
+Set to any number between 1 and maximum amount of cores on your computer}
 }
 \value{
 Returns a matrix containing p-values

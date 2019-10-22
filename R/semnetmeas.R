@@ -39,6 +39,10 @@ semnetmeas <- function (A, meas = c("ASPL", "CC", "Q"), weighted = FALSE)
     # Full measures
     full <- c("ASPL", "CC", "Q")
     
+    # Weighted
+    if(!weighted)
+    {A <- NetworkToolbox::binarize(A)}
+    
     # Average shortest path length
     if("ASPL" %in% meas)
     {ASPL <- NetworkToolbox::pathlengths(A, weighted = weighted)$ASPL}

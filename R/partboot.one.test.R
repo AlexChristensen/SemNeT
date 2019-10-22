@@ -116,9 +116,9 @@ partboot.one.test <- function (partboot.obj)
         }
         
         ##ASPL Tests
-        aspl <- matrix(NA, nrow = 1, ncol = 7)
+        aspl <- matrix(NA, nrow = 1, ncol = 8)
         row.names(aspl) <- paste(perc*100,"%",sep="")
-        colnames(aspl) <- c("t-statistic", "df", "p-value", "d",
+        colnames(aspl) <- c("t-statistic", "df", "p-value", "d", "Difference",
                             "CI95.lower", "CI95.upper","Direction")
         #ASPL
         one.aspl <- partboot.obj[[paste(name[1],"Meas",sep="")]]["ASPL",]
@@ -132,22 +132,23 @@ partboot.one.test <- function (partboot.obj)
         aspl[paste(perc*100,"%",sep=""),2] <- round(as.numeric(test$parameter),3)
         aspl[paste(perc*100,"%",sep=""),3] <- round(as.numeric(test$p.value),3)
         aspl[paste(perc*100,"%",sep=""),4] <- round(as.numeric(d(one.aspl,two.aspl)),3)
-        aspl[paste(perc*100,"%",sep=""),5] <- round(as.numeric(test$conf.int[1]),3)
-        aspl[paste(perc*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[2]),3)
+        aspl[paste(perc*100,"%",sep=""),5] <- round(as.numeric(mean(one.aspl)-mean(two.aspl)),3)
+        aspl[paste(perc*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[1]),3)
+        aspl[paste(perc*100,"%",sep=""),7] <- round(as.numeric(test$conf.int[2]),3)
         
         if(round(as.numeric(test$p.value),3) > .05)
-        {aspl[paste(perc*100,"%",sep=""),7] <- "n.s."
+        {aspl[paste(perc*100,"%",sep=""),8] <- "n.s."
         }else{
-            aspl[paste(perc*100,"%",sep=""),7] <- ifelse(sign(test$statistic)==1,
+            aspl[paste(perc*100,"%",sep=""),8] <- ifelse(sign(test$statistic)==1,
                                                          paste(name[1],">",name[2],sep=" "),
                                                          paste(name[2],">",name[1],sep=" ")
             )
         }
         
         ##CC Tests
-        cc <- matrix(NA, nrow = 1, ncol = 7)
+        cc <- matrix(NA, nrow = 1, ncol = 8)
         row.names(cc) <- paste(perc*100,"%",sep="")
-        colnames(cc) <- c("t-statistic", "df", "p-value", "d",
+        colnames(cc) <- c("t-statistic", "df", "p-value", "d", "Difference",
                             "CI95.lower", "CI95.upper","Direction")
         #CC
         one.cc <- partboot.obj[[paste(name[1],"Meas",sep="")]]["CC",]
@@ -161,22 +162,23 @@ partboot.one.test <- function (partboot.obj)
         cc[paste(perc*100,"%",sep=""),2] <- round(as.numeric(test$parameter),3)
         cc[paste(perc*100,"%",sep=""),3] <- round(as.numeric(test$p.value),3)
         cc[paste(perc*100,"%",sep=""),4] <- round(as.numeric(d(one.cc,two.cc)),3)
-        cc[paste(perc*100,"%",sep=""),5] <- round(as.numeric(test$conf.int[1]),3)
-        cc[paste(perc*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[2]),3)
+        cc[paste(perc*100,"%",sep=""),5] <- round(as.numeric(mean(one.cc)-mean(two.cc)),3)
+        cc[paste(perc*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[1]),3)
+        cc[paste(perc*100,"%",sep=""),7] <- round(as.numeric(test$conf.int[2]),3)
         
         if(round(as.numeric(test$p.value),3) > .05)
-        {cc[paste(perc*100,"%",sep=""),7] <- "n.s."
+        {cc[paste(perc*100,"%",sep=""),8] <- "n.s."
         }else{
-            cc[paste(perc*100,"%",sep=""),7] <- ifelse(sign(test$statistic)==1,
+            cc[paste(perc*100,"%",sep=""),8] <- ifelse(sign(test$statistic)==1,
                                                          paste(name[1],">",name[2],sep=" "),
                                                          paste(name[2],">",name[1],sep=" ")
             )
         }
         
         ##Q Tests
-        q <- matrix(NA, nrow = 1, ncol = 7)
+        q <- matrix(NA, nrow = 1, ncol = 8)
         row.names(q) <- paste(perc*100,"%",sep="")
-        colnames(q) <- c("t-statistic", "df", "p-value", "d",
+        colnames(q) <- c("t-statistic", "df", "p-value", "d", "Difference",
                           "CI95.lower", "CI95.upper","Direction")
         #Q
         one.q <- partboot.obj[[paste(name[1],"Meas",sep="")]]["Q",]
@@ -190,13 +192,14 @@ partboot.one.test <- function (partboot.obj)
         q[paste(perc*100,"%",sep=""),2] <- round(as.numeric(test$parameter),3)
         q[paste(perc*100,"%",sep=""),3] <- round(as.numeric(test$p.value),3)
         q[paste(perc*100,"%",sep=""),4] <- round(as.numeric(d(one.q,two.q)),3)
-        q[paste(perc*100,"%",sep=""),5] <- round(as.numeric(test$conf.int[1]),3)
-        q[paste(perc*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[2]),3)
+        q[paste(perc*100,"%",sep=""),5] <- round(as.numeric(mean(one.q)-mean(two.q)),3)
+        q[paste(perc*100,"%",sep=""),6] <- round(as.numeric(test$conf.int[1]),3)
+        q[paste(perc*100,"%",sep=""),7] <- round(as.numeric(test$conf.int[2]),3)
         
         if(round(as.numeric(test$p.value),3) > .05)
-        {q[paste(perc*100,"%",sep=""),7] <- "n.s."
+        {q[paste(perc*100,"%",sep=""),8] <- "n.s."
         }else{
-            q[paste(perc*100,"%",sep=""),7] <- ifelse(sign(test$statistic)==1,
+            q[paste(perc*100,"%",sep=""),8] <- ifelse(sign(test$statistic)==1,
                                                        paste(name[1],">",name[2],sep=" "),
                                                        paste(name[2],">",name[1],sep=" ")
             )

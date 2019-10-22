@@ -2,9 +2,10 @@
 % Please edit documentation in R/compare.nets.R
 \name{compare.nets}
 \alias{compare.nets}
-\title{Plots Two Networks for Comparison}
+\title{Plots Networks for Comparison}
 \usage{
-compare.nets(..., title, config)
+compare.nets(..., title, config, placement = c("match", "default"),
+  weighted = FALSE, qgraph.args = list())
 }
 \arguments{
 \item{...}{Matrices or data frames of network adjacency matrices}
@@ -15,6 +16,30 @@ Characters denoting titles of plots}
 \item{config}{Character.
 Defaults to \code{\link[networktools]{MDSnet}}.
 See \code{\link[qgraph]{qgraph}} for more options}
+
+\item{placement}{Character.
+How should nodes be placed when comparing groups?
+Defaults to \code{"default"}
+
+\itemize{
+\item{\code{"match"}}
+{places nodes in the same position for all networks}
+
+\item{\code{"default"}}
+{places nodes in the default \code{config} positions} 
+}}
+
+\item{weighted}{Boolean.
+Should networks be plotted with weights?
+Defaults to \code{FALSE}.
+Set to \code{TRUE} to plot networks with weights
+corresponding to association strength. Often, unweighted
+networks are more aesthetically representational of the
+networks}
+
+\item{qgraph.args}{List.
+An argument list to be passed onto \code{\link[qgraph]{qgraph}}.
+See \code{\link[qgraph]{qgraph}} for possible arguments}
 }
 \value{
 Plots networks using \code{\link[qgraph]{qgraph}}
@@ -22,8 +47,19 @@ or \code{\link[networktools]{MDSnet}}
 }
 \description{
 Uses \code{\link[qgraph]{qgraph}} and \code{\link[networktools]{MDSnet}}
-to plot networks in a layout that provides meaningful comparisons of distances
-(see Jones, Mair, & McNally, 2018)
+to plot networks. Accepts any number of networks and will organize the plots
+in the number of side-by-side columns using the heuristic of taking the square root of the number of 
+input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
+
+\strong{Examples}
+\itemize{
+\item{3 networks:}
+{1 x 3}
+\item{6 networks:}
+{2 x 3}
+\item{9 networks:}
+{3 x 3}
+}
 }
 \examples{
 # Simulate Datasets
@@ -39,7 +75,11 @@ net1 <- NetworkToolbox::TMFG(cos1)$A
 net2 <- NetworkToolbox::TMFG(cos2)$A
 
 # Compare networks
-compare.nets(net1, net2, title = list("One", "Two"))
+compare.nets(net1, net2, title = list("One", "Two"), config = "spring")
+
+# Change edge colors
+compare.nets(net1, net2, title = list("One", "Two"),
+config = "spring", qgraph.args = list(edge.color = "blue"))
 
 }
 \references{

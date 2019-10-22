@@ -1,4 +1,4 @@
-#' Wrapper function for \code{\link[SemNeT]{partboot.test}}
+#' Statistical tests for \code{\link[SemNeT]{partboot}}
 #' 
 #' @description Computes statistical tests for partial bootstrapped
 #' networks from \code{\link[SemNeT]{partboot}}. Automatically
@@ -47,8 +47,8 @@
 #' residual degrees of freedom, \emph{p}-value, and partial eta squared {\code{p.eta.sq}}}
 #' 
 #' \item{HSD}{A matrix containing the differences between each group (\code{diff}),
-#' lower (\code{lwr}) and upper (\code{upr}) bounds of the 95% confidence interval,
-#' and the adjusted \emph{p}-value (\code{p adj})}
+#' lower (\code{lwr}) and upper (\code{upr}) bounds of the 95\% confidence interval,
+#' and the adjusted \emph{p}-value (\code{p.adj})}
 #' 
 #' @examples
 #' # Simulate Dataset
