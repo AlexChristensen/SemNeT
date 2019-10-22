@@ -1,5 +1,10 @@
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
+# How To Use
+See our tutorial: https://psyarxiv.com/eht87/
+
+Christensen, A. P., & Kenett, Y. N. (under review). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing    semantic networks. PsyArXiv. doi:10.31234/osf.io/eht87. OSF:10.17605/OSF.IO/HQXTC
+
 # How To Install
 devtools::install_github("AlexChristensen/SemNeT")
 
