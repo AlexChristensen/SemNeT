@@ -1,15 +1,17 @@
-citHeader("To cite SemNeT in publications use:")
+citHeader("To cite SemNetCleaner in publications use:")
 
-citEntry(entry = "manual",
-  title        = "{SemNeT}: Methods and measures for semantic network analysis",
-  author       = "Alexander P Christensen and Yoed N Kenett",
+bibentry(
+  bibtype      = "article",
+  key          = "christensen2019semna",
+  title        = "Semantic network analysis {(SemNA)}: A tutorial on preprocessing, estimating, and analyzing semantic networks",
+  author       = c(person("Christensen,", "P", "Alexander"),
+		   person("Kenett,", "N", "Yoed")),
+  journal      = "PsyArXiv",
   year         = "2019",
-  note	       = "R package version 1.1.1",
-  url          = "https://cran.r-project.org/package=SemNeT",
+  doi          = "10.31234/osf.io/eht87",
 
   textVersion  =
-  paste("Christensen, A. P., & Kenett, Y. N. (2019).",
-        "SemNeT: Methods and measures for semantic network analysis.",
-        "R package version 1.1.1.",
-        "Retrieved from https://cran.r-project.org/package=SemNeT")
+  paste0("Christensen, A. P., & Kenett, Y. N. (2019). ",
+        "Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. ",
+        "PsyArXiv. https//doi.org/10.31234/osf.io/eht87")
 )

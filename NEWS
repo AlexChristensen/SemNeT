@@ -2,6 +2,15 @@ Changes in version 1.1.2
 
 o fixed bug for weighted modularity in `semnetmeas`
 
+o updated citation (PsyArXiv)
+
+o changed y-axis in plots for `partboot` to read as integers (as added black dot for mean in the scatterplots under the raincloud)
+
+o added vignette for analyzing semantic networks
+
+o added data for plots in vignette
+
+
 Changes in version 1.1.1
 
 o updated citation
