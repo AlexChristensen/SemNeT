@@ -8,6 +8,18 @@
 #' 
 #' @param partboot.obj Object from \code{\link[SemNeT]{partboot}}
 #' 
+#' @param formula Character.
+#' A formula for specifying an ANOVA structure. The formula should
+#' have the predictor variable as "y" and include the names the variables
+#' are grouped by (e.g., \code{formula = "y ~ group_var1 * group_var2"}).
+#' See Two-way ANOVA example in examples
+#' 
+#' @param groups Data frame.
+#' A data frame specifying the groups to be input into the formula.
+#' The column names should be the variable names of interest. The
+#' groups should be in the same order as the groups input into
+#' \code{\link[SemNeT]{partboot}}
+#' 
 #' @return Returns a list containing the objects:
 #' 
 #' \item{ASPL}{Test statistics for each percentage of nodes remaining for ASPL}
@@ -62,17 +74,57 @@
 #' # Compute tests
 #' partboot.one.test(two.result)
 #' 
+#' \donttest{
+#' # Two-way ANOVA example
+#' ## Simulated data
+#' hihi <- sim.fluency(50, 500)
+#' hilo <- sim.fluency(50, 500)
+#' lohi <- sim.fluency(50, 500)
+#' lolo <- sim.fluency(50, 500)
+#' 
+#' ## Create groups
+#' hihi.group <- cbind(rep("high",nrow(hihi)),rep("high",nrow(hihi)))
+#' hilo.group <- cbind(rep("high",nrow(hilo)),rep("low",nrow(hilo)))
+#' lohi.group <- cbind(rep("low",nrow(lohi)),rep("high",nrow(lohi)))
+#' lolo.group <- cbind(rep("low",nrow(lolo)),rep("low",nrow(lolo)))
+#' 
+#' ## Bind groups into single data frame
+#' groups <- rbind(hihi.group,
+#'                 hilo.group,
+#'                 lohi.group,
+#'                 lolo.group)
+#' 
+#' ## Change column names (variable names)
+#' colnames(groups) <- c("gf","caq")
+#' 
+#' ## Change groups into data frame
+#' groups <- as.data.frame(groups)
+#' 
+#' ## Run partial bootstrap networks
+#' boot.fifty <- partboot(hihi, hilo, lohi, lolo, percent = .50)
+#' 
+#' ## Compute tests
+#' partboot.one.test(boot.fifty, formula = "y ~ gf*caq", groups = groups)
+#' }
+#' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
-#' @importFrom stats t.test aov TukeyHSD
+#' @importFrom stats t.test aov TukeyHSD as.formula
 #' 
 #' @export
 #Test: Partial Bootstrapped Network Statistics----
-partboot.one.test <- function (partboot.obj)
+partboot.one.test <- function (partboot.obj, formula = NULL, groups = NULL)
 {
     #Check for 'partboot' object
     if(class(partboot.obj) != "partboot")
     {stop("Object input into 'partboot.obj' is not a 'partboot' object")}
+    
+    #Check for data if formula is not NULL
+    if(!is.null(formula))
+    {
+        if(!exists("groups"))
+        {stop("'groups' argument is NULL when 'formula' argument is not. Please input groups.")}
+    }
     
     #Get names of networks
     name <- unique(gsub("Summ","",gsub("Meas","",names(partboot.obj))))
@@ -222,9 +274,15 @@ partboot.one.test <- function (partboot.obj)
         }
         
         ##ASPL Tests
-        aspl <- matrix(NA, nrow = 1, ncol = 5)
-        row.names(aspl) <- paste(perc*100,"%",sep="")
-        colnames(aspl) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
+        if(is.null(formula))
+        {
+            aspl <- matrix(NA, nrow = 1, ncol = 5)
+            row.names(aspl) <- paste(perc*100,"%",sep="")
+            colnames(aspl) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
+        }else{
+            aspl <- list()
+            hsd <- list()
+        }
         
         #Initialize group object
         new.aspl <- vector("numeric", length = iter)
@@ -249,21 +307,41 @@ partboot.one.test <- function (partboot.obj)
         aov.obj$Group <- as.factor(as.character(aov.obj$Group))
         aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
         
+        # Check for groups
+        if(!is.null(groups))
+        {
+            aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
+            colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
+            aov.obj$Group <- as.factor(as.character(aov.obj$Group))
+            aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
+            
+            for(g in 1:ncol(groups))
+            {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
+        }
+        
         #ANOVA
-        test <- aov(Measure ~ Group, data = aov.obj)
-        test.summ <- summary(test)[[1]]
-        
-        #Input results into table
-        aspl[paste(perc*100,"%",sep=""),"F-statistic"] <- round(test.summ$`F value`[1],3)
-        aspl[paste(perc*100,"%",sep=""),"group.df"] <- test.summ$Df[1]
-        aspl[paste(perc*100,"%",sep=""),"residual.df"] <- test.summ$Df[2]
-        aspl[paste(perc*100,"%",sep=""),"p-value"] <- test.summ$`Pr(>F)`[1]
-        aspl[paste(perc*100,"%",sep=""),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-        
-        #Tukey's HSD
-        if(test.summ$`Pr(>F)`[1] < .05)
-        {hsd <- TukeyHSD(test)$Group
-        }else{hsd <- "ANOVA was not significant"}
+        if(!is.null(formula))
+        {
+            test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
+            aspl[[paste(perc*100,"%",sep="")]] <- summary(test)[[1]]
+            hsd[[paste(perc*100,"%",sep="")]] <- TukeyHSD(test)
+        }else{
+            test <- aov(Measure ~ Group, data = aov.obj)
+            
+            test.summ <- summary(test)[[1]]
+            
+            #Input results into table
+            aspl[paste(perc*100,"%",sep=""),"F-statistic"] <- round(test.summ$`F value`[1],3)
+            aspl[paste(perc*100,"%",sep=""),"group.df"] <- test.summ$Df[1]
+            aspl[paste(perc*100,"%",sep=""),"residual.df"] <- test.summ$Df[2]
+            aspl[paste(perc*100,"%",sep=""),"p-value"] <- test.summ$`Pr(>F)`[1]
+            aspl[paste(perc*100,"%",sep=""),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
+            
+            #Tukey's HSD
+            if(test.summ$`Pr(>F)`[1] < .05)
+            {hsd <- TukeyHSD(test)$Group
+            }else{hsd <- "ANOVA was not significant"}
+        }
         
         #List for ASPL
         ASPL <- list()
@@ -271,9 +349,15 @@ partboot.one.test <- function (partboot.obj)
         ASPL$HSD <- hsd
         
         ##CC Tests
-        cc <- matrix(NA, nrow = 1, ncol = 5)
-        row.names(cc) <- paste(perc*100,"%",sep="")
-        colnames(cc) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
+        if(is.null(formula))
+        {
+            cc <- matrix(NA, nrow = 1, ncol = 5)
+            row.names(cc) <- paste(perc*100,"%",sep="")
+            colnames(cc) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
+        }else{
+            cc <- list()
+            hsd <- list()
+        }
         
         #Initialize group object
         new.cc <- vector("numeric", length = iter)
@@ -298,21 +382,41 @@ partboot.one.test <- function (partboot.obj)
         aov.obj$Group <- as.factor(as.character(aov.obj$Group))
         aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
         
+        # Check for groups
+        if(!is.null(groups))
+        {
+            aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
+            colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
+            aov.obj$Group <- as.factor(as.character(aov.obj$Group))
+            aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
+            
+            for(g in 1:ncol(groups))
+            {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
+        }
+        
         #ANOVA
-        test <- aov(Measure ~ Group, data = aov.obj)
-        test.summ <- summary(test)[[1]]
-        
-        #Input results into table
-        cc[paste(perc*100,"%",sep=""),"F-statistic"] <- round(test.summ$`F value`[1],3)
-        cc[paste(perc*100,"%",sep=""),"group.df"] <- test.summ$Df[1]
-        cc[paste(perc*100,"%",sep=""),"residual.df"] <- test.summ$Df[2]
-        cc[paste(perc*100,"%",sep=""),"p-value"] <- test.summ$`Pr(>F)`[1]
-        cc[paste(perc*100,"%",sep=""),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-        
-        #Tukey's HSD
-        if(test.summ$`Pr(>F)`[1] < .05)
-        {hsd <- TukeyHSD(test)$Group
-        }else{hsd <- "ANOVA was not significant"}
+        if(!is.null(formula))
+        {
+            test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
+            cc[[paste(perc*100,"%",sep="")]] <- summary(test)[[1]]
+            hsd[[paste(perc*100,"%",sep="")]] <- TukeyHSD(test)
+        }else{
+            test <- aov(Measure ~ Group, data = aov.obj)
+            
+            test.summ <- summary(test)[[1]]
+            
+            #Input results into table
+            cc[paste(perc*100,"%",sep=""),"F-statistic"] <- round(test.summ$`F value`[1],3)
+            cc[paste(perc*100,"%",sep=""),"group.df"] <- test.summ$Df[1]
+            cc[paste(perc*100,"%",sep=""),"residual.df"] <- test.summ$Df[2]
+            cc[paste(perc*100,"%",sep=""),"p-value"] <- test.summ$`Pr(>F)`[1]
+            cc[paste(perc*100,"%",sep=""),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
+            
+            #Tukey's HSD
+            if(test.summ$`Pr(>F)`[1] < .05)
+            {hsd <- TukeyHSD(test)$Group
+            }else{hsd <- "ANOVA was not significant"}
+        }
         
         #List for CC
         CC <- list()
@@ -320,9 +424,15 @@ partboot.one.test <- function (partboot.obj)
         CC$HSD <- hsd
         
         ##Q Tests
-        q <- matrix(NA, nrow = 1, ncol = 5)
-        row.names(q) <- paste(perc*100,"%",sep="")
-        colnames(q) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
+        if(is.null(formula))
+        {
+            q <- matrix(NA, nrow = 1, ncol = 5)
+            row.names(q) <- paste(perc*100,"%",sep="")
+            colnames(q) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
+        }else{
+            q <- list()
+            hsd <- list()
+        }
         
         #Initialize group object
         new.q <- vector("numeric", length = iter)
@@ -347,22 +457,41 @@ partboot.one.test <- function (partboot.obj)
         aov.obj$Group <- as.factor(as.character(aov.obj$Group))
         aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
         
-        #ANOVA
-        test <- aov(Measure ~ Group, data = aov.obj)
-        test.summ <- summary(test)[[1]]
-        
-        #Input results into table
-        q[paste(perc*100,"%",sep=""),"F-statistic"] <- round(test.summ$`F value`[1],3)
-        q[paste(perc*100,"%",sep=""),"group.df"] <- test.summ$Df[1]
-        q[paste(perc*100,"%",sep=""),"residual.df"] <- test.summ$Df[2]
-        q[paste(perc*100,"%",sep=""),"p-value"] <- test.summ$`Pr(>F)`[1]
-        q[paste(perc*100,"%",sep=""),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-        
-        #Tukey's HSD
-        if(test.summ$`Pr(>F)`[1] < .05)
+        # Check for groups
+        if(!is.null(groups))
         {
-            hsd <- TukeyHSD(test)$Group
-        }else{hsd <- "ANOVA was not significant"}
+            aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
+            colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
+            aov.obj$Group <- as.factor(as.character(aov.obj$Group))
+            aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
+            
+            for(g in 1:ncol(groups))
+            {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
+        }
+        
+        #ANOVA
+        if(!is.null(formula))
+        {
+            test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
+            q[[paste(perc*100,"%",sep="")]] <- summary(test)[[1]]
+            hsd[[paste(perc*100,"%",sep="")]] <- TukeyHSD(test)
+        }else{
+            test <- aov(Measure ~ Group, data = aov.obj)
+            
+            test.summ <- summary(test)[[1]]
+            
+            #Input results into table
+            q[paste(perc*100,"%",sep=""),"F-statistic"] <- round(test.summ$`F value`[1],3)
+            q[paste(perc*100,"%",sep=""),"group.df"] <- test.summ$Df[1]
+            q[paste(perc*100,"%",sep=""),"residual.df"] <- test.summ$Df[2]
+            q[paste(perc*100,"%",sep=""),"p-value"] <- test.summ$`Pr(>F)`[1]
+            q[paste(perc*100,"%",sep=""),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
+            
+            #Tukey's HSD
+            if(test.summ$`Pr(>F)`[1] < .05)
+            {hsd <- TukeyHSD(test)$Group
+            }else{hsd <- "ANOVA was not significant"}
+        }
         
         #List for Q
         Q <- list()

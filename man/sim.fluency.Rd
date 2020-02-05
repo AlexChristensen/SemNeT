@@ -4,30 +4,36 @@
 \alias{sim.fluency}
 \title{Simulates a verbal fluency binary response matrix}
 \usage{
-sim.fluency(nodes)
+sim.fluency(nodes, cases, random = FALSE)
 }
 \arguments{
 \item{nodes}{Numeric.
-Number of nodes to simulate in data}
+Number of nodes to simulate in data.
+Defaults to \code{100}}
+
+\item{cases}{Numeric.
+Number of participants to simulate in data.
+Defaults to \code{500}}
+
+\item{random}{Boolean.
+Should the frequencies be randomly sampled from?
+Defaults to \code{FALSE}.}
 }
 \value{
 A binary matrix with \code{p} (participants) by \code{n} (nodes)
 }
 \description{
 Simulates verbal fluency data based on the number of
-nodes in the desired network. Participants are 5 percent greater than
-the maximum simulated fluency response given. The summed total of
-each response is simulated from a gamma distribution with a
-shape of .25 and rate of 1 (see \code{\link{pgamma}}). Using these
+nodes in the desired network. The summed total of
+each response is simulated from a poisson distribution 
+(see \code{\link{rpois}}), using frequencies from the
+\code{\link[SemNeT]{animals.freq}} data. Using these
 sums, participants responses are simulated with a probability of giving
 a response as the total of the summed response over the number of participants.
 }
-\details{
-Simulates data
-}
 \examples{
-# Simulate data for 50 nodes
-sim.fluency(nodes = 50)
+# Simulate data for 50 nodes and 200 participants
+sim.fluency(nodes = 50, cases = 200)
 
 }
 \author{

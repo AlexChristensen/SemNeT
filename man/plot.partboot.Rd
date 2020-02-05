@@ -4,8 +4,7 @@
 \alias{plot.partboot}
 \title{Plot for partboot}
 \usage{
-\method{plot}{partboot}(..., groups = NULL, measures = c("ASPL", "CC",
-  "Q"))
+\method{plot}{partboot}(..., groups = NULL, measures = c("ASPL", "CC", "Q"))
 }
 \arguments{
 \item{...}{Object(s) from \code{\link[SemNeT]{partboot}}}

@@ -4,10 +4,22 @@
 \alias{partboot.test}
 \title{Statistical tests for \code{\link[SemNeT]{partboot}}}
 \usage{
-partboot.test(...)
+partboot.test(..., formula = NULL, groups = NULL)
 }
 \arguments{
 \item{...}{Object(s) from \code{\link[SemNeT]{partboot}}}
+
+\item{formula}{Character.
+A formula for specifying an ANOVA structure. The formula should
+have the predictor variable as "y" and include the names the variables
+are grouped by (e.g., \code{formula = "y ~ group_var1 * group_var2"}).
+See Two-way ANOVA example in examples}
+
+\item{groups}{Data frame.
+A data frame specifying the groups to be input into the formula.
+The column names should be the variable names of interest. The
+groups should be in the same order as the groups input into
+\code{\link[SemNeT]{partboot}}}
 }
 \value{
 Returns a list containing the objects:
@@ -70,6 +82,40 @@ sim = "cosine", cores = 2)
 }
 # Compute tests
 partboot.test(two.result)
+
+\donttest{
+# Two-way ANOVA example
+## Simulated data
+hihi <- sim.fluency(50, 500)
+hilo <- sim.fluency(50, 500)
+lohi <- sim.fluency(50, 500)
+lolo <- sim.fluency(50, 500)
+
+## Create groups
+hihi.group <- cbind(rep("high",nrow(hihi)),rep("high",nrow(hihi)))
+hilo.group <- cbind(rep("high",nrow(hilo)),rep("low",nrow(hilo)))
+lohi.group <- cbind(rep("low",nrow(lohi)),rep("high",nrow(lohi)))
+lolo.group <- cbind(rep("low",nrow(lolo)),rep("low",nrow(lolo)))
+
+## Bind groups into single data frame
+groups <- rbind(hihi.group,
+                hilo.group,
+                lohi.group,
+                lolo.group)
+
+## Change column names (variable names)
+colnames(groups) <- c("gf","caq")
+
+## Change groups into data frame
+groups <- as.data.frame(groups)
+
+## Run partial bootstrap networks
+boot.fifty <- partboot(hihi, hilo, lohi, lolo, percent = .50)
+boot.sixty <- partboot(hihi, hilo, lohi, lolo, percent = .60)
+
+## Compute tests
+partboot.test(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
+}
 
 }
 \author{

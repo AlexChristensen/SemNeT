@@ -4,8 +4,7 @@
 \alias{randwalk}
 \title{Random Walk Simulation}
 \usage{
-randwalk(A, B, reps = 20, steps = 10, iter = 10000,
-  short.res = TRUE, cores)
+randwalk(A, B, reps = 20, steps = 10, iter = 10000, short.res = TRUE, cores)
 }
 \arguments{
 \item{A}{Matrix or data frame.

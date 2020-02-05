@@ -4,8 +4,14 @@
 \alias{compare.nets}
 \title{Plots Networks for Comparison}
 \usage{
-compare.nets(..., title, config, placement = c("match", "default"),
-  weighted = FALSE, qgraph.args = list())
+compare.nets(
+  ...,
+  title,
+  config,
+  placement = c("match", "default"),
+  weighted = FALSE,
+  qgraph.args = list()
+)
 }
 \arguments{
 \item{...}{Matrices or data frames of network adjacency matrices}

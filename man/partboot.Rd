@@ -4,7 +4,7 @@
 \alias{partboot}
 \title{Partial Bootstrapped Semantic Network Analysis}
 \usage{
-partboot(..., percent, sim, weighted = FALSE, iter = 1000, cores)
+partboot(..., percent = 0.5, sim, weighted = FALSE, iter = 1000, cores)
 }
 \arguments{
 \item{...}{Matrices or data frames.
@@ -31,7 +31,7 @@ Defaults to \code{1000}}
 
 \item{cores}{Numeric.
 Number of computer processing cores to use for bootstrapping samples.
-Defaults to \emph{n} - 1 total number of cores.
+Defaults to \emph{n} / 2 total number of cores.
 Set to any number between 1 and maximum amount of cores on your computer
 (see \code{parellel::detectCores()})}
 }

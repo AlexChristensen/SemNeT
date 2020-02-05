@@ -26,7 +26,7 @@
 #' 
 #' @param cores Numeric.
 #' Number of computer processing cores to use for bootstrapping samples.
-#' Defaults to \emph{n} - 1 total number of cores.
+#' Defaults to \emph{n} / 2 total number of cores.
 #' Set to any number between 1 and maximum amount of cores on your computer
 #' (see \code{parellel::detectCores()})
 #' 
@@ -69,7 +69,7 @@
 #' 
 #' @export
 #Partial Bootstrapped Semantic Network Analysis----
-partboot <- function (..., percent, sim, weighted = FALSE,
+partboot <- function (..., percent = .50, sim, weighted = FALSE,
                       iter = 1000, cores)
 {
     ####Missing arguments####
@@ -78,7 +78,7 @@ partboot <- function (..., percent, sim, weighted = FALSE,
     }else{sim <- sim}
     
     if(missing(cores))
-    {cores <- parallel::detectCores() - 1
+    {cores <- parallel::detectCores() / 2
     }else{cores <- cores}
     ####Missing arguments####
     

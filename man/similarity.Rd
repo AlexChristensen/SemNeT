@@ -4,8 +4,10 @@
 \alias{similarity}
 \title{Measures of Similarity}
 \usage{
-similarity(data, method = c("angular", "cor", "cosine", "euclid",
-  "faith", "jaccard", "phi", "rr"))
+similarity(
+  data,
+  method = c("angular", "cor", "cosine", "euclid", "faith", "jaccard", "phi", "rr")
+)
 }
 \arguments{
 \item{data}{Matrix or data frame.

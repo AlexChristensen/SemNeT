@@ -1,53 +1,73 @@
 #' Simulates a verbal fluency binary response matrix
 #' 
 #' @description Simulates verbal fluency data based on the number of
-#' nodes in the desired network. Participants are 5 percent greater than
-#' the maximum simulated fluency response given. The summed total of
-#' each response is simulated from a gamma distribution with a
-#' shape of .25 and rate of 1 (see \code{\link{pgamma}}). Using these
+#' nodes in the desired network. The summed total of
+#' each response is simulated from a poisson distribution 
+#' (see \code{\link{rpois}}), using frequencies from the
+#' \code{\link[SemNeT]{animals.freq}} data. Using these
 #' sums, participants responses are simulated with a probability of giving
 #' a response as the total of the summed response over the number of participants.
 #' 
 #' @param nodes Numeric.
-#' Number of nodes to simulate in data
+#' Number of nodes to simulate in data.
+#' Defaults to \code{100}
+#' 
+#' @param cases Numeric.
+#' Number of participants to simulate in data.
+#' Defaults to \code{500}
+#' 
+#' @param random Boolean.
+#' Should the frequencies be randomly sampled from?
+#' Defaults to \code{FALSE}.
 #' 
 #' @return A binary matrix with \code{p} (participants) by \code{n} (nodes)
 #' 
-#' @details Simulates data
-#' 
 #' @examples
-#' # Simulate data for 50 nodes
-#' sim.fluency(nodes = 50)
+#' # Simulate data for 50 nodes and 200 participants
+#' sim.fluency(nodes = 50, cases = 200)
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
-#' @importFrom stats rgamma
+#' @importFrom stats rpois
 #' 
 #' @export
-#' 
+#'
 #Simulate Verbal Fluency Data----
-sim.fluency <- function(nodes)
+sim.fluency <- function(nodes, cases, random = FALSE)
 {
-    # Compute response frequency distribution
-    sum.resp <- ceiling(rgamma(nodes, shape = .25, rate = 1)*100)
+    # Defaults
+    if(missing(nodes))
+    {nodes <- 100}
     
-    parts <- max(sum.resp) + ceiling(nodes * .05)
+    if(missing(cases))
+    {cases <- 500}
+    
+    # Compute response frequency distribution
+    ## Based on animals verbal fluency
+    if(random)
+    {samp.freq <- sample(SemNeT::animals.freq, size = nodes, replace = TRUE)
+    }else{samp.freq <- SemNeT::animals.freq}
+    
+    sum.resp <- rpois(nodes, samp.freq) + 1
+    
+    # Compute proportions
+    props <- sum.resp / (max(sum.resp) * 1.05)
     
     # Initialize response matrix
-    resp.mat <- matrix(0, nrow = parts, ncol = nodes)
+    resp.mat <- matrix(0, nrow = cases, ncol = nodes)
     
-    for(i in 1:length(sum.resp))
+    for(i in 1:length(props))
     {
         # Endorse probability
-        end.prob <- sum.resp[i]/parts
+        end.prob <- props[i]
         # Not endorse probability
         no.end.prob <- 1 - end.prob
         
         #Generate responses
-        resp.mat[,i] <- sample(c(0,1), parts, replace = TRUE, prob = c(no.end.prob,end.prob))
+        resp.mat[,i] <- sample(c(0,1), cases, replace = TRUE, prob = c(no.end.prob,end.prob))
     }
     
-    # Make sure there are no zeros
+    # Make sure there are no zeros in response matrix
     if(any(colSums(resp.mat)==0))
     {
         # Target columns
@@ -55,7 +75,7 @@ sim.fluency <- function(nodes)
         
         # Add a response
         for(i in 1:length(target))
-        {resp.mat[sample(parts, 1),target] <- 1}
+        {resp.mat[sample(cases, 1),target[i]] <- 1}
     }
     
     return(resp.mat)
