@@ -1,4 +1,4 @@
-[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)[![Downloads Total](https://cranlogs.r-pkg.org/badges/grand-total/SemNeT?color=brightgreen)](https://cran.r-project.org/package=SemNeT) [![Downloads per month](http://cranlogs.r-pkg.org/badges/SemNeT?color=brightgreen)](https://cran.r-project.org/package=SemNeT) 
 
 # How To Use
 See our tutorial: https://psyarxiv.com/eht87/
