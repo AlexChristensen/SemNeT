@@ -1,7 +1,7 @@
 #Simulated Result for Dataset One----
 #' Simulated Result for Dataset One
 #'
-#' A result of \code{\link[SemNeT]{partboot}} from a simulated dataset
+#' A result of \code{\link[SemNeT]{bootSemNeT}} from a simulated dataset
 #' 
 #' @name one.result
 #' 

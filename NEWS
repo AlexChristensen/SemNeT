@@ -1,3 +1,27 @@
+Changes in version 1.3.0
+
+UPDATE: `compare.nets` has changed to `compare_nets`
+
+ADD: Several semantic network estimation methods (see `CN`, `NRW`, and `PF`) -- these are included in the Shiny app
+
+CHANGE: `partboot` is now `bootSemNeT`
+
+CHANGE: `plot.partboot` is now `plot.bootSemNeT`
+
+CHANGE: `partboot.test` is now `test.bootSemNeT`
+
+
+Changes in version 1.2.0
+
+o ADD: Shiny app
+
+o FIX: 'groups' argument in `org.plot`
+
+o UPDATE: moved several functions to internal to clean up package
+
+o ADD: binary responses matrices from animals verbal fluency data associated with the 'SemNetCleaner' package (open.animals)
+
+
 Changes in version 1.1.3
 
 o added extended ANOVA capabilities to `partboot.test` (e.g., two-way ANOVA)

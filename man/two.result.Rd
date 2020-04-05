@@ -4,12 +4,14 @@
 \name{two.result}
 \alias{two.result}
 \title{Simulated Result for Dataset One and Two}
-\format{two.result (list, length = 6)}
+\format{
+two.result (list, length = 6)
+}
 \usage{
 data(two.result)
 }
 \description{
-A result of \code{\link[SemNeT]{partboot}} from two simulated datasets
+A result of \code{\link[SemNeT]{bootSemNeT}} from two simulated datasets
 }
 \examples{
 data("two.result")

@@ -1,7 +1,7 @@
 # Methods:
 
-# Plot partboot
-plot.partboot <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
+# Plot bootSemNeT
+plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
 {
     #Obtain ... in a list
     input <- list(...)
@@ -47,4 +47,25 @@ plot.partboot <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
                         len = len, groups = groups, netmeas = "Q")}
     
     return(plot)
+}
+
+# Plot Shiny compare
+plot.compareShiny <- function (res)
+{
+    for(i in 1:length(res$datalist))
+    {
+        #Network specific arguments
+        ##Networks
+        if(res$config == "mds")
+        {res$qgraph.args$qgraph_net <- res$layouts[[i]]
+        }else{res$qgraph.args$input <- res$layouts[[i]]}
+        ##Network title and labels
+        res$qgraph.args$title <- res$title[[i]]
+        res$qgraph.args$labels <- res$labs[[i]]
+        
+        #Generate plot
+        ifelse(res$config == "mds",
+               do.call(networktools::MDSnet, args = res$qgraph.args),
+               do.call(qgraph::qgraph, args = res$qgraph.args))
+    }
 }

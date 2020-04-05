@@ -4,12 +4,14 @@
 \name{one.result}
 \alias{one.result}
 \title{Simulated Result for Dataset One}
-\format{one.result (list, length = 4)}
+\format{
+one.result (list, length = 4)
+}
 \usage{
 data(one.result)
 }
 \description{
-A result of \code{\link[SemNeT]{partboot}} from a simulated dataset
+A result of \code{\link[SemNeT]{bootSemNeT}} from a simulated dataset
 }
 \examples{
 data("one.result")

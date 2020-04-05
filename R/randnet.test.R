@@ -136,7 +136,7 @@ randnet.test <- function (..., iter, cores)
     {
         sig.mat <- matrix(0, nrow = 3, ncol = 3)
         row.names(sig.mat) <- c("ASPL","CC","Q")
-        colnames(sig.mat) <- c(name[i], "M.rand", "SD.rand")
+        colnames(sig.mat) <- c(paste(name[i], "(p-value)"), "M.rand", "SD.rand")
         
         #Insert random means and sds
         sig.mat[,"M.rand"] <- round(rowMeans(net.meas[[i]]),4)
@@ -147,13 +147,13 @@ randnet.test <- function (..., iter, cores)
         
         ##ASPL
         z.aspl <- (meas["ASPL"] - sig.mat["ASPL","M.rand"]) / sig.mat["ASPL","SD.rand"]
-        sig.mat["ASPL",name[i]] <- round(dnorm(z.aspl, mean = sig.mat["ASPL","M.rand"], sd = sig.mat["ASPL","SD.rand"]),4)
+        sig.mat["ASPL",paste(name[i], "(p-value)")] <- round(dnorm(z.aspl, mean = sig.mat["ASPL","M.rand"], sd = sig.mat["ASPL","SD.rand"]),4)
         ##CC
         z.cc <- (meas["CC"] - sig.mat["CC","M.rand"]) / sig.mat["CC","SD.rand"]
-        sig.mat["CC",name[i]] <- round(dnorm(z.cc, mean = sig.mat["CC","M.rand"], sd = sig.mat["CC","SD.rand"]),4)
+        sig.mat["CC",paste(name[i], "(p-value)")] <- round(dnorm(z.cc, mean = sig.mat["CC","M.rand"], sd = sig.mat["CC","SD.rand"]),4)
         ##Q
         z.q <- (meas["Q"] - sig.mat["Q","M.rand"]) / sig.mat["Q","SD.rand"]
-        sig.mat["Q",name[i]] <- round(dnorm(z.q, mean = sig.mat["Q","M.rand"], sd = sig.mat["Q","SD.rand"]),4)
+        sig.mat["Q",paste(name[i], "(p-value)")] <- round(dnorm(z.q, mean = sig.mat["Q","M.rand"], sd = sig.mat["Q","SD.rand"]),4)
     
         #Insert results
         res[[i]] <- sig.mat

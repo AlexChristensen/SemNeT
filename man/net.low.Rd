@@ -4,7 +4,9 @@
 \name{net.low}
 \alias{net.low}
 \title{Low Openness to Experience Network}
-\format{net.low (matrix, 160 x 160)}
+\format{
+net.low (matrix, 160 x 160)
+}
 \usage{
 data(net.low)
 }

@@ -4,7 +4,9 @@
 \name{animals.freq}
 \alias{animals.freq}
 \title{Frequency of Animal Responses}
-\format{animals.freq (vector, length = 367)}
+\format{
+animals.freq (vector, length = 367)
+}
 \usage{
 data(animals.freq)
 }

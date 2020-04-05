@@ -4,7 +4,9 @@
 \name{vignette.plots}
 \alias{vignette.plots}
 \title{Plots for Vignette}
-\format{vignette.plots (list, length = 3)}
+\format{
+vignette.plots (list, length = 3)
+}
 \usage{
 data(vignette.plots)
 }

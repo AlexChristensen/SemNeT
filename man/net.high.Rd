@@ -4,7 +4,9 @@
 \name{net.high}
 \alias{net.high}
 \title{High Openness to Experience Network}
-\format{net.high (matrix, 160 x 160)}
+\format{
+net.high (matrix, 160 x 160)
+}
 \usage{
 data(net.high)
 }
