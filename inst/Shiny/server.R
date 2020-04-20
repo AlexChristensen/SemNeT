@@ -5,6 +5,36 @@ server <- function(input, output, session)
   #### NETWORK ESTIMATION ####
   ############################
   
+  # Keep previous environment
+  prev.env <<- ls(envir = globalenv())
+  
+  # Check if anything exists in previous environment
+  if(length(prev.env) != 0)
+  {
+    # Initialize textcleaner objects variable
+    tc.object <<- vector(length = length(prev.env))
+    
+    # Check for textcleaner objects
+    for(i in 1:length(prev.env))
+    {tc.object[i] <- class(get(prev.env[i], envir = globalenv())) == "textcleaner"}
+    
+    # Set up environment objects
+    if(sum(tc.object) != 0)
+    {
+      output$clean_ui <- renderUI({
+        selectInput("clean_envir", label = "textcleaner Objects Detected in Environment. Use?",
+                    choices = c("", prev.env[tc.object]), selected = 1)
+      })
+    }
+    
+    if(exists("group"))
+    {
+      output$group_ui <- renderUI({
+        radioButtons("group_envir", label = "R Object 'group' Detected in Environment. Use?",
+                     choices = c("Yes", "No"), inline = TRUE, selected = "Yes")
+      })
+    }
+  }
   
   # Set up UI based on selection of network estimaton
   ## Option 1
@@ -44,23 +74,32 @@ server <- function(input, output, session)
                  # Let user know
                  showNotification("Estimating networks...")
                  
-                 if(!is.null(input$data))
+                 if(!is.null(input$clean_envir) || !is.null(input$group_envir))
                  {
-                   # Load preprocessed data
-                   dat <<- SemNetCleaner::read.data(input$data$datapath)
+                   # Load data from R environment
+                   if(input$clean_envir != "")
+                     dat <<- get(input$clean_envir, envir = globalenv())$responses$clean
                    
-                   # Load group data
-                   if(!is.null(input$group))
-                   {group <<- SemNetCleaner::read.data(input$group$datapath)
-                   }else{group <<- list(rep("Group", nrow(dat)))}
-                   
-                 }else{
-                   # Load data from SemNetCleaner package
-                   dat <<- open.clean
-                   
-                   # Load group data from SemNetCleaner package
-                   group <<- ifelse(SemNetCleaner::open.animals$Group == 1, "Low", "High")
+                   # Load group from R environment
+                   if(input$group_envir == "Yes")
+                   {group <<- group}
                  }
+                 
+                 # Load preprocessed data
+                 if(!is.null(input$data))
+                 {dat <<- SemNeT:::read.data(input$data$datapath)}
+                 
+                 # Load group data
+                 if(!is.null(input$group))
+                 {group <<- SemNeT:::read.data(input$group$datapath)}
+                 
+                 # Load data from SemNeT package
+                 if(!exists("dat"))
+                 {dat <<- SemNeT::open.clean}
+                 
+                 # Load group data from SemNeT package
+                 if(!exists("group"))
+                 {group <<- SemNeT::open.group}
                  
                  # Organize group data
                  group <<- unlist(group)
@@ -79,7 +118,7 @@ server <- function(input, output, session)
                  ## Change responses to binary matrix
                  if(network == "TMFG")
                    if(all(apply(dat, 2, is.character)))
-                   {dat <<- SemNetCleaner::resp2bin(dat)}
+                   {dat <<- SemNeT:::resp2bin(dat)}
                  
                  ## Create new data
                  for(i in 1:length(uniq))
@@ -112,8 +151,8 @@ server <- function(input, output, session)
                    
                    # FOR WEB
                    #shinyalert::shinyalert(title = "Running...",
-                   #                       text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
-                   #                       type = "info")
+                   #                      text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
+                   #                      type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
@@ -125,12 +164,12 @@ server <- function(input, output, session)
                    ## Store binary groups
                    for(i in 1:length(uniq))
                    {assign(paste(uniq[i]),
-                           SemNetCleaner::finalize(get(uniq[i], envir = globalenv()),
-                                                   minCase = as.numeric(input$minCase)),
+                           SemNeT::finalize(get(paste(uniq[i]), envir = globalenv()),
+                                            minCase = as.numeric(input$minCase)),
                            envir = globalenv())}
                    
                    ## Equate groups
-                   eq <<- SemNetCleaner:::equateShiny(mget(paste(uniq), envir = globalenv()))
+                   eq <<- SemNeT:::equateShiny(mget(paste(uniq), envir = globalenv()))
                    
                    ## Grab proper association label
                    sim <<- switch(input$assoc,
@@ -144,7 +183,7 @@ server <- function(input, output, session)
                    )
                    
                    ## Compute associations
-                   assoc <<- lapply(SemNetCleaner:::equateShiny(mget(paste(uniq), envir = globalenv())),
+                   assoc <<- lapply(SemNeT:::equateShiny(mget(paste(uniq), envir = globalenv())),
                                     SemNeT::similarity, method = sim)
                    
                    ## Estimate networks
@@ -239,7 +278,11 @@ server <- function(input, output, session)
                                                                           "Pathfinder Network (PN)",
                                                                           "Triangulated Maximally Filtered Graph (TMFG)")
                                             )
-                                            rm(list = ls(envir = globalenv())[-match(c("dat", "group"), ls(globalenv()))], envir = globalenv())
+                                            
+                                            if(exists("clean"))
+                                            {rm(list = ls(envir = globalenv())[-match(c("clean", "dat", "group"), ls(globalenv()))], envir = globalenv())
+                                            }else{rm(list = ls(envir = globalenv())[-match(c("dat", "group"), ls(globalenv()))], envir = globalenv())}
+                                            
                                           }
                                         })
                })
@@ -511,7 +554,7 @@ server <- function(input, output, session)
     {resultShiny$bootstrapPlot <<- pbplot}
     
     # Remove all other variables from global environment
-    rm(list = ls(envir = globalenv())[-match("resultShiny", ls(globalenv()))], envir = globalenv())
+    rm(list = ls(envir = globalenv())[-match(c("resultShiny", prev.env), ls(globalenv()))], envir = globalenv())
     
   }
   )

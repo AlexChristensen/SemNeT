@@ -20,7 +20,7 @@ compare_nets(
 Characters denoting titles of plots}
 
 \item{config}{Character.
-Defaults to \code{\link[networktools]{MDSnet}}.
+Defaults to \code{"spring"}
 See \code{\link[qgraph]{qgraph}} for more options}
 
 \item{placement}{Character.
@@ -49,11 +49,10 @@ See \code{\link[qgraph]{qgraph}} for possible arguments}
 }
 \value{
 Plots networks using \code{\link[qgraph]{qgraph}}
-or \code{\link[networktools]{MDSnet}}
 }
 \description{
-Uses \code{\link[qgraph]{qgraph}} and \code{\link[networktools]{MDSnet}}
-to plot networks. Accepts any number of networks and will organize the plots
+Uses \code{\link[qgraph]{qgraph}} to plot networks.
+Accepts any number of networks and will organize the plots
 in the number of side-by-side columns using the heuristic of taking the square root of the number of 
 input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
 

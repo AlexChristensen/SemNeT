@@ -1,3 +1,180 @@
+#' Changes Bad Responses to NA
+#' 
+#' @description A sub-routine to determine whether responses are good or bad.
+#' Bad responses are replaced with missing (\code{NA}). Good responses are returned.
+#' 
+#' @param word Character.
+#' A word to be tested for whether it is bad
+#' 
+#' @param ... Vector.
+#' Additional responses to be considered bad
+#' 
+#' @return If response is bad, then returns \code{NA}.
+#' If response is valid, then returns the response
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Change Bad Responses----
+# Updated 15.04.2020
+bad.response <- function (word, ...)
+{
+  # Other bad responses
+  others <- unlist(list(...))
+  
+  # Bad responses
+  bad <- c(NA, "NA", "", " ", "  ", others)
+  
+  # If there is no longer a response
+  if(length(word)==0)
+  {word <- NA}
+  
+  for(i in 1:length(word))
+  {
+    #if bad, then convert to NA
+    if(word[i] %in% bad)
+    {word[i] <- NA}
+  }
+  
+  return(word)
+}
+
+#' Responses to binary matrix
+#' 
+#' @description Converts the response matrix to binary response matrix
+#' 
+#' @param resp Response matrix.
+#' A response matrix of verbal fluency or linguistic data
+#' 
+#' @return A list containing objects for each participant and their responses
+#' 
+#' @examples
+#' # Toy example
+#' raw <- open.animals[c(1:10),-c(1:3)]
+#' 
+#' # Clean and prepocess data
+#' clean <- textcleaner(raw, partBY = "row", dictionary = "animals")
+#' 
+#' # Change response matrix to binary response matrix
+#' binmat <- resp2bin(clean$responses$clean)
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Response matrix to binary matrix
+# Updated 15.04.2020
+resp2bin <- function (resp)
+{
+  # Data matrix
+  mat <- as.matrix(resp)
+  
+  # Replace bad responses with NA
+  mat <- bad.response(mat)
+  
+  # Unique responses
+  uniq.resp <- sort(na.omit(unique(as.vector(mat))))
+  
+  # Number of cases
+  n <- nrow(mat)
+  
+  # Initialize binary matrix
+  bin.mat <- matrix(0, nrow = n, ncol = length(uniq.resp))
+  colnames(bin.mat) <- uniq.resp
+  row.names(bin.mat) <- row.names(resp)
+  
+  # Loop through and replace
+  for(i in 1:n)
+  {bin.mat[i,na.omit(match(mat[i,], colnames(bin.mat)))] <- 1}
+  
+  return(bin.mat)
+}
+
+#' Binary Responses to Character Responses
+#' @description Converts the binary response matrix into characters for each participant
+#' 
+#' @param rmat Binary matrix.
+#' A binarized response matrix of verbal fluency or linguistic data
+#' 
+#' @param to.data.frame Boolean.
+#' Should output be a data frame where participants are columns?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} to convert output to data frame
+#' 
+#' @return A list containing objects for each participant and their responses
+#' 
+#' @examples
+#' # Toy example
+#' raw <- open.animals[c(1:10),-c(1:3)]
+#' 
+#' # Clean and prepocess data
+#' clean <- textcleaner(raw, partBY = "row", dictionary = "animals")
+#' 
+#' # Change binary response matrix to word response matrix
+#' charmat <- bin2resp(clean$binary)
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Binary to Response----
+# Updated 15.04.2020
+bin2resp <- function (rmat, to.data.frame = FALSE)
+{
+  #grab response names
+  name <- colnames(rmat)
+  
+  #number of responses
+  n <- ncol(rmat)
+  
+  #initialize matrix
+  mat <- matrix(NA,nrow=nrow(rmat),ncol=ncol(rmat))
+  
+  #loop for each name
+  for(i in 1:n)
+  {mat[,i] <- ifelse(rmat[,i]==1,name[i],NA)}
+  
+  #number of participants
+  p <- nrow(rmat)
+  
+  #initialize participant list
+  part <- list()
+  
+  #loop for each participant
+  for(j in 1:p)
+  {
+    resps <- na.omit(mat[j,])
+    attributes(resps)$na.action <- NULL
+    part[[row.names(rmat)[j]]] <- resps
+  }
+  
+  #convert output to data frame
+  if(to.data.frame)
+  {
+    nlen <- vector("numeric",length=length(part))
+    
+    num <- length(nlen)
+    
+    for(i in 1:num)
+    {nlen[i] <- length(part[[i]])}
+    
+    mlen <- max(nlen)
+    
+    part.df <- matrix("",nrow=mlen,ncol=num)
+    
+    for(i in 1:num)
+    {
+      reps <- mlen - nlen[i]
+      
+      part.df[,i] <- c(unlist(part[[i]]),rep("",reps))
+    }
+    
+    part <- as.data.frame(part.df)
+    colnames(part) <- row.names(rmat)
+    part <- t(part)
+  }
+  
+  return(part)
+}
+
 #' Organization function for \link[SemNeT]{plot.bootSemNeT}
 #' 
 #' @description A sub-routine used in \code{\link[SemNeT]{plot.bootSemNeT}}. Not to be used individually
@@ -1065,7 +1242,7 @@ stat.cooccur <- function(data, window = 2, alpha = .05)
   mat <- as.matrix(data)
   
   # Replace bad responses with NA
-  mat <- SemNetCleaner::bad.response(mat)
+  mat <- bad.response(mat)
   
   # Number of particpants
   m <- nrow(mat)
@@ -1127,3 +1304,55 @@ stat.cooccur <- function(data, window = 2, alpha = .05)
   return(adj)
 }
 
+
+
+#' @noRd
+### cosine.R from lsa package (now archived)
+###
+### 2009-09-14:
+###   * added vector vs. matrix comparison
+###     to reduce data load when looking for associations
+### 2005-11-21:
+###   * added lazy calculation:
+###     calc only below diagonale; diag = 1; add t(co)
+###   * sqrt() over crossprod(x) and crossprod(y)
+### 2005-11-09:
+###   * bugfix cosvecs
+###   * integrated cosvecs into cosine by doing type dependant processing
+### 2005-08-26:
+###   * rewrote cosvecs function to crossprod
+### 
+cosine <- function( x, y=NULL ) {
+  
+  if ( is.matrix(x) && is.null(y) ) {
+    
+    co = array(0,c(ncol(x),ncol(x)))
+    f = colnames( x )
+    dimnames(co) = list(f,f)
+    
+    for (i in 2:ncol(x)) {
+      for (j in 1:(i-1)) {
+        co[i,j] = cosine(x[,i], x[,j])
+      }
+    }
+    co = co + t(co)
+    diag(co) = 1
+    
+    return (as.matrix(co))
+    
+  } else if ( is.vector(x) && is.vector(y) ) {
+    return ( crossprod(x,y) / sqrt( crossprod(x)*crossprod(y) ) )
+  } else if ( is.vector(x) && is.matrix(y) ) {
+    
+    co = vector(mode='numeric', length=ncol(y))
+    names(co) = colnames(y)
+    for (i in 1:ncol(y)) {
+      co[i] = cosine(x,y[,i]) 
+    }
+    return(co)
+    
+  }	else {
+    stop("argument mismatch. Either one matrix or two vectors needed as input.")
+  }
+  
+}

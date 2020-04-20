@@ -19,15 +19,15 @@
 #' 
 #' @examples
 #' # Get data
-#' data <- SemNetCleaner::bad.response(as.matrix(SemNetCleaner::open.animals[,-c(1:3)]), 99)
+#' data <- open.clean
 #' 
 #' # Organize group data
 #' ## Get group data
-#' group <- SemNetCleaner::open.animals$Group
+#' group <- open.group
 #' 
 #' ## Low and high openness to experience groups
-#' low <- data[which(group == 1),]
-#' high <- data[which(group == 2),]
+#' low <- data[which(group == "Low"),]
+#' high <- data[which(group == "High"),]
 #' 
 #' \dontrun{
 #' # Compute networks
@@ -46,7 +46,7 @@
 #' @export
 #' 
 # Commmunity Network----
-# Updated 03.27.2020
+# Updated 15.04.2020
 CN <- function (data, window = 2, alpha = .05)
 {
   # Compute statistical co-occurrence

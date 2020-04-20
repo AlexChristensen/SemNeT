@@ -1,7 +1,7 @@
 #' Plots Networks for Comparison
 #' 
-#' @description Uses \code{\link[qgraph]{qgraph}} and \code{\link[networktools]{MDSnet}}
-#' to plot networks. Accepts any number of networks and will organize the plots
+#' @description Uses \code{\link[qgraph]{qgraph}} to plot networks.
+#' Accepts any number of networks and will organize the plots
 #' in the number of side-by-side columns using the heuristic of taking the square root of the number of 
 #' input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
 #' 
@@ -21,7 +21,7 @@
 #' Characters denoting titles of plots
 #' 
 #' @param config Character.
-#' Defaults to \code{\link[networktools]{MDSnet}}.
+#' Defaults to \code{"spring"}
 #' See \code{\link[qgraph]{qgraph}} for more options
 #' 
 #' @param placement Character.
@@ -49,7 +49,6 @@
 #' See \code{\link[qgraph]{qgraph}} for possible arguments
 #' 
 #' @return Plots networks using \code{\link[qgraph]{qgraph}}
-#' or \code{\link[networktools]{MDSnet}}
 #' 
 #' @examples
 #' # Simulate Datasets
@@ -114,7 +113,7 @@ compare_nets <- function (..., title, config,
     {stop("Argument 'title' only takes list objects")}
     
     if(missing(config))
-    {config <- tolower("MDS")
+    {config <- tolower("spring")
     }else{config <- tolower(config)}
     
     if(missing(placement))
@@ -139,9 +138,11 @@ compare_nets <- function (..., title, config,
         diag(datalist[[i]]) <- 0
         
         #Create graph layouts
-        if(config == "mds")
-        {layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE)
-        }else{layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE,layout=config)}
+        #if(config == "mds")
+        #{layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE)
+        #}else{
+        layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE,layout=config)
+        #}
         
         #Get labels
         labs[[i]] <- as.factor(colnames(datalist[[i]]))
@@ -210,17 +211,20 @@ compare_nets <- function (..., title, config,
     {
         #Network specific arguments
         ##Networks
-        if(config == "mds")
-        {qgraph.args$qgraph_net <- layouts[[i]]
-        }else{qgraph.args$input <- layouts[[i]]}
+        #if(config == "mds")
+        #{qgraph.args$qgraph_net <- layouts[[i]]
+        #}else{
+        qgraph.args$input <- layouts[[i]]
+        #}
         ##Network title and labels
         qgraph.args$title <- title[[i]]
         qgraph.args$labels <- labs[[i]]
         
         #Generate plot
-        ifelse(config == "mds",
-               do.call(networktools::MDSnet, args = qgraph.args),
-               do.call(qgraph::qgraph, args = qgraph.args))
+        #ifelse(config == "mds",
+               #do.call(networktools::MDSnet, args = qgraph.args),
+               do.call(qgraph::qgraph, args = qgraph.args)
+               #)
     }
 }
 #----

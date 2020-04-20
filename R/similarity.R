@@ -116,7 +116,7 @@ similarity <- function (data, method = c("angular", "cor", "cosine",
     }else if(method == "euclid")
     {mat <- dist(t(data), diag = TRUE, upper = TRUE)
     }else if(method == "cosine")
-    {mat <- lsa::cosine(as.matrix(data))
+    {mat <- cosine(as.matrix(data))
     }else if(method == "phi" || method == "cor")
     {mat <- cor(data)}
     

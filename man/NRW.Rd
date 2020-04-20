@@ -25,15 +25,15 @@ method described in Lerner, Ogrocki, and Thomas (2009)
 }
 \examples{
 # Get data
-data <- SemNetCleaner::bad.response(as.matrix(SemNetCleaner::open.animals[,-c(1:3)]), 99)
+data <- open.binary
 
 # Organize group data
 ## Get group data
-group <- SemNetCleaner::open.animals$Group
+group <- open.group
 
 ## Low and high openness to experience groups
-low <- data[which(group == 1),]
-high <- data[which(group == 2),]
+low <- data[which(group == "Low"),]
+high <- data[which(group == "High"),]
 
 # Compute networks
 low.net <- NRW(low)

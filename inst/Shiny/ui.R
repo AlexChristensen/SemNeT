@@ -12,6 +12,9 @@ ui <- (
                # Input
                sidebarPanel(
                  
+                 # Environment objects
+                 uiOutput("clean_ui"), uiOutput("group_ui"),
+                 
                  # Data upload
                  tags$div(fileInput("data", label = "Upload Preprocessed (Binary) Response Matrix",
                                     accept = c(".rds", ".csv", ".xls", ".xlsx", ".txt")), id = "data"),

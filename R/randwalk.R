@@ -18,7 +18,8 @@
 #' Defaults to \code{10}
 #' 
 #' @param iter Numeric.
-#' Number of iterations for each random walk
+#' Number of iterations for each random walk.
+#' Defaults to \code{10000}
 #' 
 #' @param short.res Boolean.
 #' Should shorten results (p-values only) be produced?
@@ -59,7 +60,6 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com> and Yoed Kenett <yoedkenett@gmail.com>
 #' 
 #' @importFrom stats wilcox.test
-#' @importFrom foreach %dopar%
 #' 
 #' @export
 #Random Walks
@@ -73,10 +73,11 @@ randwalk <- function (A, B, reps = 20, steps = 10,
     
     #Grab names of matrices
     nameA <- as.character(substitute(A))
-    nameB <- as.character(substitute(A))
+    nameB <- as.character(substitute(B))
     
     #number of nodes
-    n <- ncol(A)
+    nA <- ncol(A)
+    nB <- ncol(B)
     
     #starting steps
     start <- steps
@@ -86,140 +87,136 @@ randwalk <- function (A, B, reps = 20, steps = 10,
     B <- NetworkToolbox::binarize(B)
     
     #transition matrices
-    TA <- matrix(0,nrow=n,ncol=n)
-    TB <- matrix(0,nrow=n,ncol=n)
+    TA <- matrix(0,nrow=nA,ncol=nA)
+    TB <- matrix(0,nrow=nB,ncol=nB)
     
     degA <- NetworkToolbox::degree(A)
     degB <- NetworkToolbox::degree(B)
     
-    for(i in 1:n)
-        for(j in 1:n)
-        {
-            TA[i,j] <- A[i,j]/degA[i]
-            TB[i,j] <- B[i,j]/degB[i]
-        }
+    for(i in 1:nA)
+        for(j in 1:nA)
+        {TA[i,j] <- A[i,j]/degA[i]}
+    
+    for(i in 1:nB)
+        for(j in 1:nB)
+        {TB[i,j] <- B[i,j]/degB[i]}
     
     #distance matrices
     DA <- NetworkToolbox::distance(A)
     DB <- NetworkToolbox::distance(B)
     
+    # Random walk function
+    rw <- function(steps, nA, nB, TA, TB, DA, DB)
+    {
+        #initialize matrices
+        sim <- numeric(length = 2)
+        sim5 <- sim
+        uniq <- sim
+        results <- vector("numeric",17)
+        vnA <- numeric(length = steps)
+        vnB <- vnA
+        visit <- matrix(NA, nrow = 2, ncol = steps)
+        
+        permA <- sample(nA, 1)
+        permB <- sample(nB, 1)
+        
+        startingNodeA <- permA
+        startingNodeB <- permB
+        
+        vnA[1] <- permA
+        vnB[1] <- permB
+        
+        for(k in 2:steps)
+        {
+            cdfA <- cumsum(TA[startingNodeA,])
+            cdfB <- cumsum(TB[startingNodeB,])
+            
+            x <- runif(1)
+            
+            nA <- which(cdfA > x)[1]
+            nB <- which(cdfB > x)[1]
+            
+            vnA[k] <- nA
+            vnB[k] <- nB
+            
+            startingNodeA <- nA
+            startingNodeB <- nB
+        }
+        
+        uA <- unique(vnA)
+        uB <- unique(vnB)
+        
+        a <- uA[length(uA)]
+        b <- uB[length(uB)]
+        
+        simA <- exp(-DA[vnA[1],a])
+        simB <- exp(-DB[vnB[1],b])
+        
+        s5ind <- 5
+        su <- min(c(length(uA),length(uB)))
+        if(s5ind > su)
+        {s5ind <- su}
+        
+        g5ind <- 5
+        if(g5ind > s5ind)
+        {g5ind <- s5ind}
+        
+        simA5 <- exp(-DA[vnA[1],uA[s5ind]])
+        simB5 <- exp(-DB[vnB[1],uB[s5ind]])
+        
+        visit[1,] <- vnA
+        visit[2,] <- vnB
+        
+        sim[1] <- simA
+        sim5[1] <- simA5
+        uniq[1] <- length(uA)
+        sim[2] <- simB
+        sim5[2] <- simB5
+        uniq[2] <- length(uB)
+        
+        # Initialize result list
+        res <- list()
+        res$sim <- sim
+        res$sim5 <- sim5
+        res$uniq <- uniq
+        res$visit <- visit
+        
+        return(res)
+    }
+    
+    # Initialize steps list
+    steps <- seq(steps, steps*reps, 10)
+    
+    step.list <- list()
+    
+    for(i in 1:reps)
+    {step.list[[i]] <- as.list(rep(steps[i], iter))}
+    
+    # Initialize parallelization results
+    pb.res <- vector("list", length = reps)
+    
     #Parallel processing
     cl <- parallel::makeCluster(cores)
-    doParallel::registerDoParallel(cl)
+    
+    #Export datalist
+    parallel::clusterExport(cl = cl, varlist = c("rw", "steps", "step.list", "nA", "nB", "reps",
+                                                 "TA", "TB", "DA", "DB", "pb.res"), envir = environment())
     
     #Let user know analysis is starting
-    message("Computing random walks...", appendLF = FALSE)
+    message("Computing random walks...")
     
-    results <- foreach::foreach(i=1:reps,
-                               .combine = rbind,
-                               .packages = c("NetworkToolbox","SemNeT")
-                               ) %dopar%
-        {
-            
-            #initialize matrices
-            sim <- matrix(0,nrow=iter,ncol=2)
-            sim5 <- matrix(0,nrow=iter,ncol=2)
-            uniq <- matrix(0,nrow=iter,ncol=2)
-            results <- vector("numeric",17)
-            vnA <- vector("numeric",length=steps)
-            vnB <- vector("numeric",length=steps)
-            visitA <- matrix(0,nrow=iter,ncol=steps)
-            visitB <- matrix(0,nrow=iter,ncol=steps)
-            
-            g5ind <- 5
-            
-            #random walk
-            for(j in 1:iter)
-            {
-                perm <- sample(n,1)
-                startingNodeA <- perm
-                startingNodeB <- perm
-                
-                vnA[1] <- perm
-                vnB[1] <- perm
-                
-                for(k in 2:steps)
-                {
-                    cdfA <- cumsum(TA[startingNodeA,])
-                    cdfB <- cumsum(TB[startingNodeB,])
-                    
-                    x <- runif(1)
-                    
-                    nA <- which(cdfA > x)[1]
-                    nB <- which(cdfB > x)[1]
-                    
-                    vnA[k] <- nA
-                    vnB[k] <- nB
-                    
-                    startingNodeA <- nA
-                    startingNodeB <- nB
-                }
-                
-                uA <- unique(vnA)
-                uB <- unique(vnB)
-                
-                a <- uA[length(uA)]
-                b <- uB[length(uB)]
-                
-                simA <- exp(-DA[vnA[1],a])
-                simB <- exp(-DB[vnB[1],b])
-                
-                s5ind <- 5
-                su <- min(c(length(uA),length(uB)))
-                if(s5ind > su)
-                {s5ind <- su}
-                
-                if(g5ind > s5ind)
-                {g5ind <- s5ind}
-                
-                simA5 <- exp(-DA[vnA[1],uA[s5ind]])
-                simB5 <- exp(-DB[vnB[1],uB[s5ind]])
-                
-                visitA[j,] <- vnA
-                visitB[j,] <- vnB
-                
-                sim[j,1] <- simA
-                sim5[j,1] <- simA5
-                uniq[j,1] <- length(uA)
-                sim[j,2] <- simB
-                sim5[j,2] <- simB5
-                uniq[j,2] <- length(uB)
-            }
-            
-            #p-values
-            pu <- suppressWarnings(wilcox.test(uniq[,1],uniq[,2])$p.value)
-            ps <- suppressWarnings(wilcox.test(sim[,1],sim[,2])$p.value)
-            ps5 <- suppressWarnings(wilcox.test(sim5[,1],sim5[,2])$p.value)
-            
-            #results
-            results[1] <- steps
-            results[2] <- mean(uniq[,1])
-            results[3] <- sd(uniq[,1])
-            results[4] <- mean(sim[,1])
-            results[5] <- sd(sim[,1])
-            results[6] <- mean(sim5[,1])
-            results[7] <- sd(sim5[,1])
-            results[8] <- mean(uniq[,2])
-            results[9] <- sd(uniq[,2])
-            results[10] <- mean(sim[,2])
-            results[11] <- sd(sim[,2])
-            results[12] <- mean(sim5[,2])
-            results[13] <- sd(sim5[,2])
-            results[14] <- pu
-            results[15] <- ps
-            results[16] <- ps5
-            results[17] <- g5ind
-            
-            steps <- steps + 10
-            rm(perm)
-            
-            return(results)
-        }
+    for(i in 1:reps)
+    {
+        message(paste("Repetition ", i, " of ", reps, " (", steps[i], " steps)", sep = ""))
+        
+        
+        pb.res[[i]] <- pbapply::pblapply(step.list[[i]], function(x){rw(x, nA, nB, TA, TB, DA, DB)})
+    }
     
     parallel::stopCluster(cl)
     
-    #Let user know analysis is starting
-    message("done", appendLF = TRUE)
+    # Initialize result matrix
+    results <- matrix(NA, nrow = reps, ncol = 17)
     
     colnames(results) <- c("Steps",paste("M.uniq",nameA,sep="."),
                            paste("SD.uniq",nameA,sep="."),
@@ -234,6 +231,58 @@ randwalk <- function (A, B, reps = 20, steps = 10,
                            paste("M.sim5",nameB,sep="."),
                            paste("SD.sim5",nameB,sep="."),
                            "pu", "ps", "ps5", "g5ind")
+    
+    # Organized into matrices
+    for(i in 1:reps)
+    {
+        sim <- t(sapply(
+            lapply(pb.res[[i]], function(x)
+            {
+                x$sim
+            }),
+            rbind
+        ))
+        
+        sim5 <- t(sapply(
+            lapply(pb.res[[i]], function(x)
+            {
+                x$sim5
+            }),
+            rbind
+        ))
+        
+        uniq <- t(sapply(
+            lapply(pb.res[[i]], function(x)
+            {
+                x$uniq
+            }),
+            rbind
+        ))
+        
+        #p-values
+        pu <- suppressWarnings(wilcox.test(uniq[,1],uniq[,2])$p.value)
+        ps <- suppressWarnings(wilcox.test(sim[,1],sim[,2])$p.value)
+        ps5 <- suppressWarnings(wilcox.test(sim5[,1],sim5[,2])$p.value)
+        
+        #results
+        results[i,1] <- steps[i]
+        results[i,2] <- mean(uniq[,1])
+        results[i,3] <- sd(uniq[,1])
+        results[i,4] <- mean(sim[,1])
+        results[i,5] <- sd(sim[,1])
+        results[i,6] <- mean(sim5[,1])
+        results[i,7] <- sd(sim5[,1])
+        results[i,8] <- mean(uniq[,2])
+        results[i,9] <- sd(uniq[,2])
+        results[i,10] <- mean(sim[,2])
+        results[i,11] <- sd(sim[,2])
+        results[i,12] <- mean(sim5[,2])
+        results[i,13] <- sd(sim5[,2])
+        results[i,14] <- pu
+        results[i,15] <- ps
+        results[i,16] <- ps5
+        results[i,17] <- 5
+    }
     
     if(short.res)
     {results <- results[,c("Steps","pu","ps","ps5")]}

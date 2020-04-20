@@ -29,15 +29,15 @@ method described in Goni et al. (2011)
 }
 \examples{
 # Get data
-data <- SemNetCleaner::bad.response(as.matrix(SemNetCleaner::open.animals[,-c(1:3)]), 99)
+data <- open.clean
 
 # Organize group data
 ## Get group data
-group <- SemNetCleaner::open.animals$Group
+group <- open.group
 
 ## Low and high openness to experience groups
-low <- data[which(group == 1),]
-high <- data[which(group == 2),]
+low <- data[which(group == "Low"),]
+high <- data[which(group == "High"),]
 
 \dontrun{
 # Compute networks

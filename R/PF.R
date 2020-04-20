@@ -41,7 +41,7 @@ PF <- function (data, progBar = TRUE)
 {
   # Check if the matrix is responses
   if(all(apply(data, 2, is.character)))
-  {data <- SemNetCleaner::resp2bin(data)}
+  {data <- resp2bin(data)}
   
   # Data matrix
   mat <- as.matrix(data)

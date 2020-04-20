@@ -16,15 +16,15 @@
 #' 
 #' @examples
 #' # Get data
-#' data <- SemNetCleaner::bad.response(as.matrix(SemNetCleaner::open.animals[,-c(1:3)]), 99)
+#' data <- open.binary
 #' 
 #' # Organize group data
 #' ## Get group data
-#' group <- SemNetCleaner::open.animals$Group
+#' group <- open.group
 #' 
 #' ## Low and high openness to experience groups
-#' low <- data[which(group == 1),]
-#' high <- data[which(group == 2),]
+#' low <- data[which(group == "Low"),]
+#' high <- data[which(group == "High"),]
 #' 
 #' # Compute networks
 #' low.net <- NRW(low)
@@ -46,13 +46,13 @@ NRW <- function(data, threshold = 3)
 {
   # Check if the matrix is numeric
   if(all(apply(data, 2, is.numeric)))
-  {data <- SemNetCleaner::bin2resp(data, to.data.frame = TRUE)}
+  {data <- bin2resp(data, to.data.frame = TRUE)}
   
   # Data matrix
   mat <- as.matrix(data)
   
   # Replace bad responses with NA
-  mat <- SemNetCleaner::bad.response(mat)
+  mat <- bad.response(mat)
   
   # Number of cases
   cases <- nrow(mat)

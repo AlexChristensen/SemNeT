@@ -22,7 +22,8 @@ Number of random steps to begin with.
 Defaults to \code{10}}
 
 \item{iter}{Numeric.
-Number of iterations for each random walk}
+Number of iterations for each random walk.
+Defaults to \code{10000}}
 
 \item{short.res}{Boolean.
 Should shorten results (p-values only) be produced?

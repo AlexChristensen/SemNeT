@@ -4,17 +4,18 @@
 \alias{plot.compareShiny}
 \title{Plots Networks for Comparison from Shiny}
 \usage{
-\method{plot}{compareShiny}(res)
+\method{plot}{compareShiny}(x, ...)
 }
 \arguments{
-\item{res}{Shiny result \code{resultShiny$comparePlot}}
+\item{x}{Shiny result \code{resultShiny$comparePlot}}
+
+\item{...}{Additional arguments}
 }
 \value{
 Plots networks using \code{\link[qgraph]{qgraph}}
-or \code{\link[networktools]{MDSnet}}
 }
 \description{
-Uses \code{\link[qgraph]{qgraph}} and \code{\link[networktools]{MDSnet}}
+Uses \code{\link[qgraph]{qgraph}}
 to plot networks. Accepts any number of networks and will organize the plots
 in the number of side-by-side columns using the heuristic of taking the square root of the number of 
 input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).

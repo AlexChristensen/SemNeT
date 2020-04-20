@@ -101,8 +101,8 @@
 #' }
 #' # Bootstrap case-wise networks
 #' ## Get openness data
-#' low <- open.binary[which(SemNetCleaner::open.animals$Group == 1),]
-#' high <- open.binary[which(SemNetCleaner::open.animals$Group == 2),]
+#' low <- open.binary[which(open.group == "Low"),]
+#' high <- open.binary[which(open.group == "High"),]
 #' \donttest{
 #' ## Run
 #' open <- bootSemNeT(low, high, iter = 1000, cores = 2, method = "NRW", type = "case")
@@ -113,7 +113,8 @@
 #' @importFrom stats sd cor dist pnorm runif
 #' 
 #' @export
-#Bootstrapped Semantic Network Analysis----
+# Bootstrapped Semantic Network Analysis----
+# Updated 15.04.2020
 bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,

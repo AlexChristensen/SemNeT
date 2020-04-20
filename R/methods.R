@@ -50,22 +50,23 @@ plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
 }
 
 # Plot Shiny compare
-plot.compareShiny <- function (res)
+plot.compareShiny <- function (x, ...)
 {
-    for(i in 1:length(res$datalist))
+    for(i in 1:length(x$datalist))
     {
         #Network specific arguments
         ##Networks
-        if(res$config == "mds")
-        {res$qgraph.args$qgraph_net <- res$layouts[[i]]
-        }else{res$qgraph.args$input <- res$layouts[[i]]}
+        #if(x$config == "mds")
+        #{x$qgraph.args$qgraph_net <- x$layouts[[i]]
+        #}else{
+        x$qgraph.args$input <- x$layouts[[i]]#}
         ##Network title and labels
-        res$qgraph.args$title <- res$title[[i]]
-        res$qgraph.args$labels <- res$labs[[i]]
+        x$qgraph.args$title <- x$title[[i]]
+        x$qgraph.args$labels <- x$labs[[i]]
         
         #Generate plot
-        ifelse(res$config == "mds",
-               do.call(networktools::MDSnet, args = res$qgraph.args),
-               do.call(qgraph::qgraph, args = res$qgraph.args))
+        #ifelse(x$config == "mds",
+               #do.call(networktools::MDSnet, args = x$qgraph.args),
+               do.call(qgraph::qgraph, args = x$qgraph.args)#)
     }
 }

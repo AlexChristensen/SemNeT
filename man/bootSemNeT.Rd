@@ -119,8 +119,8 @@ sim = "cosine", cores = 2, method = "TMFG", type = "node")
 }
 # Bootstrap case-wise networks
 ## Get openness data
-low <- open.binary[which(SemNetCleaner::open.animals$Group == 1),]
-high <- open.binary[which(SemNetCleaner::open.animals$Group == 2),]
+low <- open.binary[which(open.group == "Low"),]
+high <- open.binary[which(open.group == "High"),]
 \donttest{
 ## Run
 open <- bootSemNeT(low, high, iter = 1000, cores = 2, method = "NRW", type = "case")
