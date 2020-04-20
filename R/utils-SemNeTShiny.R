@@ -510,24 +510,12 @@ randnet.testShiny <- function (dat, iter, cores)
     #Get names of networks
     name <- names(dat)
     
-    #Create list of input
-    datalist <- dat
+    #Initialize data list
+    data.list <- vector("list", length = length(name))
     
-    #Number of nodes
-    nodes <- list()
-    
-    for(i in 1:length(datalist))
-    {nodes[[i]] <- ncol(datalist[[i]])}
-    
-    #Make diagonals zero
-    for(i in 1:length(datalist))
-    {diag(datalist[[i]]) <- 0}
-    
-    #Number of edges
-    edges <- list()
-    
-    for(i in 1:length(datalist))
-    {edges[[i]] <- sum(colSums(NetworkToolbox::binarize(datalist[[i]])))/2}
+    for(i in 1:length(name))
+        for(j in 1:iter)
+        {data.list[[i]][[j]] <- dat[[i]]}
     
     #Initialize random networks list
     rand.list <- vector("list", length = length(name))
@@ -536,28 +524,15 @@ randnet.testShiny <- function (dat, iter, cores)
     #Message for begin random networks
     message("Generating random networks...", appendLF = FALSE)
     
-    for(i in 1:length(datalist))
-    {
-        #Initialize count
-        count <- 0
-        
-        repeat{
-            
-            #Increase count
-            count <- count + 1
-            
-            #Generate random network
-            rand.list[[i]][[count]] <- NetworkToolbox::randnet(nodes[[i]], edges[[i]])
-            
-            #Break out of repeat when
-            #count reaches iter
-            if(count == iter)
-            {break}
-        }
-    }
+    #Parallel processing
+    cl <- parallel::makeCluster(cores)
     
-    #Message for end of random networks
-    message("done", appendLF = TRUE)
+    #Export variables
+    parallel::clusterExport(cl, c("data.list", "rand.list"), envir = environment())
+    
+    #Compute random networks
+    for(i in 1:length(data.list))
+    {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){SemNeT:::randnet(A = X)}, cl = cl)}
     
     #Message for begin of network measures
     message("Computing network measures...\n", appendLF = FALSE)
@@ -566,13 +541,10 @@ randnet.testShiny <- function (dat, iter, cores)
     net.meas <- vector("list", length = length(name))
     names(net.meas) <- name
     
-    #Parallel processing
-    cl <- parallel::makeCluster(cores)
-    
     #Export variables
-    parallel::clusterExport(cl, c("rand.list", "net.meas"), envir = environment())
+    parallel::clusterExport(cl, c("net.meas"), envir = environment())
     
-    for(i in 1:length(datalist))
+    for(i in 1:length(data.list))
     {
         #Compute network measures
         net.meas[[i]] <- pbapply::pbsapply(X = rand.list[[i]], FUN = semnetmeas, cl = cl)
@@ -586,7 +558,7 @@ randnet.testShiny <- function (dat, iter, cores)
     names(res) <- name
     
     #Compute significance tests
-    for(i in 1:length(datalist))
+    for(i in 1:length(data.list))
     {
         sig.mat <- matrix(0, nrow = 3, ncol = 3)
         row.names(sig.mat) <- c("ASPL","CC","Q")
@@ -597,7 +569,7 @@ randnet.testShiny <- function (dat, iter, cores)
         sig.mat[,"SD.rand"] <- round(apply(net.meas[[i]],1,sd),4)
         
         #Compute semantic network measures for network
-        meas <- semnetmeas(datalist[[i]])
+        meas <- semnetmeas(dat[[i]])
         
         ##ASPL
         z.aspl <- (meas["ASPL"] - sig.mat["ASPL","M.rand"]) / sig.mat["ASPL","SD.rand"]
@@ -612,6 +584,8 @@ randnet.testShiny <- function (dat, iter, cores)
         #Insert results
         res[[i]] <- sig.mat
     }
+    
+    return(res)
     
     return(res)
 }
