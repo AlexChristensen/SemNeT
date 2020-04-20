@@ -515,7 +515,7 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
       geom_boxplot(aes(x = group, y = netmeas, fill = group),outlier.shape = NA,
                    alpha = .5, width = .1, colour = "black") +
       
-      geom_point(data = plot.desc, aes(x = prop, y = mean),
+      geom_point(data = plot.desc, aes(x = group, y = mean),
                  position = position_nudge(x = -.125),
                  alpha = 1, pch = 21, size = 3) +
       
