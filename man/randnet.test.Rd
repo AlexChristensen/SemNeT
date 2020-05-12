@@ -47,6 +47,11 @@ randnet.test(net, iter = 1000, cores = 2)
 \dontshow{randnet.test(net, iter = 1, cores = 2)}
 
 }
+\references{
+Viger, F., & Latapy, M. (2016).
+Efficient and simple generation of random simple connected graphs with prescribed degree sequence.
+\emph{Journal of Complex Networks}, \emph{4}, 15-37.
+}
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
 }

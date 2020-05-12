@@ -545,7 +545,7 @@ server <- function(input, output, session)
     {resultShiny$randomTest <<- rand.res}
     
     if(exists("res_boot", envir = globalenv()))
-    {resultShiny$bootstrap <<- res_boot}
+    {resultShiny$bootstrap <<- unlist(res_boot, recursive = FALSE)}
     
     if(exists("bootTest", envir = globalenv()))
     {resultShiny$bootstrapTest <<- bootTest}

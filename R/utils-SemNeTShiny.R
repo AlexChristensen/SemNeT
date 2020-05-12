@@ -532,7 +532,7 @@ randnet.testShiny <- function (dat, iter, cores)
     
     #Compute random networks
     for(i in 1:length(data.list))
-    {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){SemNeT:::randnet(A = X)}, cl = cl)}
+    {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){randnet(A = X)}, cl = cl)}
     
     #Message for begin of network measures
     message("Computing network measures...\n", appendLF = FALSE)

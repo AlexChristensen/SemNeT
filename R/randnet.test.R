@@ -36,6 +36,11 @@
 #' }
 #' \dontshow{randnet.test(net, iter = 1, cores = 2)}
 #' 
+#' @references 
+#' Viger, F., & Latapy, M. (2016).
+#' Efficient and simple generation of random simple connected graphs with prescribed degree sequence.
+#' \emph{Journal of Complex Networks}, \emph{4}, 15-37.
+#' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
 #' @importFrom stats dnorm
@@ -81,7 +86,7 @@ randnet.test <- function (..., iter, cores)
     
     #Compute random networks
     for(i in 1:length(data.list))
-    {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){SemNeT:::randnet(A = X)}, cl = cl)}
+    {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){randnet(A = X)}, cl = cl)}
     
     #Message for begin of network measures
     message("Computing network measures...\n", appendLF = FALSE)
