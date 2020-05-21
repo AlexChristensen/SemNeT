@@ -83,22 +83,15 @@
 #' lolo <- sim.fluency(50, 500)
 #' 
 #' ## Create groups
-#' hihi.group <- cbind(rep("high",nrow(hihi)),rep("high",nrow(hihi)))
-#' hilo.group <- cbind(rep("high",nrow(hilo)),rep("low",nrow(hilo)))
-#' lohi.group <- cbind(rep("low",nrow(lohi)),rep("high",nrow(lohi)))
-#' lolo.group <- cbind(rep("low",nrow(lolo)),rep("low",nrow(lolo)))
-#' 
-#' ## Bind groups into single data frame
-#' groups <- rbind(hihi.group,
-#'                 hilo.group,
-#'                 lohi.group,
-#'                 lolo.group)
+#' groups <- matrix(
+#' c("high", "high",
+#' "high", "low",
+#' "low", "high",
+#' "low", "low"
+#' ), ncol = 2, byrow = TRUE)
 #' 
 #' ## Change column names (variable names)
 #' colnames(groups) <- c("gf","caq")
-#' 
-#' ## Change groups into data frame
-#' groups <- as.data.frame(groups)
 #' 
 #' ## Run partial bootstrap networks
 #' boot.fifty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .50,
@@ -107,7 +100,7 @@
 #' type = "node", method = "TMFG")
 #' 
 #' ## Compute tests
-#' bootTest(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
+#' test.bootSemNeT(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
 #' }
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>

@@ -1,5 +1,7 @@
 Changes in version 1.3.0
 
+FIX: 'groups' argument in `test.bootSemNeT`
+
 UPDATE: added integration of SemNetCleaner output into `SemNeTShiny`
 
 MOVE: `equate` and `finalize` moved from SemNetCleaner to SemNeT

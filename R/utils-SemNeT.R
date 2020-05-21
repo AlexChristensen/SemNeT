@@ -947,7 +947,7 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     # Check for groups
     if(!is.null(groups))
     {
-      aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
+      aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
       colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
       aov.obj$Group <- as.factor(as.character(aov.obj$Group))
       aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
@@ -1022,7 +1022,7 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     # Check for groups
     if(!is.null(groups))
     {
-      aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
+      aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
       colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
       aov.obj$Group <- as.factor(as.character(aov.obj$Group))
       aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
@@ -1097,7 +1097,7 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     # Check for groups
     if(!is.null(groups))
     {
-      aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
+      aov.obj <- as.data.frame(cbind(aov.obj,rep.rows(groups, iter)), stringsAsFactors = FALSE)
       colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
       aov.obj$Group <- as.factor(as.character(aov.obj$Group))
       aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
@@ -1434,4 +1434,22 @@ cosine <- function( x, y=NULL ) {
     stop("argument mismatch. Either one matrix or two vectors needed as input.")
   }
   
+}
+
+#' @noRd
+# Function to replicate rows----
+# Updated 21.05.2020
+rep.rows <- function (mat, times)
+{
+  # New matrix
+  new.mat <- matrix(NA, nrow = 0, ncol = ncol(mat))
+  
+  # Loop through rows of matrix
+  for(i in 1:nrow(mat))
+  {new.mat <- rbind(new.mat, matrix(rep(mat[i,], times = times), ncol = ncol(mat), byrow = TRUE))}
+  
+  # Rename new matrix
+  colnames(new.mat) <- colnames(mat)
+  
+  return(new.mat)
 }
