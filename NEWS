@@ -1,5 +1,7 @@
 Changes in version 1.3.0
 
+FIX: output of two-way ANOVA in `test.bootSemNeT`
+
 FIX: 'groups' argument in `test.bootSemNeT`
 
 UPDATE: added integration of SemNetCleaner output into `SemNeTShiny`

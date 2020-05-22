@@ -107,7 +107,7 @@
 #' 
 #' @export
 #Test: Partial Bootstrapped Network Statistics----
-# Updated 05.04.2020
+# Updated 22.05.2020
 test.bootSemNeT <- function (..., formula = NULL, groups = NULL)
 {
     #Obtain ... in a list
@@ -233,12 +233,12 @@ test.bootSemNeT <- function (..., formula = NULL, groups = NULL)
                     aspl[[sprintf("%1.2f", perc)]]$HSD <- test$ASPL$HSD[[1]]
                     
                     #CC
-                    cc[[sprintf("%1.2f", perc)]] <- test$CC$ANOVA[[1]]
-                    cc[[sprintf("%1.2f", perc)]] <- test$CC$HSD[[1]]
+                    cc[[sprintf("%1.2f", perc)]]$ANOVA <- test$CC$ANOVA[[1]]
+                    cc[[sprintf("%1.2f", perc)]]$HSD <- test$CC$HSD[[1]]
                     
                     #Q
-                    q[[sprintf("%1.2f", perc)]] <- test$Q$ANOVA[[1]]
-                    q[[sprintf("%1.2f", perc)]] <- test$Q$HSD[[1]]
+                    q[[sprintf("%1.2f", perc)]]$ANOVA <- test$Q$ANOVA[[1]]
+                    q[[sprintf("%1.2f", perc)]]$HSD <- test$Q$HSD[[1]]
                     
                     hsd <- NULL
                 }

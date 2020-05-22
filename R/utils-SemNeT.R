@@ -746,7 +746,7 @@ randnet <- function (nodes = NULL, edges = NULL, A = NULL)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics----
-# Updated 30.03.2020
+# Updated 21.05.2020
 boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
 {
   #Check for 'partboot' object
