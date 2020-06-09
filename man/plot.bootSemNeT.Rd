@@ -28,7 +28,7 @@ one <- sim.fluency(20)
 \donttest{
 # Run partial bootstrap networks
 one.result <- bootSemNeT(one, prop = .50, iter = 1000,
-sim = "cosine", cores = 2, type = "node", method = "TFMG")
+sim = "cosine", cores = 2, type = "node", method = "TMFG")
 }
 # Plot
 plot(one.result, groups = c("One"))

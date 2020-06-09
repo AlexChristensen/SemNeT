@@ -95,9 +95,9 @@
 #' 
 #' ## Run partial bootstrap networks
 #' boot.fifty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .50,
-#' type = "node", method = "TMFG")
+#' type = "node", method = "TMFG", cores = 2)
 #' boot.sixty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .60,
-#' type = "node", method = "TMFG")
+#' type = "node", method = "TMFG", cores = 2)
 #' 
 #' ## Compute tests
 #' test.bootSemNeT(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
