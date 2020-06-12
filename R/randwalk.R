@@ -21,10 +21,6 @@
 #' Number of iterations for each random walk.
 #' Defaults to \code{10000}
 #' 
-#' @param short.res Boolean.
-#' Should shorten results (p-values only) be produced?
-#' Defaults to \code{TRUE}
-#' 
 #' @param cores Numeric.
 #' Number of computer processing cores to use for bootstrapping samples.
 #' Defaults to \emph{n} - 1 total number of cores.
@@ -62,9 +58,10 @@
 #' @importFrom stats wilcox.test
 #' 
 #' @export
-#Random Walks
+# Random Walks
+# Updated 12.06.2020
 randwalk <- function (A, B, reps = 20, steps = 10,
-                      iter = 10000, short.res = TRUE, cores)
+                      iter = 10000, cores)
 {
     #Missing arguments
     if(missing(cores))
@@ -74,6 +71,19 @@ randwalk <- function (A, B, reps = 20, steps = 10,
     #Grab names of matrices
     nameA <- as.character(substitute(A))
     nameB <- as.character(substitute(B))
+    
+    #Get names from list
+    if("$" %in% unlist(strsplit(nameA, split = "")))
+    {
+        nameA <- unlist(strsplit(nameA, split = "\\$"))
+        nameA <- nameA[length(nameA)]
+    }
+    
+    if("$" %in% unlist(strsplit(nameB, split = "")))
+    {
+        nameB <- unlist(strsplit(nameB, split = "\\$"))
+        nameB <- nameB[length(nameB)]
+    }
     
     #number of nodes
     nA <- ncol(A)
@@ -218,18 +228,13 @@ randwalk <- function (A, B, reps = 20, steps = 10,
     # Initialize result matrix
     results <- matrix(NA, nrow = reps, ncol = 17)
     
-    colnames(results) <- c("Steps",paste("M.uniq",nameA,sep="."),
-                           paste("SD.uniq",nameA,sep="."),
-                           paste("M.sim",nameA,sep="."),
-                           paste("SD.sim",nameA,sep="."),
-                           paste("M.sim5",nameA,sep="."),
-                           paste("SD.sim5",nameA,sep="."),
-                           paste("M.uniq",nameB,sep="."),
-                           paste("SD.uniq",nameB,sep="."),
-                           paste("M.sim",nameB,sep="."),
-                           paste("SD.sim",nameB,sep="."),
-                           paste("M.sim5",nameB,sep="."),
-                           paste("SD.sim5",nameB,sep="."),
+    colnames(results) <- c("Steps",
+                           paste("M.uniq",nameA,sep="."), paste("SD.uniq",nameA,sep="."),
+                           paste("M.sim",nameA,sep="."), paste("SD.sim",nameA,sep="."),
+                           paste("M.sim5",nameA,sep="."), paste("SD.sim5",nameA,sep="."),
+                           paste("M.uniq",nameB,sep="."), paste("SD.uniq",nameB,sep="."),
+                           paste("M.sim",nameB,sep="."), paste("SD.sim",nameB,sep="."),
+                           paste("M.sim5",nameB,sep="."), paste("SD.sim5",nameB,sep="."),
                            "pu", "ps", "ps5", "g5ind")
     
     # Organized into matrices
@@ -284,10 +289,50 @@ randwalk <- function (A, B, reps = 20, steps = 10,
         results[i,17] <- 5
     }
     
-    if(short.res)
-    {results <- results[,c("Steps","pu","ps","ps5")]}
+    # Get directions
+    ## pu
+    dir.pu <- ifelse(results[,"pu"] < .05,
+                     ifelse(results[,2] > results[,8],
+                            paste(nameA, ">", nameB),
+                            paste(nameB, ">", nameA)),
+                     "n.s.")
     
+    ## ps
+    dir.ps <- ifelse(results[,"ps"] < .05,
+                     ifelse(results[,4] > results[,10],
+                            paste(nameA, ">", nameB),
+                            paste(nameB, ">", nameA)),
+                     "n.s.")
     
-    return(results)
+    ## ps5
+    dir.ps5 <- ifelse(results[,"ps5"] < .05,
+                      ifelse(results[,6] > results[,12],
+                             paste(nameA, ">", nameB),
+                             paste(nameB, ">", nameA)),
+                      "n.s.")
+    
+    # Change p-values
+    short.results <- round(results[,c("Steps","pu","ps","ps5")], 3)
+    short.results <- ifelse(short.results < .001, "< .001", short.results)
+    
+    # Combine p-values and effect directions
+    short.results <- cbind(short.results[,1:2], dir.pu,
+                           short.results[,3], dir.ps,
+                           short.results[,4], dir.ps5)
+    
+    # Rename columns
+    colnames(short.results) <- c("Steps",
+                                 "Unique Nodes (p-value)", "Direction",
+                                 "Similarity (p-value)", "Direction",
+                                 "5-step Similarlity (p-value)", "Direction")
+    # Convert to data frame
+    short.results <- as.data.frame(short.results)
+    
+    # Result list
+    res <- list()
+    res$long <- results
+    res$short <- short.results
+    
+    return(res)
 }
 #----

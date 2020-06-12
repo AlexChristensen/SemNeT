@@ -3,11 +3,11 @@ library(shiny)
 # Interface for SemNeT
 ui <- (
   
-  navbarPage(title = "Semantic Network Analysis with SemNeT",
+  navbarPage(title = "Semantic Network Analysis with SemNeT", id = "tabs",
              
-             # Network Estimation Panel
+             # Load Data Panel
              tabPanel(
-               "Network Estimation",
+               "Load Data",
                
                # Input
                sidebarPanel(
@@ -21,6 +21,23 @@ ui <- (
                  
                  # Group variable upload
                  tags$div(fileInput("group", label = "Upload Group Variable"), id = "group"),
+                 
+                 actionButton("load_data", label = "Load Data")
+                 
+               ),
+               
+               # Output
+               mainPanel(
+                 
+               )
+             ),
+             
+             # Network Estimation Panel
+             tabPanel(
+               "Network Estimation",
+               
+               # Input
+               sidebarPanel(
                  
                  # Network estimation method
                  selectInput("estimation", "Network Estimation Method", c("",
@@ -55,7 +72,7 @@ ui <- (
                # Input
                sidebarPanel(
                  
-                 numericInput("iters_rand", label = "Number of Iterations", value = 1000, min = 1),
+                 numericInput("iters_rand", label = "Number of Iterations", value = 1000, min = 0, step = 100),
                  
                  uiOutput("cores_rand"),
                  
@@ -76,13 +93,15 @@ ui <- (
                # Input
                sidebarPanel(
                  
-                 numericInput("iters_boot", label = "Number of Iterations", value = 1000, min = 1),
+                 uiOutput("type"),
+                 
+                 numericInput("iters_boot", label = "Number of Iterations", value = 1000, min = 0, step = 100),
                  
                  uiOutput("cores_boot"),
                  
-                 uiOutput("type"),
+                 actionButton("run_boot", label = "Run Bootstrap Analyses"),
                  
-                 actionButton("run_boot", label = "Run Bootstrap Analyses")
+                 actionButton("run_plot", label = "Generate Plots")
                  
                ),
                
@@ -91,31 +110,76 @@ ui <- (
                  tableOutput("aspl"),
                  tableOutput("cc"),
                  tableOutput("q"),
-                 tableOutput("tab")
-               )
-             ),
-             
-             # Plot Bootstrap Analyses Panel
-             tabPanel(
-               "Plot Bootstrap Analyses",
-               
-               # Input
-               sidebarPanel(
-                 
-                 actionButton("run_plot", label = "Generate Plots")
-                 
-               ),
-               
-               # Output
-               mainPanel(
+                 tableOutput("tab"),
                  plotOutput("asplPlot"),
                  plotOutput("ccPlot"),
                  plotOutput("qPlot")
                )
              ),
              
+             # Random Walk Analyses Panel
+             tabPanel(
+               "Random Walk Analyses",
+               
+               # Input
+               sidebarPanel(
+                 
+                 uiOutput("A"),
+                 
+                 uiOutput("B"),
+                 
+                 numericInput("reps", label = "Number of Repetitions", value = 20, min = 0, max = Inf, step = 5),
+                 
+                 numericInput("steps", label = "Number of Steps", value = 10, min = 0, max = Inf, step = 1),
+                 
+                 numericInput("iters_walk", label = "Number of Iterations", value = 10000, min = 0, max = Inf, step = 1000),
+                 
+                 uiOutput("cores_walk"),
+                 
+                 actionButton("run_walk", label = "Run Random Walk Analyses")
+                 
+               ),
+               
+               # Output
+               mainPanel(
+                 tableOutput("walk_rand")
+               )
+             ),
+             
+             # Spreading Activation Analyses Panel
+             tabPanel(
+               "Spreading Activation Analyses",
+               
+               # Input
+               sidebarPanel(
+                 
+                 uiOutput("network_select"),
+                 
+                 numericInput("retention", label = "Retention (proportion of activation that remains in spreading node)", value = 0.5, min = 0, max = 1),
+                 
+                 numericInput("time", label = "Number of Time Steps", value = 10, min = 0, max = Inf),
+                 
+                 numericInput("decay", label = "Decay (activation lost at each time step)", value = 0, min = 0, max = 1),
+                 
+                 numericInput("suppress", label = "Suppress (activation less than value is set to zero)", value = 0, min = 0, max = Inf),
+                 
+                 uiOutput("node_select"),
+                 
+                 actionButton("run_spr_act", label = "Run Spreading Activation Analyses")
+                 
+               ),
+               
+               # Output
+               mainPanel(
+                 
+               )
+             ),
+             
              # Use shinyalert
-             shinyalert::useShinyalert()
+             shinyalert::useShinyalert(),
+             
+             # Use shinyjs
+             shinyjs::useShinyjs()
              
   )
 )

@@ -1,6 +1,16 @@
 # Code for SemNeT
 server <- function(input, output, session)
 {
+  ###################
+  #### HIDE TABS ####
+  ###################
+  
+  hideTab(inputId = "tabs", target = "Network Estimation")
+  hideTab(inputId = "tabs", target = "Random Network Analyses")
+  hideTab(inputId = "tabs", target = "Bootstrap Network Analyses")
+  hideTab(inputId = "tabs", target = "Random Walk Analyses")
+  hideTab(inputId = "tabs", target = "Spreading Activation Analyses")
+  
   #############################
   #### NETWORK ESTIMATION ####
   ############################
@@ -35,6 +45,62 @@ server <- function(input, output, session)
       })
     }
   }
+  
+  
+  # Semantic Networks panel
+  observeEvent(input$load_data,
+               {
+                 # Let user know
+                 showNotification("Loading data...")
+                 
+                 if(!is.null(input$clean_envir) || !is.null(input$group_envir))
+                 {
+                   # Load data from R environment
+                   if(input$clean_envir != "")
+                     dat <<- get(input$clean_envir, envir = globalenv())$responses$clean
+                   
+                   # Load group from R environment
+                   if(input$group_envir == "Yes")
+                   {group <<- group}
+                 }
+                 
+                 # Load preprocessed data
+                 if(!is.null(input$data))
+                 {dat <<- SemNeT:::read.data(input$data$datapath)}
+                 
+                 # Load group data
+                 if(!is.null(input$group))
+                 {group <<- SemNeT:::read.data(input$group$datapath)}
+                 
+                 # Load data from SemNeT package
+                 if(!exists("dat"))
+                 {
+                   dat <<- SemNeT::open.clean
+                   group <<- SemNeT::open.group
+                 }
+                 
+                 # Load group data from SemNeT package
+                 if(!exists("group"))
+                 {group <<- rep(1, nrow(data))}
+                 
+                 # Organize group data
+                 group <<- unlist(group)
+                 
+                 # Show network estimation tab
+                 showTab(inputId = "tabs", target = "Network Estimation")
+                 
+                 # Print waiting message
+                 # FOR R PACKAGE AND WEB
+                 shinyalert::shinyalert(title = "Data Loaded Successfully",
+                                        type = "info",
+                                        showConfirmButton = TRUE)
+                 
+                 # Move on to network estimation tab
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "Network Estimation")
+                 
+               }
+  )
   
   # Set up UI based on selection of network estimaton
   ## Option 1
@@ -74,36 +140,6 @@ server <- function(input, output, session)
                  # Let user know
                  showNotification("Estimating networks...")
                  
-                 if(!is.null(input$clean_envir) || !is.null(input$group_envir))
-                 {
-                   # Load data from R environment
-                   if(input$clean_envir != "")
-                     dat <<- get(input$clean_envir, envir = globalenv())$responses$clean
-                   
-                   # Load group from R environment
-                   if(input$group_envir == "Yes")
-                   {group <<- group}
-                 }
-                 
-                 # Load preprocessed data
-                 if(!is.null(input$data))
-                 {dat <<- SemNeT:::read.data(input$data$datapath)}
-                 
-                 # Load group data
-                 if(!is.null(input$group))
-                 {group <<- SemNeT:::read.data(input$group$datapath)}
-                 
-                 # Load data from SemNeT package
-                 if(!exists("dat"))
-                 {dat <<- SemNeT::open.clean}
-                 
-                 # Load group data from SemNeT package
-                 if(!exists("group"))
-                 {group <<- SemNeT::open.group}
-                 
-                 # Organize group data
-                 group <<- unlist(group)
-                 
                  ## Identify unique groups
                  uniq <<- unique(group)
                  
@@ -118,7 +154,7 @@ server <- function(input, output, session)
                  ## Change responses to binary matrix
                  if(network == "TMFG")
                    if(all(apply(dat, 2, is.character)))
-                   {dat <<- SemNeT:::resp2bin(dat)}
+                   {bin_dat <<- SemNeT:::resp2bin(dat)}
                  
                  ## Create new data
                  for(i in 1:length(uniq))
@@ -146,13 +182,8 @@ server <- function(input, output, session)
                    # Print waiting message
                    # FOR R PACKAGE
                    shinyalert::shinyalert(title = "Running...",
-                                          text = "Check R Console for the Pathfinder Network Estimation Progress",
-                                          type = "info")
-                   
-                   # FOR WEB
-                   #shinyalert::shinyalert(title = "Running...",
-                   #                      text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
-                   #                      type = "info")
+                                           text = "Check R Console for the Pathfinder Network Estimation Progress",
+                                           type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
@@ -160,6 +191,13 @@ server <- function(input, output, session)
                    
                  }else if(network == "TMFG")
                  {
+                   ## Create new data
+                   for(i in 1:length(uniq))
+                   {
+                     assign(paste(uniq[i]),
+                            bin_dat[which(group == uniq[i]),],
+                            envir = globalenv())
+                   }
                    
                    ## Store binary groups
                    for(i in 1:length(uniq))
@@ -241,6 +279,12 @@ server <- function(input, output, session)
                    
                  })
                  
+                 # Show analysis tabs
+                 showTab(inputId = "tabs", target = "Random Network Analyses")
+                 showTab(inputId = "tabs", target = "Bootstrap Network Analyses")
+                 showTab(inputId = "tabs", target = "Random Walk Analyses")
+                 showTab(inputId = "tabs", target = "Spreading Activation Analyses")
+                 
                }
   )
   
@@ -257,7 +301,7 @@ server <- function(input, output, session)
                                         {
                                           if(x)
                                           {
-                                            showNotification("Results Cleared")
+                                            showNotification("Results cleared")
                                             
                                             output$viz <- renderPlot({})
                                             output$measures <- renderTable({})
@@ -280,8 +324,10 @@ server <- function(input, output, session)
                                             )
                                             
                                             if(exists("clean"))
-                                            {rm(list = ls(envir = globalenv())[-match(c("clean", "dat", "group"), ls(globalenv()))], envir = globalenv())
-                                            }else{rm(list = ls(envir = globalenv())[-match(c("dat", "group"), ls(globalenv()))], envir = globalenv())}
+                                            {rm(list = ls(envir = globalenv())[-match(c("prev.env", "clean", "dat", "group"), ls(globalenv()))], envir = globalenv())
+                                            }else if(exists("group") && exists("dat"))
+                                            {rm(list = ls(envir = globalenv())[-match(c("prev.env", "dat", "group"), ls(globalenv()))], envir = globalenv())
+                                            }else{rm(list = ls(envir = globalenv())[-match(c("prev.env", "dat", "group"), ls(globalenv()))], envir = globalenv())}
                                             
                                           }
                                         })
@@ -298,7 +344,7 @@ server <- function(input, output, session)
     core_rand <<- seq(1,parallel::detectCores()-1,1)
     names(core_rand) <- paste(core_rand)
     
-    selectInput("cores_rand", label = "Number of processing cores",
+    selectInput("cores_rand", label = "Number of Processing Cores",
                 choices = core_rand,
                 selected = ceiling(length(core_rand) / 2)
     )
@@ -313,13 +359,8 @@ server <- function(input, output, session)
                  # Print waiting message
                  # FOR R PACKAGE
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Check R Console for the Random Network Analyses Progress",
-                                        type = "info")
-                 
-                 # FOR WEB
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                       text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
-                 #                       type = "info")
+                                         text = "Check R Console for the Random Network Analyses Progress",
+                                         type = "info")
                  
                  # Run random networks
                  rand_res <- reactive({
@@ -357,11 +398,14 @@ server <- function(input, output, session)
     core_boot <<- seq(1,parallel::detectCores()-1,1)
     names(core_boot) <- paste(core_boot)
     
-    selectInput("cores_boot", label = "Number of processing cores",
+    selectInput("cores_boot", label = "Number of Processing Cores",
                 choices = core_boot,
                 selected = ceiling(length(core_boot) / 2)
     )
   })
+  
+  ## Hide plot button
+  shinyjs::hide("run_plot")
   
   # Partial Bootstrap Networks panel
   observeEvent(input$run_boot,
@@ -387,13 +431,8 @@ server <- function(input, output, session)
                          # Print waiting message
                          # FOR R PACKAGE
                          shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                                text = "Check R Console for the Bootstrap Network Analyses Progress",
-                                                type = "info")
-                         
-                         # FOR WEB
-                         #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                         #                       text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
-                         #                       type = "info")
+                                               text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                               type = "info")
                          
                          assign(paste(percents[i]),
                                 SemNeT:::bootSemNeTShiny(eq,
@@ -416,12 +455,6 @@ server <- function(input, output, session)
                      shinyalert::shinyalert(title = "Running...",
                                             text = "Check R Console for the Bootstrap Network Analyses Progress",
                                             type = "info")
-                     
-                     # FOR WEB
-                     #shinyalert::shinyalert(title = "Running...",
-                     #                       text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
-                     #                       type = "info")
-                     
                      
                      ## Only one
                      percents <- as.numeric(100)
@@ -495,6 +528,8 @@ server <- function(input, output, session)
                    
                  }
                  
+                 ## Show plot button
+                 shinyjs::show("run_plot")
                  
                }
   )
@@ -519,6 +554,151 @@ server <- function(input, output, session)
                  
                }
                
+  )
+  
+  ##############################
+  #### RANDOM WALK ANALYSIS ####
+  ##############################
+  
+  # Determine the number of cores
+  ## Random Walk
+  output$cores_walk <- renderUI({
+    
+    core_walk <<- seq(1,parallel::detectCores()-1,1)
+    names(core_walk) <- paste(core_walk)
+    
+    selectInput("cores_walk", label = "Number of Processing Cores",
+                choices = core_walk,
+                selected = ceiling(length(core_walk) / 2)
+    )
+  })
+  
+  # Determine networks
+  output$A <- renderUI({
+    selectInput("A", label = "Select Network A",
+                choices = c("", names(nets)),
+                selected = "")
+  })
+  
+  output$B <- renderUI({
+    selectInput("B", label = "Select Network B",
+                choices = c("", names(nets))[-which(c("", names(nets)) == input$A)],
+                selected = "")
+  })
+  
+  # Random Walks panel
+  observeEvent(input$run_walk,
+               {
+                 # Let user know
+                 showNotification("Computing statistics...")
+                 
+                 # Print waiting message
+                 # FOR R PACKAGE
+                 shinyalert::shinyalert(title = "Running...",
+                                         text = "Check R Console for the Random Walk Analyses Progress",
+                                         type = "info")
+                 
+                 # Run random networks
+                 rand_walk <- reactive({
+                   
+                   rw <<- SemNeT:::randwalkShiny(nets, input$A, input$B,
+                                                 reps = as.numeric(input$reps),
+                                                 steps = as.numeric(input$steps),
+                                                 iter = as.numeric(input$iters_walk),
+                                                 cores = as.numeric(input$cores_walk))
+                   
+                   return(rw)
+                   
+                 })
+                 
+                 # Render random networks table
+                 output$walk_rand <- renderTable({rw <<- rand_walk(); rw$short}, rownames = FALSE,
+                                                 caption = "Random Walk Results",
+                                                 caption.placement = getOption("xtable.caption.placement", "top")
+                 )
+                 
+               }
+  )
+  
+  #######################################
+  #### SPREADING ACTIVATION ANALYSIS ####
+  #######################################
+  
+  # Determine networks
+  output$network_select <- renderUI({
+    selectInput("network_select", label = "Select a Network",
+                choices = c("", names(nets)),
+                selected = "")
+  })
+  
+  # Determine nodes
+  output$node_select <- renderUI({
+    
+    net_name <<- input$network_select
+    
+    nodes <<- colnames(nets[[net_name]])
+    mat <<- cbind(nodes, rep("", length(nodes)))
+    
+    shinyMatrix::matrixInput("node_activation",
+                             cols = list(
+                               names = TRUE,
+                               editableNames = FALSE
+                             ),
+                             value = matrix(mat, ncol = 2,
+                                            dimnames = list(NULL, c("Node", "Activation")))
+    )
+  })
+  
+  # Random Walks panel
+  observeEvent(input$run_spr_act,
+               {
+                 # Let user know
+                 showNotification("Computing statistics...")
+                 
+                 # Set up start_run data frame
+                 act_mat <<- input$node_activation
+                 
+                 # Convert nodes to numbers
+                 act_mat[,1] <<- 1:nrow(act_mat)
+                 
+                 # Keep activation rows
+                 keep.row <<- ifelse(is.na(act_mat[,2]) | act_mat[,2] == "" | act_mat[,2] == "0", FALSE, TRUE)
+                 
+                 # Keep only those rows
+                 act_mat <<- as.matrix(act_mat[keep.row,])
+                 
+                 # Make sure two columns
+                 if(ncol(act_mat) != 2)
+                 {act_mat <<- t(act_mat)}
+                 
+                 # Make sure values are numeric
+                 act_mat <<- apply(act_mat, 2, as.numeric)
+                 
+                 # Keep rows
+                 act_df <<- as.data.frame(act_mat)
+                 
+                 # Make sure two columns (and data frame)
+                 if(ncol(act_df) != 2)
+                 {act_df <<- as.data.frame(t(act_df))}
+                 
+                 # Make sure column names are correct
+                 colnames(act_df) <<- c("node", "activation")
+                 
+                 # Run spreading activation
+                 sa <<- spreadr::spreadr(network = nets[[net_name]],
+                                         start_run = act_df,
+                                         retention = input$retention,
+                                         time = input$time,
+                                         decay = input$decay,
+                                         suppress = input$suppress)
+                 
+                 # Print waiting message
+                 # FOR R PACKAGE
+                 shinyalert::shinyalert(title = "Finished",
+                 text = "Results are stored in the output (resultShiny$spreadingActivation)",
+                 type = "info")
+                 
+               }
   )
   
   onStop(function(x)
@@ -552,6 +732,12 @@ server <- function(input, output, session)
     
     if(exists("pbplot", envir = globalenv()))
     {resultShiny$bootstrapPlot <<- pbplot}
+    
+    if(exists("rw", envir = globalenv()))
+    {resultShiny$randomWalk <<- rw}
+    
+    if(exists("sa", envir = globalenv()))
+    {resultShiny$spreadingActivation <<- sa}
     
     # Remove all other variables from global environment
     rm(list = ls(envir = globalenv())[-match(c("resultShiny", prev.env), ls(globalenv()))], envir = globalenv())

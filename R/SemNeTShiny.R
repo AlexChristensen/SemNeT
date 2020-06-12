@@ -31,6 +31,12 @@
 #' \item{bootstrapPlot}{Plots of the statistical results from the Bootstrap Network Analysis
 #' (see \code{\link[SemNeT]{plot.bootSemNeT}})}
 #' 
+#' \item{randomWalk}{Results from the Random Walk Analysis
+#' (see \code{\link[SemNeT]{randwalk}})}
+#' 
+#' \item{bootstrapPlot}{Results from the Spreading Activation Analysis
+#' (see \code{\link[spreadr]{spreadr}})}
+#' 
 #' @examples
 #' 
 #' if(interactive())

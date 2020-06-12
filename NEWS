@@ -1,28 +1,39 @@
+Changes in version 1.3.1
+
+o UPDATE: output names for `randwalk`
+
+o UPDATE: Shiny interface is condensed and more step-by-step progressive
+
+o UPDATE: Shiny includes random walk analysis
+
+o UPDATE: Shiny includes spreading activation analysis (thanks to Cythina Siew)
+
+
 Changes in version 1.3.0
 
-FIX: output of two-way ANOVA in `test.bootSemNeT`
+o FIX: output of two-way ANOVA in `test.bootSemNeT`
 
-FIX: 'groups' argument in `test.bootSemNeT`
+o FIX: 'groups' argument in `test.bootSemNeT`
 
-UPDATE: added integration of SemNetCleaner output into `SemNeTShiny`
+o UPDATE: added integration of SemNetCleaner output into `SemNeTShiny`
 
-MOVE: `equate` and `finalize` moved from SemNetCleaner to SemNeT
+o MOVE: `equate` and `finalize` moved from SemNetCleaner to SemNeT
 
-REMOVE: foreach and doParallel dependencies were removed (all parallelization is through the pbapply package)
+o REMOVE: foreach and doParallel dependencies were removed (all parallelization is through the pbapply package)
 
-REMOVE: SemNetCleaner dependency was removed to allow SemNeT to operate independently -- all necessary functions from SemNetCleaner have been moved to internal functions
+o REMOVE: SemNetCleaner dependency was removed to allow SemNeT to operate independently -- all necessary functions from SemNetCleaner have been moved to internal functions
 
-UPDATE: `compare.nets` has changed to `compare_nets`
+o UPDATE: `compare.nets` has changed to `compare_nets`
 
-ADD: Several semantic network estimation methods (see `CN`, `NRW`, and `PF`) -- these are included in the Shiny app
+o ADD: Several semantic network estimation methods (see `CN`, `NRW`, and `PF`) -- these are included in the Shiny app
 
-CHANGE: `partboot` is now `bootSemNeT`
+o CHANGE: `partboot` is now `bootSemNeT`
 
-CHANGE: `plot.partboot` is now `plot.bootSemNeT`
+o CHANGE: `plot.partboot` is now `plot.bootSemNeT`
 
-CHANGE: `partboot.test` is now `test.bootSemNeT`
+o CHANGE: `partboot.test` is now `test.bootSemNeT`
 
-UPDATE: `cosine` was added to internal functions to remove archived package from dependencies
+o UPDATE: `cosine` was added to internal functions to remove archived package from dependencies
 
 
 Changes in version 1.2.0

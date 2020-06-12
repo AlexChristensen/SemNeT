@@ -148,19 +148,19 @@ compare_nets <- function (..., title, config,
         labs[[i]] <- as.factor(colnames(datalist[[i]]))
     }
     
-    #Manipulate R plot window
+    # Manipulate R plot window
     if(length(datalist) == 2)
     {layout(t(1:2))
     }else if(length(datalist) > 2)
     {
-        #Find square root
+        # Find square root
         len <- floor(sqrt(length(datalist)))
         
-        #Remainder
-        remain <- length(datalist)%%len
+        # Remainder
+        remain <- ceiling(length(datalist) / len)
         
-        #Change layout accordingly
-        layout(t(matrix(1:(length(datalist)+remain),ncol=len)))
+        # Change layout accordingly
+        layout(t(matrix(1:(len*remain),ncol=len,nrow=remain)))
     }
     
     #Change layout arguments to FALSE

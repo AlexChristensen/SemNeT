@@ -4,7 +4,7 @@
 \alias{randwalk}
 \title{Random Walk Simulation}
 \usage{
-randwalk(A, B, reps = 20, steps = 10, iter = 10000, short.res = TRUE, cores)
+randwalk(A, B, reps = 20, steps = 10, iter = 10000, cores)
 }
 \arguments{
 \item{A}{Matrix or data frame.
@@ -24,10 +24,6 @@ Defaults to \code{10}}
 \item{iter}{Numeric.
 Number of iterations for each random walk.
 Defaults to \code{10000}}
-
-\item{short.res}{Boolean.
-Should shorten results (p-values only) be produced?
-Defaults to \code{TRUE}}
 
 \item{cores}{Numeric.
 Number of computer processing cores to use for bootstrapping samples.
