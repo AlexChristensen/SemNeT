@@ -181,14 +181,9 @@ server <- function(input, output, session)
                  {
                    # Print waiting message
                    # FOR R PACKAGE
-                   #shinyalert::shinyalert(title = "Running...",
-                   #                        text = "Check R Console for the Pathfinder Network Estimation Progress",
-                   #                        type = "info")
-                   
-                   # FOR WEB
                    shinyalert::shinyalert(title = "Running...",
-                                          text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
-                                          type = "info")
+                                           text = "Check R Console for the Pathfinder Network Estimation Progress",
+                                           type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
@@ -363,14 +358,9 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                        text = "Check R Console for the Random Network Analyses Progress",
-                 #                        type = "info")
-                 
-                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
-                                        type = "info")
+                                         text = "Check R Console for the Random Network Analyses Progress",
+                                         type = "info")
                  
                  # Run random networks
                  rand_res <- reactive({
@@ -440,14 +430,9 @@ server <- function(input, output, session)
                          
                          # Print waiting message
                          # FOR R PACKAGE
-                         #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                         #                      text = "Check R Console for the Bootstrap Network Analyses Progress",
-                         #                      type = "info")
-                         
-                         # FOR WEB
                          shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                                text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
-                                                type = "info")
+                                               text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                               type = "info")
                          
                          assign(paste(percents[i]),
                                 SemNeT:::bootSemNeTShiny(eq,
@@ -467,13 +452,8 @@ server <- function(input, output, session)
                      
                      # Print waiting message
                      # FOR R PACKAGE
-                     #shinyalert::shinyalert(title = "Running...",
-                     #                       text = "Check R Console for the Bootstrap Network Analyses Progress",
-                     #                       type = "info")
-                     
-                     # FOR WEB
                      shinyalert::shinyalert(title = "Running...",
-                                            text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
+                                            text = "Check R Console for the Bootstrap Network Analyses Progress",
                                             type = "info")
                      
                      
@@ -613,14 +593,9 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                        text = "Check R Console for the Random Walk Analyses Progress",
-                 #                        type = "info")
-                 
-                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Results will appear when the Random Walk Analyses are completed (do not exit browser)",
-                                        type = "info")
+                                         text = "Check R Console for the Random Walk Analyses Progress",
+                                         type = "info")
                  
                  # Run random networks
                  rand_walk <- reactive({
@@ -734,13 +709,6 @@ server <- function(input, output, session)
                  ## Show plot size
                  shinyjs::show("animate_size")
                  
-                 # Plot size
-                 size <<- switch(input$animate_size,
-                                 "Small (500 x 500)" = 500,
-                                 "Medium (900 x 900)" = 900,
-                                 "Large (1400 x 1400)" = 1400
-                 )
-                 
                  ## Hide matrix input
                  shinyjs::hide("node_activation")
                  
@@ -754,6 +722,19 @@ server <- function(input, output, session)
                  
                }
   )
+  
+  # Plot size
+  size <- reactive({
+    
+    plot_size <- switch(input$animate_size,
+                        "Small (500 x 500)" = 500,
+                        "Medium (900 x 900)" = 900,
+                        "Large (1400 x 1400)" = 1400
+    )
+    
+    return(plot_size)
+    
+  })
   
   observeEvent(input$animate,
                {
