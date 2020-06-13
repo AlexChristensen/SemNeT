@@ -1,6 +1,6 @@
 library(shiny)
 
-# Interface for SemNeT
+# Interface for SemNeT----
 ui <- (
   
   navbarPage(title = "Semantic Network Analysis with SemNeT", id = "tabs",

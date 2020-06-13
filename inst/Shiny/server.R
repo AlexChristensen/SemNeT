@@ -1,4 +1,4 @@
-# Code for SemNeT
+# Code for SemNeT----
 server <- function(input, output, session)
 {
   ###################
@@ -626,18 +626,24 @@ server <- function(input, output, session)
   # Determine networks
   output$network_select <- renderUI({
     selectInput("network_select", label = "Select a Network",
-                choices = c("", names(nets)),
-                selected = "")
+                choices = names(nets))
   })
   
   # Determine nodes
   output$node_select <- renderUI({
     
+    # Gets rid of NULL index bug
+    req(input$network_select)
+    
+    # Name of selected network
     net_name <<- input$network_select
     
+    # Nodes of the selected network
     nodes <<- colnames(nets[[net_name]])
+    # Create matrix of nodes with blank activations
     mat <<- cbind(nodes, rep("", length(nodes)))
     
+    # Create Shiny matrix of nodes and activations
     shinyMatrix::matrixInput("node_activation",
                              cols = list(
                                names = TRUE,
@@ -738,10 +744,29 @@ server <- function(input, output, session)
   
   observeEvent(input$animate,
                {
+                 # Initialize plot list
+                 plot_list <- vector("list", length = max(sa$time))
+                 
+                 # FOR WEB & R PACKAGE
+                 shinyalert::shinyalert(title = "Generating animation...",
+                                        text = "Animation will appear when the plot generation is finished (do not exit Shiny app).",
+                                        type = "info")
+                 
                  # Generate animation
+                 for(i in 1:max(sa$time))
+                 {
+                   SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa, time = i)
+                   plot_list[[i]] <- recordPlot()
+                 }
+                 
+                 # Render plot
                  output$spreadr_animate <- renderPlot({
-                   SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa,
-                                             time = input$animate_slider2)
+                   
+                   # Gets rid of NULL index bug
+                   req(input$animate_slider2)
+                   
+                   plot_list[[input$animate_slider2]]
+                   
                  }, width = size, height = size)
                  
                  ## Show animation slider
