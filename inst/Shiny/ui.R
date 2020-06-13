@@ -101,7 +101,7 @@ ui <- (
                  
                  actionButton("run_boot", label = "Run Bootstrap Analyses"),
                  
-                 actionButton("run_plot", label = "Generate Plots")
+                 actionButton("run_plot", label = "Generate Bootstrap Plots")
                  
                ),
                
@@ -165,12 +165,24 @@ ui <- (
                  
                  uiOutput("node_select"),
                  
-                 actionButton("run_spr_act", label = "Run Spreading Activation Analyses")
+                 actionButton("run_spr_act", label = "Run Spreading Activation Analyses"),
+                 
+                 selectInput("animate_size", label = "Plot Size",
+                             choices = c("Small (500 x 500)", "Medium (900 x 900)", "Large (1400 x 1400)"),
+                             selected = "Medium (900 x 900)"),
+                 
+                 actionButton("animate", label = "Generate Spreading Activation Plot"),
+                 
+                 actionButton("reset_act", label = "Reset Spreading Activation")
                  
                ),
                
                # Output
                mainPanel(
+                 
+                 uiOutput("animate_slider"),
+                 
+                 plotOutput("spreadr_animate")
                  
                )
              ),

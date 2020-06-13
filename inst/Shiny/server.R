@@ -181,9 +181,14 @@ server <- function(input, output, session)
                  {
                    # Print waiting message
                    # FOR R PACKAGE
+                   #shinyalert::shinyalert(title = "Running...",
+                   #                        text = "Check R Console for the Pathfinder Network Estimation Progress",
+                   #                        type = "info")
+                   
+                   # FOR WEB
                    shinyalert::shinyalert(title = "Running...",
-                                           text = "Check R Console for the Pathfinder Network Estimation Progress",
-                                           type = "info")
+                                          text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
+                                          type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
@@ -358,9 +363,14 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
+                 #shinyalert::shinyalert(title = "Running...",
+                 #                        text = "Check R Console for the Random Network Analyses Progress",
+                 #                        type = "info")
+                 
+                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                         text = "Check R Console for the Random Network Analyses Progress",
-                                         type = "info")
+                                        text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
+                                        type = "info")
                  
                  # Run random networks
                  rand_res <- reactive({
@@ -430,9 +440,14 @@ server <- function(input, output, session)
                          
                          # Print waiting message
                          # FOR R PACKAGE
+                         #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
+                         #                      text = "Check R Console for the Bootstrap Network Analyses Progress",
+                         #                      type = "info")
+                         
+                         # FOR WEB
                          shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                               text = "Check R Console for the Bootstrap Network Analyses Progress",
-                                               type = "info")
+                                                text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
+                                                type = "info")
                          
                          assign(paste(percents[i]),
                                 SemNeT:::bootSemNeTShiny(eq,
@@ -452,9 +467,15 @@ server <- function(input, output, session)
                      
                      # Print waiting message
                      # FOR R PACKAGE
+                     #shinyalert::shinyalert(title = "Running...",
+                     #                       text = "Check R Console for the Bootstrap Network Analyses Progress",
+                     #                       type = "info")
+                     
+                     # FOR WEB
                      shinyalert::shinyalert(title = "Running...",
-                                            text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                            text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
                                             type = "info")
+                     
                      
                      ## Only one
                      percents <- as.numeric(100)
@@ -576,14 +597,12 @@ server <- function(input, output, session)
   # Determine networks
   output$A <- renderUI({
     selectInput("A", label = "Select Network A",
-                choices = c("", names(nets)),
-                selected = "")
+                choices = names(nets))
   })
   
   output$B <- renderUI({
     selectInput("B", label = "Select Network B",
-                choices = c("", names(nets))[-which(c("", names(nets)) == input$A)],
-                selected = "")
+                choices = names(nets)[-which(names(nets) == input$A)])
   })
   
   # Random Walks panel
@@ -594,9 +613,14 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
+                 #shinyalert::shinyalert(title = "Running...",
+                 #                        text = "Check R Console for the Random Walk Analyses Progress",
+                 #                        type = "info")
+                 
+                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                         text = "Check R Console for the Random Walk Analyses Progress",
-                                         type = "info")
+                                        text = "Results will appear when the Random Walk Analyses are completed (do not exit browser)",
+                                        type = "info")
                  
                  # Run random networks
                  rand_walk <- reactive({
@@ -649,6 +673,18 @@ server <- function(input, output, session)
     )
   })
   
+  ## Hide animate button
+  shinyjs::hide("animate")
+  
+  ## Hide plot size
+  shinyjs::hide("animate_size")
+  
+  ## Hide animation slider
+  shinyjs::hide("animate_slider")
+  
+  ## Hide reset activation
+  shinyjs::hide("reset_act")
+  
   # Random Walks panel
   observeEvent(input$run_spr_act,
                {
@@ -692,14 +728,79 @@ server <- function(input, output, session)
                                          decay = input$decay,
                                          suppress = input$suppress)
                  
-                 # Print waiting message
-                 # FOR R PACKAGE
-                 shinyalert::shinyalert(title = "Finished",
-                 text = "Results are stored in the output (resultShiny$spreadingActivation)",
-                 type = "info")
+                 ## Show animate button
+                 shinyjs::show("animate")
+                 
+                 ## Show plot size
+                 shinyjs::show("animate_size")
+                 
+                 # Plot size
+                 size <<- switch(input$animate_size,
+                                 "Small (500 x 500)" = 500,
+                                 "Medium (900 x 900)" = 900,
+                                 "Large (1400 x 1400)" = 1400
+                 )
+                 
+                 ## Hide matrix input
+                 shinyjs::hide("node_activation")
+                 
+                 ## Hide inputs
+                 shinyjs::hide("network_select")
+                 shinyjs::hide("run_spr_act")
+                 shinyjs::hide("retention")
+                 shinyjs::hide("time")
+                 shinyjs::hide("decay")
+                 shinyjs::hide("suppress")
                  
                }
   )
+  
+  observeEvent(input$animate,
+               {
+                 # Generate animation
+                 output$spreadr_animate <- renderPlot({
+                   SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa,
+                                             time = input$animate_slider2)
+                 }, width = size, height = size)
+                 
+                 ## Show animation slider
+                 shinyjs::show("animate_slider")
+                 
+                 # Slider for animation
+                 output$animate_slider <- renderUI({
+                   sliderInput("animate_slider2", "Time",
+                               min = 1, max = max(sa$time), value = 1, step = 1,
+                               animate = TRUE)
+                 })
+                 
+                 ## Show reset activation
+                 shinyjs::show("reset_act")
+               }
+  )
+  
+  observeEvent(input$reset_act,
+               {
+                 ## Show inputs
+                 shinyjs::show("network_select")
+                 shinyjs::show("run_spr_act")
+                 shinyjs::show("retention")
+                 shinyjs::show("time")
+                 shinyjs::show("decay")
+                 shinyjs::show("suppress")
+                 shinyjs::show("node_activation")
+                 
+                 ## Hide animate button
+                 shinyjs::hide("animate")
+                 
+                 ## Hide reset activation
+                 shinyjs::hide("reset_act")
+                 
+                 ## Hide plot size
+                 shinyjs::hide("animate_size")
+               }
+  )
+  
+  
   
   onStop(function(x)
   {

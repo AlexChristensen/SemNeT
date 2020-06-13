@@ -1750,7 +1750,7 @@ plotbootSemNeTShiny <- function (input, groups = NULL, measures = c("ASPL","CC",
 #' @importFrom stats wilcox.test
 #' 
 #' @noRd
-# Random Walks
+# Random Walks----
 # Updated 12.06.2020
 randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
                       iter = 10000, cores)
@@ -2013,5 +2013,50 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
     res$short <- short.results
     
     return(res)
+}
+#----
+
+#' Spreading Activation Plot in Shiny
+#' 
+#' @description Generates a plot depicting spreading activation on a network
+#' 
+#' @param network Matrix or data frame.
+#' A network associated with the spreading activation
+#' 
+#' @param spreadr.object Data frame.
+#' Output from \code{\link[spreadr]{spreadr}}
+#' 
+#' @param time Numeric.
+#' Specific time step
+#' 
+#' @return An animated plot of spreading activation
+#' 
+#' @references
+#' Siew, C. S. (2019).
+#' spreadr: An R package to simulate spreading activation in a network.
+#' \emph{Behavior Research Methods}, \emph{51}, 910-929.
+#' https://doi.org/10.3758/s13428-018-1186-5
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com> and Cynthia Siew <cynsiewsq@gmail.com>
+#' 
+#' @noRd
+# Spreading Activation Plot----
+# Updated 13.06.2020
+spreadrShinyPlot <- function (network, spreadr.output, time)
+{
+    # Reset layout
+    layout(matrix(1))
+    
+    # Get 'spreadr' output
+    act <- spreadr.output
+    
+    # Get specific time
+    act <- act[act$time == time,]
+    
+    # Min-max normalize activation
+    trans <- ((act$activation - min(act$activation)) / (max(act$activation) - min(act$activation))) * 255
+    
+    # Plot
+    qgraph::qgraph(network, layout = "spring", vTrans = trans, color = "red", labels = as.factor(colnames(network)))
 }
 #----

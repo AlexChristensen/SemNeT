@@ -8,6 +8,8 @@ o UPDATE: Shiny includes random walk analysis
 
 o UPDATE: Shiny includes spreading activation analysis (thanks to Cythina Siew)
 
+o ADD: animation plot for spreading activation analysis in Shiny
+
 
 Changes in version 1.3.0
 
