@@ -10,6 +10,10 @@ o UPDATE: Shiny includes spreading activation analysis (thanks to Cythina Siew)
 
 o ADD: animation plot for spreading activation analysis in Shiny
 
+o FIX: `randwalk` bug with 'steps' and 'reps' argument
+
+o FIX: Shiny 'Clear Results' for new analyses
+
 
 Changes in version 1.3.0
 

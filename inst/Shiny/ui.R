@@ -22,12 +22,26 @@ ui <- (
                  # Group variable upload
                  tags$div(fileInput("group", label = "Upload Group Variable"), id = "group"),
                  
+                 # Data Example
+                 actionButton("data_example", label = "See Response Matrix Example", inline = TRUE),
+                 
+                 # Group Example
+                 actionButton("group_example", label = "See Group Variable Example", inline = TRUE),
+                 
+                 br(), br(),
+                 
                  actionButton("load_data", label = "Load Data")
                  
                ),
                
                # Output
                mainPanel(
+                 
+                 tableOutput("example_data_response"),
+                 
+                 tableOutput("example_data_binary"),
+                 
+                 tableOutput("example_group")
                  
                )
              ),
@@ -128,9 +142,9 @@ ui <- (
                  
                  uiOutput("B"),
                  
-                 numericInput("reps", label = "Number of Repetitions", value = 20, min = 0, max = Inf, step = 5),
+                 numericInput("steps", label = "Starting Number of Steps", value = 10, min = 0, max = Inf, step = 1),
                  
-                 numericInput("steps", label = "Number of Steps", value = 10, min = 0, max = Inf, step = 1),
+                 numericInput("reps", label = "Number of Repetitions (Each Repetition Increases Number of Steps by 10)", value = 20, min = 0, max = Inf, step = 5),
                  
                  numericInput("iters_walk", label = "Number of Iterations", value = 10000, min = 0, max = Inf, step = 1000),
                  
@@ -155,13 +169,13 @@ ui <- (
                  
                  uiOutput("network_select"),
                  
-                 numericInput("retention", label = "Retention (proportion of activation that remains in spreading node)", value = 0.5, min = 0, max = 1),
+                 numericInput("retention", label = "Retention (proportion of activation that remains in spreading node)", value = 0.5, min = 0, max = 1, step = .10),
                  
-                 numericInput("time", label = "Number of Time Steps", value = 10, min = 0, max = Inf),
+                 numericInput("time", label = "Number of Time Steps", value = 10, min = 0, max = Inf, step = 1),
                  
-                 numericInput("decay", label = "Decay (activation lost at each time step)", value = 0, min = 0, max = 1),
+                 numericInput("decay", label = "Decay (activation lost at each time step)", value = 0, min = 0, max = 1, step = .10),
                  
-                 numericInput("suppress", label = "Suppress (activation less than value is set to zero)", value = 0, min = 0, max = Inf),
+                 numericInput("suppress", label = "Suppress (activation less than value is set to zero)", value = 0, min = 0, max = Inf, step = 1),
                  
                  uiOutput("node_select"),
                  

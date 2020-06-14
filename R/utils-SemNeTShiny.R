@@ -1751,7 +1751,7 @@ plotbootSemNeTShiny <- function (input, groups = NULL, measures = c("ASPL","CC",
 #' 
 #' @noRd
 # Random Walks----
-# Updated 12.06.2020
+# Updated 14.06.2020
 randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
                       iter = 10000, cores)
 {
@@ -1768,7 +1768,7 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
     nA <- ncol(A)
     nB <- ncol(B)
     
-    #starting steps
+    #starting step
     start <- steps
     
     #binarize matrices
@@ -1874,15 +1874,15 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
     }
     
     # Initialize steps list
-    steps <- seq(steps, steps*reps, 10)
+    steps <- seq(start, reps*10 , 10)
     
     step.list <- list()
     
-    for(i in 1:reps)
+    for(i in 1:length(steps))
     {step.list[[i]] <- as.list(rep(steps[i], iter))}
     
     # Initialize parallelization results
-    pb.res <- vector("list", length = reps)
+    pb.res <- vector("list", length = length(steps))
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
@@ -1894,7 +1894,7 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
     #Let user know analysis is starting
     message("Computing random walks...")
     
-    for(i in 1:reps)
+    for(i in 1:length(steps))
     {
         message(paste("Repetition ", i, " of ", reps, " (", steps[i], " steps)", sep = ""))
         
