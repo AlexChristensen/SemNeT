@@ -2029,6 +2029,9 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
 #' @param time Numeric.
 #' Specific time step
 #' 
+#' @param size Numeric.
+#' Size of plot
+#' 
 #' @return An animated plot of spreading activation
 #' 
 #' @references
@@ -2042,7 +2045,7 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
 #' @noRd
 # Spreading Activation Plot----
 # Updated 13.06.2020
-spreadrShinyPlot <- function (network, spreadr.output, time)
+spreadrShinyPlot <- function (network, spreadr.output, time, size)
 {
     # Reset layout
     layout(matrix(1))
@@ -2056,7 +2059,61 @@ spreadrShinyPlot <- function (network, spreadr.output, time)
     # Min-max normalize activation
     trans <- ((act$activation - min(act$activation)) / (max(act$activation) - min(act$activation))) * 255
     
+    # Convert size to character
+    size <- as.character(size)
+    
+    # Change node size based on size
+    vsize <- switch(size,
+                    "500" = 4,
+                    "900" = 6,
+                    "1400" = 8
+                    )
+    
     # Plot
-    qgraph::qgraph(network, layout = "spring", vTrans = trans, color = "red", labels = as.factor(colnames(network)))
+    qgraph::qgraph(network, layout = "spring", vTrans = trans,
+                   color = "red", labels = as.factor(colnames(network)),
+                   label.prop = 1, vsize = vsize)
+}
+#----
+
+#' Animate Networks for Spreading Activation from Shiny
+#' 
+#' @description Uses \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.replay}}
+#' to animate networks. Accepts only one network animation at a time
+#' 
+#' @param x Shiny result \code{resultShiny$spreadingActivationPlot}
+#' 
+#' @param ... Additional arguments for \code{\link[animation]{ani.replay}}
+#' 
+#' @return Plots animated networks using \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.replay}}
+#' 
+#' @examples
+#' 
+#' if(interactive())
+#' {SemNeTShiny()}
+#' 
+#' \dontrun{
+#'   plot(resultShiny$spreadingActivationPlot[[1]])
+#' }
+#' 
+#' @references 
+#' Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
+#' qgraph: Network visualizations of relationships in psychometric data.
+#' \emph{Journal of Statistical Software}, \emph{48}, 1-18.
+#' Retrieved from: http://www.jstatsoft.org/v48/i04/
+#' 
+#' Siew, C. S. Q. (2019).
+#' spreadr: An R package to simulate spreading activation in a network.
+#' \emph{Behavior Research Methods}, \emph{51}, 910-929.
+#' https://doi.org/10.3758/s13428-018-1186-5
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @export
+# Animate Graphs----
+# Updated 16.06.2020
+plot.animateShiny <- function (x, ...)
+{
+    animation::ani.replay(x, ...)
 }
 #----

@@ -54,8 +54,7 @@ ui <- (
                sidebarPanel(
                  
                  # Network estimation method
-                 selectInput("estimation", "Network Estimation Method", c("",
-                                                                          "Community Network (CN)",
+                 selectInput("estimation", "Network Estimation Method", c("Community Network (CN)",
                                                                           "Naive Random Walk (NRW)",
                                                                           "Pathfinder Network (PN)",
                                                                           "Triangulated Maximally Filtered Graph (TMFG)"
@@ -176,6 +175,8 @@ ui <- (
                  numericInput("decay", label = "Decay (activation lost at each time step)", value = 0, min = 0, max = 1, step = .10),
                  
                  numericInput("suppress", label = "Suppress (activation less than value is set to zero)", value = 0, min = 0, max = Inf, step = 1),
+                 
+                 actionButton("set_act", label = "Set Activations"),
                  
                  uiOutput("node_select"),
                  

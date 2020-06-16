@@ -70,3 +70,9 @@ plot.compareShiny <- function (x, ...)
                do.call(qgraph::qgraph, args = x$qgraph.args)#)
     }
 }
+
+# Plot Shiny animate
+plot.animateShiny <- function (x, ...)
+{
+    animation::ani.replay(x, ...)
+}

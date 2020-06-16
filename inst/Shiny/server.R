@@ -85,7 +85,7 @@ server <- function(input, output, session)
   }
   
   
-  # Semantic Networks panel
+  # Load Data panel
   observeEvent(input$load_data,
                {
                  # Let user know
@@ -172,7 +172,11 @@ server <- function(input, output, session)
     
   })
   
-  # Semantic Networks panel
+  # Network Estimation panel
+  
+  ## Hide clear results button
+  shinyjs::hide("reset")
+  
   observeEvent(input$run_est,
                {
                  # Let user know
@@ -219,9 +223,14 @@ server <- function(input, output, session)
                  {
                    # Print waiting message
                    # FOR R PACKAGE
+                   #shinyalert::shinyalert(title = "Running...",
+                   #                        text = "Check R Console for the Pathfinder Network Estimation Progress",
+                   #                        type = "info")
+                   
+                   # FOR WEB
                    shinyalert::shinyalert(title = "Running...",
-                                           text = "Check R Console for the Pathfinder Network Estimation Progress",
-                                           type = "info")
+                                          text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
+                                          type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
@@ -273,7 +282,7 @@ server <- function(input, output, session)
                  meas.mat <<- sapply(meas, c)
                  
                  ## Generate plot
-                 plots <<- SemNeT:::compare_netShiny(nets, config = "spring", weighted = FALSE)
+                 plots <<- SemNeT:::compare_netShiny(nets, config = "spring", weighted = TRUE)
                  
                  ## Render semantic networks plot
                  output$viz <- renderPlot({
@@ -323,6 +332,9 @@ server <- function(input, output, session)
                  showTab(inputId = "tabs", target = "Random Walk Analyses")
                  showTab(inputId = "tabs", target = "Spreading Activation Analyses")
                  
+                 ## Hide clear results button
+                 shinyjs::show("reset")
+                 
                }
   )
   
@@ -359,8 +371,7 @@ server <- function(input, output, session)
                                             updateSelectInput(session = session,
                                                               inputId = "estimation",
                                                               label = "Network Estimation Method",
-                                                              choices = c("",
-                                                                          "Community Network (CN)",
+                                                              choices = c("Community Network (CN)",
                                                                           "Naive Random Walk (NRW)",
                                                                           "Pathfinder Network (PN)",
                                                                           "Triangulated Maximally Filtered Graph (TMFG)")
@@ -465,24 +476,6 @@ server <- function(input, output, session)
                                                                label = "Suppress (activation less than value is set to zero)",
                                                                value = 0, min = 0, max = Inf, step = 1)
                                             
-                                            if(exists("nodes", envir = globalenv()))
-                                            {
-                                              # Nodes of the first network
-                                              nodes <<- colnames(nets[[1]])
-                                              # Create matrix of nodes with blank activations
-                                              mat <<- cbind(nodes, rep("", length(nodes)))
-                                              
-                                              # Create Shiny matrix of nodes and activations
-                                              shinyMatrix::updatematrixInput("node_activation",
-                                                                             cols = list(
-                                                                               names = TRUE,
-                                                                               editableNames = FALSE
-                                                                             ),
-                                                                             value = matrix(mat, ncol = 2,
-                                                                                            dimnames = list(NULL, c("Node", "Activation")))
-                                              )
-                                            }
-                                            
                                             updateSelectInput(session = session,
                                                               inputId = "animate_size",
                                                               label = "Plot Size",
@@ -492,18 +485,20 @@ server <- function(input, output, session)
                                             
                                             ## Show inputs
                                             shinyjs::show("network_select")
-                                            shinyjs::show("run_spr_act")
                                             shinyjs::show("retention")
                                             shinyjs::show("time")
                                             shinyjs::show("decay")
                                             shinyjs::show("suppress")
-                                            shinyjs::show("node_activation")
+                                            shinyjs::show("set_act")
                                             
                                             ## Hide inputs
                                             shinyjs::hide("animate")
                                             shinyjs::hide("animate_size")
                                             shinyjs::hide("animate_slider")
                                             shinyjs::hide("reset_act")
+                                            shinyjs::hide("reset")
+                                            shinyjs::hide("node_select")
+                                            shinyjs::hide("run_spr_act")
                                             
                                             if(exists("clean"))
                                             {rm(list = ls(envir = globalenv())[-match(c("prev.env", "clean", "dat", "group"), ls(globalenv()))], envir = globalenv())
@@ -540,9 +535,14 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
+                 #shinyalert::shinyalert(title = "Running...",
+                 #                        text = "Check R Console for the Random Network Analyses Progress",
+                 #                        type = "info")
+                 
+                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                         text = "Check R Console for the Random Network Analyses Progress",
-                                         type = "info")
+                                        text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
+                                        type = "info")
                  
                  # Run random networks
                  rand_res <- reactive({
@@ -603,39 +603,57 @@ server <- function(input, output, session)
                      ## Obtain percentages
                      percents <- as.numeric(input$percent)
                      
-                     ## Run partial bootstrap networks
-                     for(i in 1:length(percents))
-                     {
-                       if(exists(paste(percents[i]), envir = globalenv()))
-                       {next
-                       }else{
-                         
-                         # Print waiting message
-                         # FOR R PACKAGE
-                         shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                               text = "Check R Console for the Bootstrap Network Analyses Progress",
-                                               type = "info")
-                         
-                         assign(paste(percents[i]),
-                                SemNeT:::bootSemNeTShiny(eq,
-                                                         prop = percents[i],
-                                                         sim = sim,
-                                                         weighted = FALSE,
-                                                         iter = as.numeric(input$iters_boot),
-                                                         cores = as.numeric(input$cores_boot),
-                                                         type = "node",
-                                                         method = network),
-                                envir = globalenv())
-                         
+                     # Show progress
+                     withProgress({
+                       
+                       ## Run partial bootstrap networks
+                       for(i in 1:length(percents))
+                       {
+                         if(exists(paste(percents[i]), envir = globalenv()))
+                         {next
+                         }else{
+                           
+                           # Print waiting message
+                           # FOR R PACKAGE
+                           #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
+                           #                      text = "Check R Console for the Bootstrap Network Analyses Progress",
+                           #                      type = "info")
+                           
+                           # FOR WEB
+                           shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
+                                                  text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
+                                                  type = "info")
+                           
+                           # Increase progress
+                           setProgress(value = i)
+                           
+                           assign(paste(percents[i]),
+                                  SemNeT:::bootSemNeTShiny(eq,
+                                                           prop = percents[i],
+                                                           sim = sim,
+                                                           weighted = FALSE,
+                                                           iter = as.numeric(input$iters_boot),
+                                                           cores = as.numeric(input$cores_boot),
+                                                           type = "node",
+                                                           method = network),
+                                  envir = globalenv())
+                           
+                         }
                        }
-                     }
+                       
+                     }, message = "Computing bootstraps...", value = 0, min = 1, max = length(percents))
                      
                    }else{
                      
                      # Print waiting message
                      # FOR R PACKAGE
+                     #shinyalert::shinyalert(title = "Running...",
+                     #                       text = "Check R Console for the Bootstrap Network Analyses Progress",
+                     #                       type = "info")
+                     
+                     # FOR WEB
                      shinyalert::shinyalert(title = "Running...",
-                                            text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                            text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
                                             type = "info")
                      
                      
@@ -775,9 +793,14 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
+                 #shinyalert::shinyalert(title = "Running...",
+                 #                        text = "Check R Console for the Random Walk Analyses Progress",
+                 #                        type = "info")
+                 
+                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                         text = "Check R Console for the Random Walk Analyses Progress",
-                                         type = "info")
+                                        text = "Results will appear when the Random Walk Analyses are completed (do not exit browser)",
+                                        type = "info")
                  
                  # Run random networks
                  rand_walk <- reactive({
@@ -805,37 +828,54 @@ server <- function(input, output, session)
   #### SPREADING ACTIVATION ANALYSIS ####
   #######################################
   
+  ## Hide animate button
+  shinyjs::hide("run_spr_act")
+  
   # Determine networks
   output$network_select <- renderUI({
     selectInput("network_select", label = "Select a Network",
-                choices = names(nets))
+                choices = names(nets),
+                selected = NULL)
   })
   
-  # Determine nodes
-  output$node_select <- renderUI({
-    
-    # Gets rid of NULL index bug
-    req(input$network_select)
-    
-    # Name of selected network
-    net_name <<- input$network_select
-    
-    # Nodes of the selected network
-    nodes <<- colnames(nets[[net_name]])
-    # Create matrix of nodes with blank activations
-    mat <<- cbind(nodes, rep("", length(nodes)))
-    
-    # Create Shiny matrix of nodes and activations
-    shinyMatrix::matrixInput("node_activation",
-                             cols = list(
-                               names = TRUE,
-                               editableNames = FALSE
-                             ),
-                             value = matrix(mat, ncol = 2,
-                                            dimnames = list(NULL, c("Node", "Activation")))
-    )
-    
-  })
+  observeEvent(input$set_act,
+               {
+                 ## Show node select
+                 shinyjs::show("node_select")
+                 
+                 # Determine nodes
+                 output$node_select <- renderUI({
+                   
+                   # Gets rid of NULL index bug
+                   req(input$network_select)
+                   
+                   # Name of selected network
+                   net_name <<- input$network_select
+                   
+                   # Nodes of the selected network
+                   nodes <<- colnames(nets[[net_name]])
+                   # Create matrix of nodes with blank activations
+                   mat <<- cbind(nodes, rep("", length(nodes)))
+                   
+                   # Create Shiny matrix of nodes and activations
+                   shinyMatrix::matrixInput("node_activation",
+                                            cols = list(
+                                              names = TRUE,
+                                              editableNames = FALSE
+                                            ),
+                                            value = matrix(mat, ncol = 2,
+                                                           dimnames = list(NULL, c("Node", "Activation")))
+                   )
+                   
+                 })
+                 
+                 ## Hide set activation
+                 shinyjs::hide("set_act")
+                 
+                 ## Show set activation
+                 shinyjs::show("run_spr_act")
+               }
+  )
   
   ## Hide animate button
   shinyjs::hide("animate")
@@ -899,7 +939,7 @@ server <- function(input, output, session)
                  shinyjs::show("animate_size")
                  
                  ## Hide matrix input
-                 shinyjs::hide("node_activation")
+                 shinyjs::hide("node_select")
                  
                  ## Hide inputs
                  shinyjs::hide("network_select")
@@ -912,35 +952,48 @@ server <- function(input, output, session)
                }
   )
   
-  # Plot size
-  size <- reactive({
-    
-    plot_size <- switch(input$animate_size,
-                        "Small (500 x 500)" = 500,
-                        "Medium (900 x 900)" = 900,
-                        "Large (1400 x 1400)" = 1400
-    )
-    
-    return(plot_size)
-    
-  })
-  
   observeEvent(input$animate,
                {
+                 
                  # Initialize plot list
-                 plot_list <- vector("list", length = max(sa$time))
-                 
-                 # FOR WEB & R PACKAGE
-                 shinyalert::shinyalert(title = "Generating animation...",
-                                        text = "Animation will appear when the plot generation is finished (do not exit Shiny app).",
-                                        type = "info")
-                 
-                 # Generate animation
-                 for(i in 1:max(sa$time))
+                 if(!exists("plot_list", envir = globalenv()))
                  {
-                   SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa, time = i)
-                   plot_list[[i]] <- recordPlot()
+                   plot_list <<- vector("list", length = length(nets))
+                   names(plot_list) <<- names(nets)
                  }
+                 
+                 # Plot size
+                 plot_size <<- switch(input$animate_size,
+                                      "Small (500 x 500)" = 500,
+                                      "Medium (900 x 900)" = 900,
+                                      "Large (1400 x 1400)" = 1400
+                 )
+                 
+                 # Initialize time list
+                 time_list <<- vector("list", length = max(sa$time))
+                 
+                 # Progress through plots
+                 withProgress({
+                   
+                   # Generate animation
+                   for(i in 1:max(sa$time))
+                   {
+                     
+                     # Increase progress
+                     setProgress(value = i)
+                     
+                     # Plots
+                     SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa, time = i, size = plot_size)
+                     time_list[[i]] <<- recordPlot()
+                   }
+                   
+                 }, message = "Generating animation...", value = 0, min = 1, max = max(sa$time))
+                 
+                 # Set class of time list
+                 class(time_list) <- "animateShiny"
+                 
+                 # Insert into plot list
+                 plot_list[[net_name]] <<- time_list
                  
                  # Render plot
                  output$spreadr_animate <- renderPlot({
@@ -948,19 +1001,22 @@ server <- function(input, output, session)
                    # Gets rid of NULL index bug
                    req(input$animate_slider2)
                    
-                   plot_list[[input$animate_slider2]]
+                   plot_list[[net_name]][[input$animate_slider2]]
                    
-                 }, width = size, height = size)
+                 }, width = plot_size, height = plot_size)
+                 
+                 # Slider for animation
+                 output$animate_slider <- renderUI({
+                   sliderInput("animate_slider2", "Time Step",
+                               min = 1, max = max(sa$time), value = 1, step = 1,
+                               animate = TRUE)
+                 })
                  
                  ## Show animation slider
                  shinyjs::show("animate_slider")
                  
-                 # Slider for animation
-                 output$animate_slider <- renderUI({
-                   sliderInput("animate_slider2", "Time",
-                               min = 1, max = max(sa$time), value = 1, step = 1,
-                               animate = TRUE)
-                 })
+                 ## Show spreadr animate
+                 shinyjs::show("spreadr_animate")
                  
                  ## Show reset activation
                  shinyjs::show("reset_act")
@@ -971,12 +1027,11 @@ server <- function(input, output, session)
                {
                  ## Show inputs
                  shinyjs::show("network_select")
-                 shinyjs::show("run_spr_act")
                  shinyjs::show("retention")
                  shinyjs::show("time")
                  shinyjs::show("decay")
                  shinyjs::show("suppress")
-                 shinyjs::show("node_activation")
+                 shinyjs::show("set_act")
                  
                  ## Hide animate button
                  shinyjs::hide("animate")
@@ -986,6 +1041,13 @@ server <- function(input, output, session)
                  
                  ## Hide plot size
                  shinyjs::hide("animate_size")
+                 
+                 ## Hide animate slider
+                 shinyjs::hide("animate_slider")
+                 
+                 ## Hide animate slider
+                 shinyjs::hide("spreadr_animate")
+                 
                }
   )
   
@@ -1029,9 +1091,14 @@ server <- function(input, output, session)
     if(exists("sa", envir = globalenv()))
     {resultShiny$spreadingActivation <<- sa}
     
+    if(any(!is.null(unlist(plot_list))))
+    {resultShiny$spreadingActivationPlot <<- plot_list}
+    
     # Remove all other variables from global environment
     rm(list = ls(envir = globalenv())[-match(c("resultShiny", prev.env), ls(globalenv()))], envir = globalenv())
     
+    # Remove plots from user view
+    dev.off()
   }
   )
   

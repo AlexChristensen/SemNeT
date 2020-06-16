@@ -14,6 +14,12 @@ o FIX: `randwalk` bug with 'steps' and 'reps' argument
 
 o FIX: Shiny 'Clear Results' for new analyses
 
+o UPDATE: progress bar for some Shiny analyses
+
+o FIX: output for animation plots in Shiny
+
+o UPDATE: S3method for animation plots
+
 
 Changes in version 1.3.0
 
