@@ -6,19 +6,42 @@ devtools::install_github("AlexChristensen/SemNeT")
 # How To Use
 See our tutorial: https://psyarxiv.com/eht87/
 
-Christensen, A. P., & Kenett, Y. N. (under review). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing    semantic networks. *PsyArXiv*. doi:10.31234/osf.io/eht87. OSF:10.17605/OSF.IO/HQXTC
+Christensen, A. P., & Kenett, Y. N. (under review). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. *PsyArXiv*. doi:10.31234/osf.io/eht87. OSF:10.17605/OSF.IO/HQXTC
 
 # SemNeT
-SemNeT offers researchers several tools for the analysis of their semantic network data. In the future, this package aims to include more methods to estimate and analyze semantic networks. This package offers tests against random networks (Kenett et al., 2013), partial bootstrap networks (Kenett, Anaki, & Faust, 2014), and random walk simulations (Kenett & Austerweil, 2016). 
+SemNeT offers researchers several tools for the analysis of their semantic network data. In the future, this package aims to include more methods to estimate and analyze semantic networks. This package offers tests against random networks (Kenett et al., 2013), partial bootstrap networks (Kenett, Anaki, & Faust, 2014), and random walk simulations (Kenett & Austerweil, 2016).
+
+## SemNeT Shiny
+The Shiny app allows for integration with [*SemNetCleaner*](https://github.com/AlexChristensen/SemNetCleaner), streamlining the preprocessing and analyses steps to three lines of code:
+
+```
+# Grouping variable
+group <- SemNeT::open.group
+
+# Preprocessed data
+clean <- SemNetCleaner::textcleaner(data = SemNetCleaner::open.animals[,-c(1,2)], miss = 99, partBY = "row", dictionary = "animals")
+
+# SemNeT Shiny app for network estimation and analyses
+SemNeT::SemNeTShiny()
+```
+
+The point and click interface of the SemNeT Shiny app enables users to perform all analyses in the package as well as spreading activation analyses from the [*spreadr*](https://github.com/csqsiew/spreadr) package (Siew, 2019).
 
 # References
-Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individuals with random walks. In Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society. Austin, TX.
+Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018).
+Remotely close associations: Openness to experience and semantic memory structure.
+*European Journal of Personality*, *32*, 480-492. https://doi.org/10.1002/per.2157
 
-Kenett, Y. N., Anaki, D., & Faust, M. (2014). Investigating the structure of semantic
-networks in low and high creative persons. *Frontiers in Human Neuroscience*, *8*, 407.
-https://doi.org/10.3389/fnhum.2014.00407
+Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individuals with random walks.
+In Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society. Austin, TX.
 
-Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust,
-M. (2013). Semantic organization in children with cochlear implants: Computational
-analysis of verbal fluency. *Frontiers in Psychology*, 4.
-https://doi.org/10.3389/fpsyg.2013.00543
+Kenett, Y. N., Anaki, D., & Faust, M. (2014). Investigating the structure of semantic networks in low and high creative persons.
+*Frontiers in Human Neuroscience*, *8*, 407. https://doi.org/10.3389/fnhum.2014.00407
+
+Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013).
+Semantic organization in children with cochlear implants: Computational analysis of verbal fluency.
+*Frontiers in Psychology*, 4. https://doi.org/10.3389/fpsyg.2013.00543
+
+Siew, C. S. Q. (2019).
+spreadr: An R package to simulate spreading activation in a network.
+*Behavior Research Methods*, *51*, 910-929. https://doi.org/10.3758/s13428-018-1186-5
