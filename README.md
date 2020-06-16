@@ -19,7 +19,8 @@ The Shiny app allows for integration with [*SemNetCleaner*](https://github.com/A
 group <- SemNeT::open.group
 
 # Preprocessed data
-clean <- SemNetCleaner::textcleaner(data = SemNetCleaner::open.animals[,-c(1,2)], miss = 99, partBY = "row", dictionary = "animals")
+clean <- SemNetCleaner::textcleaner(data = SemNetCleaner::open.animals[,-c(1,2)],
+                                    miss = 99, partBY = "row", dictionary = "animals")
 
 # SemNeT Shiny app for network estimation and analyses
 SemNeT::SemNeTShiny()
