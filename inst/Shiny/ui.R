@@ -35,15 +35,22 @@ ui <- (
                ),
                
                # Output
-               mainPanel(
+               tagList(
                  
-                 tableOutput("example_data_response"),
+                 mainPanel(
+                   
+                   tableOutput("example_data_response"),
+                   
+                   tableOutput("example_data_binary"),
+                   
+                   tableOutput("example_group")
+                   
+                 ),
                  
-                 tableOutput("example_data_binary"),
-                 
-                 tableOutput("example_group")
+                 tags$footer(htmlOutput("SEMNA_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
                  
                )
+               
              ),
              
              # Network Estimation Panel
@@ -72,10 +79,19 @@ ui <- (
                ),
                
                # Output
-               mainPanel(
-                 plotOutput("viz"),
-                 tableOutput("measures")
+               tagList(
+                 
+                 mainPanel(
+                   
+                   plotOutput("viz"),
+                   tableOutput("measures")
+                   
+                 ),
+                 
+                 tags$footer(htmlOutput("net_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 
                )
+               
              ),
              
              # Random Network Analyses Panel
@@ -94,9 +110,18 @@ ui <- (
                ),
                
                # Output
-               mainPanel(
-                 tableOutput("randnet")
+               tagList(
+                 
+                 mainPanel(
+                   
+                   tableOutput("randnet")
+                   
+                 ),
+                 
+                 tags$footer(htmlOutput("randnet_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 
                )
+               
              ),
              
              # Bootstrap Network Analyses Panel
@@ -119,15 +144,22 @@ ui <- (
                ),
                
                # Output
-               mainPanel(
-                 tableOutput("aspl"),
-                 tableOutput("cc"),
-                 tableOutput("q"),
-                 tableOutput("tab"),
-                 plotOutput("asplPlot"),
-                 plotOutput("ccPlot"),
-                 plotOutput("qPlot")
+               tagList(
+                 
+                 mainPanel(
+                   tableOutput("aspl"),
+                   tableOutput("cc"),
+                   tableOutput("q"),
+                   tableOutput("tab"),
+                   plotOutput("asplPlot"),
+                   plotOutput("ccPlot"),
+                   plotOutput("qPlot")
+                 ),
+                 
+                 tags$footer(htmlOutput("partial_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 
                )
+               
              ),
              
              # Random Walk Analyses Panel
@@ -154,9 +186,18 @@ ui <- (
                ),
                
                # Output
-               mainPanel(
-                 tableOutput("walk_rand")
+               tagList(
+                 
+                 mainPanel(
+                   
+                   tableOutput("walk_rand")
+                   
+                 ),
+                 
+                 tags$footer(htmlOutput("randwalk_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 
                )
+               
              ),
              
              # Spreading Activation Analyses Panel
@@ -193,13 +234,20 @@ ui <- (
                ),
                
                # Output
-               mainPanel(
+               tagList(
                  
-                 uiOutput("animate_slider"),
+                 mainPanel(
+                   
+                   uiOutput("animate_slider"),
+                   
+                   plotOutput("spreadr_animate")
+                   
+                 ),
                  
-                 plotOutput("spreadr_animate")
+                 tags$footer(htmlOutput("spreadr_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
                  
                )
+               
              ),
              
              # Use shinyalert

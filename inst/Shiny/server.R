@@ -1,6 +1,18 @@
 # Code for SemNeT----
 server <- function(input, output, session)
 {
+  # semna citation
+  output$SEMNA_cite <- renderUI({
+    
+    HTML(
+      
+      paste('<b>Please cite:</b><br>
+      Christensen, A. P., & Kenett, Y. N. (2019). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. <em>PsyArXiv</em>. <a href="https://doi.org/10.31234/osf.io/eht87">https://doi.org/10.31234/osf.io/eht87</a>
+      ')
+    )
+    
+  })
+  
   ###################
   #### HIDE TABS ####
   ###################
@@ -213,28 +225,61 @@ server <- function(input, output, session)
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
                                    function(x){CN(x, window = input$window, alpha = as.numeric(input$alpha))})
                    
+                   # community network citation
+                   output$net_cite <- renderUI({
+                     
+                     HTML(
+                       
+                       paste('<b>Please cite:</b><br>
+                       Goni, J., Arrondo, G., Sepulcre, J., Martincorena, I., de Mendizabel, N. V., Corominas-Murtra, B., ... & Villoslada, P. (2011). The semantic organization of the animal category: Evidence from semantic verbal fluency and network theory. <em>Cognitive Processing</em>, <em>12</em>, 183-196. <a href="https://doi.org/10.1007/s10339-010-0372-x">https://doi.org/10.1007/s10339-010-0372-x</a>
+                             ')
+                     )
+                     
+                   })
+                   
                  }else if(network == "NRW")
                  {
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
                                    function(x){NRW(x, threshold = input$threshold)})
                    
+                   # naive random walk citation
+                   output$net_cite <- renderUI({
+                     
+                     HTML(
+                       
+                       paste('<b>Please cite:</b><br>
+                       Lerner, A. J., Ogrocki, P. K., & Thomas, P. J. (2009). Network graph analysis of category fluency testing. <em>Cognitive and Behavioral Neurology</em>, <em>22</em>, 45-52. <a href="https://doi.org/10.1097/WNN.0b013e318192ccaf">https://doi.org/10.1097/WNN.0b013e318192ccaf</a>
+                             ')
+                     )
+                     
+                   })
+                   
                  }else if(network == "PN")
                  {
                    # Print waiting message
                    # FOR R PACKAGE
-                   #shinyalert::shinyalert(title = "Running...",
-                   #                        text = "Check R Console for the Pathfinder Network Estimation Progress",
-                   #                        type = "info")
-                   
-                   # FOR WEB
                    shinyalert::shinyalert(title = "Running...",
-                                          text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
-                                          type = "info")
+                                           text = "Check R Console for the Pathfinder Network Estimation Progress",
+                                           type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
                                    function(x){PF(x)})
+                   
+                   # pathfinder citation
+                   output$net_cite <- renderUI({
+                     
+                     HTML(
+                       
+                       paste('<b>Please cite:</b><br>
+                       Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008). A quick MST-based algorithm to obtain Pathfinder networks (Inf, n-1). <em>Journal of the American Society for Information Science and Technology</em>, <em>59</em>, 1912-1924. <a href="https://doi.org/10.1002/asi.20904">https://doi.org/10.1002/asi.20904</a>
+                       <br>
+                       Schvaneveldt, R. W. (1990). <em>Pathfinder associative networks: Studies in knowledge organization</em>. Norwood, NJ: Ablex Publishing.
+                             ')
+                     )
+                     
+                   })
                    
                  }else if(network == "TMFG")
                  {
@@ -273,6 +318,18 @@ server <- function(input, output, session)
                    
                    ## Estimate networks
                    nets <<- lapply(assoc, function(x){NetworkToolbox::TMFG(x)$A})
+                   
+                   # triangulated maximally filtered graph citation
+                   output$net_cite <- renderUI({
+                     
+                     HTML(
+                       
+                       paste('<b>Please cite:</b><br>
+                       Massara, G. P., Di Matteo, T., & Aste, T. (2016). Network filtering for big data: Triangulated maximally filtered graph. <em>Journal of Complex Networks</em>, <em>5</em>, 161-178. <a href="https://doi.org/10.1093/comnet/cnw015">https://doi.org/10.1093/comnet/cnw015</a>
+                             ')
+                     )
+                     
+                   })
                  }
                  
                  ## Compute network measures
@@ -334,6 +391,43 @@ server <- function(input, output, session)
                  
                  ## Hide clear results button
                  shinyjs::show("reset")
+                 
+                 ###################
+                 #### CITATIONS ####
+                 ###################
+                 
+                 
+                 # random network citation
+                 output$randnet_cite <- renderUI({
+                   
+                   HTML(
+                     
+                     paste('<b>Please cite:</b><br>
+                       Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
+                       <br>
+                       Viger, F., & Latapy, M. (2016). Efficient and simple generation of random simple connected graphs with prescribed degree sequence. <em>Journal of Complex Networks</em>, <em>4</em>, 15-37. <a href="https://doi.org/10.1093/comnet/cnv013">https://doi.org/10.1093/comnet/cnv013</a>
+                             ')
+                   )
+                   
+                 })
+                 
+                 
+                 # partial bootstrap citation
+                 if(network == "TMFG")
+                 {
+                   output$partial_cite <- renderUI({
+                     
+                     HTML(
+                       
+                       paste('<b>Please cite:</b><br>
+                       Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018). Remotely close associations: Openness to experience and semantic memory structure. <em>European Journal of Personality</em>, <em>32</em>, 480-492. <a href="https://doi.org/10.1002/per.2157">https://doi.org/10.1002/per.2157</a>
+                       <br>
+                       Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
+                             ')
+                     )
+                     
+                   })
+                 }
                  
                }
   )
@@ -535,14 +629,9 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                        text = "Check R Console for the Random Network Analyses Progress",
-                 #                        type = "info")
-                 
-                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
-                                        type = "info")
+                                         text = "Check R Console for the Random Network Analyses Progress",
+                                         type = "info")
                  
                  # Run random networks
                  rand_res <- reactive({
@@ -615,14 +704,9 @@ server <- function(input, output, session)
                            
                            # Print waiting message
                            # FOR R PACKAGE
-                           #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                           #                      text = "Check R Console for the Bootstrap Network Analyses Progress",
-                           #                      type = "info")
-                           
-                           # FOR WEB
                            shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                                  text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
-                                                  type = "info")
+                                                 text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                                 type = "info")
                            
                            # Increase progress
                            setProgress(value = i)
@@ -647,13 +731,8 @@ server <- function(input, output, session)
                      
                      # Print waiting message
                      # FOR R PACKAGE
-                     #shinyalert::shinyalert(title = "Running...",
-                     #                       text = "Check R Console for the Bootstrap Network Analyses Progress",
-                     #                       type = "info")
-                     
-                     # FOR WEB
                      shinyalert::shinyalert(title = "Running...",
-                                            text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
+                                            text = "Check R Console for the Bootstrap Network Analyses Progress",
                                             type = "info")
                      
                      
@@ -761,6 +840,18 @@ server <- function(input, output, session)
   #### RANDOM WALK ANALYSIS ####
   ##############################
   
+  # random walk citation
+  output$randwalk_cite <- renderUI({
+    
+    HTML(
+      
+      paste('<b>Please cite:</b><br>
+            Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individiuals with random walks. In <em>Proceeding of the 38th annual meeting of the cognitive science society</em> (pp. 313-318). Austin, TX. Retrieved from <a href="https://pdfs.semanticscholar.org/29b9/97953eef96c83b821b0e4d381d1f36ffdec7.pdf">https://pdfs.semanticscholar.org/29b9/97953eef96c83b821b0e4d381d1f36ffdec7.pdf</a>')
+      
+    )
+    
+  })
+  
   # Determine the number of cores
   ## Random Walk
   output$cores_walk <- renderUI({
@@ -793,14 +884,9 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                        text = "Check R Console for the Random Walk Analyses Progress",
-                 #                        type = "info")
-                 
-                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Results will appear when the Random Walk Analyses are completed (do not exit browser)",
-                                        type = "info")
+                                         text = "Check R Console for the Random Walk Analyses Progress",
+                                         type = "info")
                  
                  # Run random networks
                  rand_walk <- reactive({
@@ -827,6 +913,18 @@ server <- function(input, output, session)
   #######################################
   #### SPREADING ACTIVATION ANALYSIS ####
   #######################################
+  
+  # spreadr citation
+  output$spreadr_cite <- renderUI({
+    
+    HTML(
+      
+      paste('<b>Please cite:</b><br>
+            Siew, C. S. Q. (2019). spreadr: An R package to simulate spreading activation in a network. <em>Behavior Research Methods</em>, <em>51</em>, 910-929. <a href="https://doi.org/10.3758/s13428-018-1186-5">https://doi.org/10.3758/s13428-018-1186-5</a>')
+      
+    )
+    
+  })
   
   ## Hide animate button
   shinyjs::hide("run_spr_act")
@@ -1091,8 +1189,11 @@ server <- function(input, output, session)
     if(exists("sa", envir = globalenv()))
     {resultShiny$spreadingActivation <<- sa}
     
-    if(any(!is.null(unlist(plot_list))))
-    {resultShiny$spreadingActivationPlot <<- plot_list}
+    if(exists("plot_list", envir = globalenv()))
+    {
+      if(any(!is.null(unlist(plot_list))))
+      {resultShiny$spreadingActivationPlot <<- plot_list}
+    }
     
     # Remove all other variables from global environment
     rm(list = ls(envir = globalenv())[-match(c("resultShiny", prev.env), ls(globalenv()))], envir = globalenv())
