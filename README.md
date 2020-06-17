@@ -4,16 +4,15 @@
 devtools::install_github("AlexChristensen/SemNeT")
 
 # How To Use
-See our tutorial: https://psyarxiv.com/eht87/
+[Tutorial](https://psyarxiv.com/eht87/)
 
 Christensen, A. P., & Kenett, Y. N. (2019). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. *PsyArXiv*. doi:10.31234/osf.io/eht87
 
 # SemNeT
-SemNeT offers researchers several tools for the analysis of their semantic network data. In the future, this package aims to include more methods to estimate and analyze semantic networks. This package offers tests against random networks (Kenett et al., 2013), partial bootstrap networks (Kenett, Anaki, & Faust, 2014), and random walk simulations (Kenett & Austerweil, 2016).
+SemNeT offers researchers several tools for the analysis of their semantic network data. As a part of a module of semantic network packages, SemNeT is the most general, providing statistical analyses for all types of semantic networks.
 
 ## SemNeT Shiny
-The Shiny app allows for integration with [*SemNetCleaner*](https://github.com/AlexChristensen/SemNetCleaner), streamlining the preprocessing and analyses steps to three lines of code:
-
+From raw data to semantic network analysis in three lines of code: The Shiny app allows for integration with [*SemNetCleaner*](https://github.com/AlexChristensen/SemNetCleaner), streamlining the SemNA pipeline:
 ```
 # Grouping variable
 group <- SemNeT::open.group
