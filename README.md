@@ -6,7 +6,7 @@ devtools::install_github("AlexChristensen/SemNeT")
 # How To Use
 [Tutorial](https://psyarxiv.com/eht87/)
 
-Christensen, A. P., & Kenett, Y. N. (2019). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. *PsyArXiv*. doi:10.31234/osf.io/eht87
+Christensen, A. P., & Kenett, Y. N. (2019). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. *PsyArXiv*. https://psyarxiv.com/eht87/
 
 # SemNeT
 SemNeT offers researchers several tools for the analysis of their semantic network data. As a part of a module of semantic network packages, SemNeT is the most general, providing statistical analyses for all types of semantic networks.
