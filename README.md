@@ -33,7 +33,7 @@ Remotely close associations: Openness to experience and semantic memory structur
 *European Journal of Personality*, *32*, 480-492. https://doi.org/10.1002/per.2157
 
 Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individuals with random walks.
-In Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society. Austin, TX.
+In *Paper presented at the proceedings of the 38th annual meeting of the cognitive sceince society* (pp. 313-318). Austin, TX.
 
 Kenett, Y. N., Anaki, D., & Faust, M. (2014). Investigating the structure of semantic networks in low and high creative persons.
 *Frontiers in Human Neuroscience*, *8*, 407. https://doi.org/10.3389/fnhum.2014.00407
