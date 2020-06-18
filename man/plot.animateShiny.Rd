@@ -9,13 +9,13 @@
 \arguments{
 \item{x}{Shiny result \code{resultShiny$spreadingActivationPlot}}
 
-\item{...}{Additional arguments for \code{\link[animation]{ani.replay}}}
+\item{...}{Additional arguments for \code{\link[animation]{ani.record}}}
 }
 \value{
-Plots animated networks using \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.replay}}
+Plots animated networks using \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.record}}
 }
 \description{
-Uses \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.replay}}
+Uses \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.record}}
 to animate networks. Accepts only one network animation at a time
 }
 \examples{

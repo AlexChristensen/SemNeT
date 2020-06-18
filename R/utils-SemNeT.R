@@ -761,7 +761,7 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
   }
   
   #Get names of networks
-  name <- unique(gsub("Summ","",gsub("Meas","",names(bootSemNeT.obj))))
+  name <- unique(gsub("Net","",gsub("Summ","",gsub("Meas","",names(bootSemNeT.obj)))))
   
   #Remove proportion and iter
   name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
@@ -829,8 +829,8 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     {aspl[sprintf("%1.2f", perc),8] <- "n.s."
     }else{
       aspl[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                                   paste(name[1],">",name[2],sep=" "),
-                                                   paste(name[2],">",name[1],sep=" ")
+                                               paste(name[1],">",name[2],sep=" "),
+                                               paste(name[2],">",name[1],sep=" ")
       )
     }
     
@@ -859,8 +859,8 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     {cc[sprintf("%1.2f", perc),8] <- "n.s."
     }else{
       cc[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                                 paste(name[1],">",name[2],sep=" "),
-                                                 paste(name[2],">",name[1],sep=" ")
+                                             paste(name[1],">",name[2],sep=" "),
+                                             paste(name[2],">",name[1],sep=" ")
       )
     }
     
@@ -889,8 +889,8 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     {q[sprintf("%1.2f", perc),8] <- "n.s."
     }else{
       q[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                                paste(name[1],">",name[2],sep=" "),
-                                                paste(name[2],">",name[1],sep=" ")
+                                            paste(name[1],">",name[2],sep=" "),
+                                            paste(name[2],">",name[1],sep=" ")
       )
     }
     

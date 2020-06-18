@@ -259,9 +259,14 @@ server <- function(input, output, session)
                  {
                    # Print waiting message
                    # FOR R PACKAGE
+                   #shinyalert::shinyalert(title = "Running...",
+                   #                        text = "Check R Console for the Pathfinder Network Estimation Progress",
+                   #                        type = "info")
+                   
+                   # FOR WEB
                    shinyalert::shinyalert(title = "Running...",
-                                           text = "Check R Console for the Pathfinder Network Estimation Progress",
-                                           type = "info")
+                                          text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
+                                          type = "info")
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
@@ -274,7 +279,7 @@ server <- function(input, output, session)
                        
                        paste('<b>Please cite:</b><br>
                        Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008). A quick MST-based algorithm to obtain Pathfinder networks (Inf, n-1). <em>Journal of the American Society for Information Science and Technology</em>, <em>59</em>, 1912-1924. <a href="https://doi.org/10.1002/asi.20904">https://doi.org/10.1002/asi.20904</a>
-                       <br>
+                       <br><br>
                        Schvaneveldt, R. W. (1990). <em>Pathfinder associative networks: Studies in knowledge organization</em>. Norwood, NJ: Ablex Publishing.
                              ')
                      )
@@ -404,7 +409,7 @@ server <- function(input, output, session)
                      
                      paste('<b>Please cite:</b><br>
                        Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
-                       <br>
+                       <br><br>
                        Viger, F., & Latapy, M. (2016). Efficient and simple generation of random simple connected graphs with prescribed degree sequence. <em>Journal of Complex Networks</em>, <em>4</em>, 15-37. <a href="https://doi.org/10.1093/comnet/cnv013">https://doi.org/10.1093/comnet/cnv013</a>
                              ')
                    )
@@ -421,7 +426,7 @@ server <- function(input, output, session)
                        
                        paste('<b>Please cite:</b><br>
                        Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018). Remotely close associations: Openness to experience and semantic memory structure. <em>European Journal of Personality</em>, <em>32</em>, 480-492. <a href="https://doi.org/10.1002/per.2157">https://doi.org/10.1002/per.2157</a>
-                       <br>
+                       <br><br>
                        Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
                              ')
                      )
@@ -470,6 +475,9 @@ server <- function(input, output, session)
                                                                           "Pathfinder Network (PN)",
                                                                           "Triangulated Maximally Filtered Graph (TMFG)")
                                             )
+                                            
+                                            # Update citation
+                                            output$net_cite <- renderUI({})
                                             
                                             # Hide tabs
                                             hideTab(inputId = "tabs", target = "Random Network Analyses")
@@ -629,9 +637,14 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
+                 #shinyalert::shinyalert(title = "Running...",
+                 #                        text = "Check R Console for the Random Network Analyses Progress",
+                 #                        type = "info")
+                 
+                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                         text = "Check R Console for the Random Network Analyses Progress",
-                                         type = "info")
+                                        text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
+                                        type = "info")
                  
                  # Run random networks
                  rand_res <- reactive({
@@ -704,9 +717,14 @@ server <- function(input, output, session)
                            
                            # Print waiting message
                            # FOR R PACKAGE
+                           #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
+                           #                      text = "Check R Console for the Bootstrap Network Analyses Progress",
+                           #                      type = "info")
+                           
+                           # FOR WEB
                            shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                                 text = "Check R Console for the Bootstrap Network Analyses Progress",
-                                                 type = "info")
+                                                  text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
+                                                  type = "info")
                            
                            # Increase progress
                            setProgress(value = i)
@@ -731,8 +749,13 @@ server <- function(input, output, session)
                      
                      # Print waiting message
                      # FOR R PACKAGE
+                     #shinyalert::shinyalert(title = "Running...",
+                     #                       text = "Check R Console for the Bootstrap Network Analyses Progress",
+                     #                       type = "info")
+                     
+                     # FOR WEB
                      shinyalert::shinyalert(title = "Running...",
-                                            text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                            text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
                                             type = "info")
                      
                      
@@ -846,7 +869,7 @@ server <- function(input, output, session)
     HTML(
       
       paste('<b>Please cite:</b><br>
-            Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individiuals with random walks. In <em>Proceeding of the 38th annual meeting of the cognitive science society</em> (pp. 313-318). Austin, TX. Retrieved from <a href="https://pdfs.semanticscholar.org/29b9/97953eef96c83b821b0e4d381d1f36ffdec7.pdf">https://pdfs.semanticscholar.org/29b9/97953eef96c83b821b0e4d381d1f36ffdec7.pdf</a>')
+            Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individiuals with random walks. In <em>Proceeding of the 38th annual meeting of the cognitive science society</em> (pp. 313-318). Austin, TX. Retrieved from <a href="https://cogsci.mindmodeling.org/2016/papers/0066/index.html">https://cogsci.mindmodeling.org/2016/papers/0066/index.html</a>')
       
     )
     
@@ -884,9 +907,14 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
+                 #shinyalert::shinyalert(title = "Running...",
+                 #                        text = "Check R Console for the Random Walk Analyses Progress",
+                 #                        type = "info")
+                 
+                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                         text = "Check R Console for the Random Walk Analyses Progress",
-                                         type = "info")
+                                        text = "Results will appear when the Random Walk Analyses are completed (do not exit browser)",
+                                        type = "info")
                  
                  # Run random networks
                  rand_walk <- reactive({
@@ -936,6 +964,9 @@ server <- function(input, output, session)
                 selected = NULL)
   })
   
+  # Initialize blank matrix
+  blank_mat <<- TRUE
+  
   observeEvent(input$set_act,
                {
                  ## Show node select
@@ -952,8 +983,10 @@ server <- function(input, output, session)
                    
                    # Nodes of the selected network
                    nodes <<- colnames(nets[[net_name]])
+                   
                    # Create matrix of nodes with blank activations
-                   mat <<- cbind(nodes, rep("", length(nodes)))
+                   if(blank_mat)
+                   {mat <<- cbind(nodes, rep(0, length(nodes)))}
                    
                    # Create Shiny matrix of nodes and activations
                    shinyMatrix::matrixInput("node_activation",
@@ -967,8 +1000,12 @@ server <- function(input, output, session)
                    
                  })
                  
-                 ## Hide set activation
-                 shinyjs::hide("set_act")
+                 # Check for node activation input
+                 if(!is.null(input$node_activation))
+                 {
+                   mat <<- input$node_activation
+                   blank_mat <<- FALSE
+                 }
                  
                  ## Show set activation
                  shinyjs::show("run_spr_act")
@@ -1000,7 +1037,7 @@ server <- function(input, output, session)
                  act_mat[,1] <<- 1:nrow(act_mat)
                  
                  # Keep activation rows
-                 keep.row <<- ifelse(is.na(act_mat[,2]) | act_mat[,2] == "" | act_mat[,2] == "0", FALSE, TRUE)
+                 keep.row <<- ifelse(is.na(act_mat[,2]) | act_mat[,2] == "", FALSE, TRUE)
                  
                  # Keep only those rows
                  act_mat <<- as.matrix(act_mat[keep.row,])
@@ -1038,6 +1075,9 @@ server <- function(input, output, session)
                  
                  ## Hide matrix input
                  shinyjs::hide("node_select")
+                 
+                 ## Hide set activation
+                 shinyjs::hide("set_act")
                  
                  ## Hide inputs
                  shinyjs::hide("network_select")
@@ -1118,11 +1158,24 @@ server <- function(input, output, session)
                  
                  ## Show reset activation
                  shinyjs::show("reset_act")
+                 
                }
   )
   
   observeEvent(input$reset_act,
                {
+                 ## Reset blank matrix
+                 blank_mat <<- TRUE
+                 
+                 ## Renew node selection
+                 shinyMatrix::updateMatrixInput(session = session,
+                                                "node_activation",
+                                                value = matrix(cbind(nodes, rep(0, length(nodes))), ncol = 2,
+                                                               dimnames = list(NULL, c("Node", "Activation")))
+                                                
+                                                
+                 )
+                 
                  ## Show inputs
                  shinyjs::show("network_select")
                  shinyjs::show("retention")
@@ -1199,7 +1252,8 @@ server <- function(input, output, session)
     rm(list = ls(envir = globalenv())[-match(c("resultShiny", prev.env), ls(globalenv()))], envir = globalenv())
     
     # Remove plots from user view
-    dev.off()
+    if(!is.null(dev.list()))
+    {dev.off()}
   }
   )
   

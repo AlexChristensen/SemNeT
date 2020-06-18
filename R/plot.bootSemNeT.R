@@ -41,7 +41,7 @@ plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
     len <- length(input)
     
     #Get names of networks
-    name <- unique(gsub("Summ","",gsub("Meas","",names(input[[1]]))))
+    name <- unique(gsub("Net", "", gsub("Summ","",gsub("Meas","",names(input[[1]])))))
     
     #Remove proportion and iter
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))

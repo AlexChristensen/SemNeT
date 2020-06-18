@@ -1,4 +1,9 @@
 library(shiny)
+library(shinyalert)
+library(shinyjs)
+library(shinyMatrix)
+library(shinyBS)
+library(SemNeT)
 
 # Interface for SemNeT----
 ui <- (
@@ -47,7 +52,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("SEMNA_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 tags$footer(htmlOutput("SEMNA_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
                  
                )
                
@@ -88,7 +93,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("net_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 tags$footer(htmlOutput("net_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
                  
                )
                
@@ -118,7 +123,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("randnet_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 tags$footer(htmlOutput("randnet_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
                  
                )
                
@@ -156,7 +161,7 @@ ui <- (
                    plotOutput("qPlot")
                  ),
                  
-                 tags$footer(htmlOutput("partial_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 tags$footer(htmlOutput("partial_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
                  
                )
                
@@ -194,7 +199,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("randwalk_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 tags$footer(htmlOutput("randwalk_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 650px; z-index: 1000;")
                  
                )
                
@@ -219,7 +224,9 @@ ui <- (
                  
                  actionButton("set_act", label = "Set Activations"),
                  
-                 uiOutput("node_select"),
+                 shinyBS::bsModal("node_pop", title = "Node Activation Table", trigger = "set_act", size = "large",
+                                  uiOutput("node_select")
+                 ),
                  
                  actionButton("run_spr_act", label = "Run Spreading Activation Analyses"),
                  
@@ -244,7 +251,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("spreadr_cite"), align = "center", style = "position:absolute; bottom:0; width:100%; height:50px; color: black; padding: 10px; background-color: white; z-index: 1000;")
+                 tags$footer(htmlOutput("spreadr_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 525px; z-index: 1000;")
                  
                )
                

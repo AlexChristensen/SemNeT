@@ -685,7 +685,7 @@ randnet.testShiny <- function (dat, iter, cores)
 #' 
 #' @noRd
 #Bootstrapped Semantic Network Analysis----
-#Updated 05.04.2020
+#Updated 17.06.2020
 bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,
@@ -911,6 +911,7 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     #Insert results
     for(i in 1:length(name))
     {
+        bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("net.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
     }
@@ -1240,7 +1241,7 @@ boot.one.testShiny <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     }
     
     #Get names of networks
-    name <- unique(gsub("Summ","",gsub("Meas","",names(bootSemNeT.obj))))
+    name <- unique(gsub("Net", "", gsub("Summ","",gsub("Meas","",names(bootSemNeT.obj)))))
     
     #Remove proportion and iter
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
@@ -2044,7 +2045,7 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
 #' 
 #' @noRd
 # Spreading Activation Plot----
-# Updated 13.06.2020
+# Updated 18.06.2020
 spreadrShinyPlot <- function (network, spreadr.output, time, size)
 {
     # Reset layout
@@ -2057,7 +2058,14 @@ spreadrShinyPlot <- function (network, spreadr.output, time, size)
     act <- act[act$time == time,]
     
     # Min-max normalize activation
-    trans <- ((act$activation - min(act$activation)) / (max(act$activation) - min(act$activation))) * 255
+    if(all(act$activation == 0))
+    {
+        color <- "white"
+        trans <- 255
+    }else{
+        trans <- ((act$activation - min(act$activation)) / (max(act$activation) - min(act$activation))) * 255
+        color = "red"
+    }
     
     # Convert size to character
     size <- as.character(size)
@@ -2071,21 +2079,21 @@ spreadrShinyPlot <- function (network, spreadr.output, time, size)
     
     # Plot
     qgraph::qgraph(network, layout = "spring", vTrans = trans,
-                   color = "red", labels = as.factor(colnames(network)),
+                   color = color, labels = as.factor(colnames(network)),
                    label.prop = 1, vsize = vsize)
 }
 #----
 
 #' Animate Networks for Spreading Activation from Shiny
 #' 
-#' @description Uses \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.replay}}
+#' @description Uses \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.record}}
 #' to animate networks. Accepts only one network animation at a time
 #' 
 #' @param x Shiny result \code{resultShiny$spreadingActivationPlot}
 #' 
-#' @param ... Additional arguments for \code{\link[animation]{ani.replay}}
+#' @param ... Additional arguments for \code{\link[animation]{ani.record}}
 #' 
-#' @return Plots animated networks using \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.replay}}
+#' @return Plots animated networks using \code{\link[qgraph]{qgraph}} and \code{\link[animation]{ani.record}}
 #' 
 #' @examples
 #' 
@@ -2115,41 +2123,5 @@ spreadrShinyPlot <- function (network, spreadr.output, time, size)
 plot.animateShiny <- function (x, ...)
 {
     animation::ani.replay(x, ...)
-}
-#----
-
-#' Stylizes Text
-#' 
-#' Makes text bold, italics, underlined, and strikethrough
-#' 
-#' @param text Character.
-#' Text to stylized
-#' 
-#' @return Sytlized text
-#' 
-#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
-#' 
-#' @noRd
-# Style text----
-# Updated 24.04.2020
-styletext <- function(text, defaults = c("bold", "italics", "highlight",
-                                         "underline", "strikethrough"))
-{
-    if(missing(defaults))
-    {number <- 0
-    }else{
-        
-        # Get number code
-        number <- switch(defaults,
-                         bold = 1,
-                         italics = 3,
-                         underline = 4,
-                         highlight = 7,
-                         strikethrough = 9
-        )
-        
-    }
-    
-    return(paste("\033[", number, ";m", text, "\033[0m", sep = ""))
 }
 #----

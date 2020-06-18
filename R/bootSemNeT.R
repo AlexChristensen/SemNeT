@@ -114,7 +114,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 15.04.2020
+# Updated 17.06.2020
 bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,
@@ -267,32 +267,29 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                                     cl = cl,
                                     FUN = NET.FUNC)
         
+        #Just get networks for TMFG
+        if(method == "TMFG")
+        {newNet <- lapply(newNet, function(x){x$A})}
+        
         #Insert network list
-        assign(paste("net.",name[i],sep=""),newNet)
+        assign(paste("Semnet.",name[i],sep=""), newNet)
     }
     
     #Stop Cluster
     parallel::stopCluster(cl)
     
     #Grab networks
-    for(i in 1:length(name))
-    {
-        #Initialize semantic network list
-        Semnet <- list()
-        
-        #Loop through networks
-        if(method == "TMFG")
-        {
-            for(j in 1:iter)
-            {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]$A}
-        }else{
-            for(j in 1:iter)
-            {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]}
-        }
-
-        #Insert semantic network list
-        assign(paste("Semnet.",name[i],sep=""),Semnet)
-    }
+    #for(i in 1:length(name))
+    #{
+    #    #Initialize semantic network list
+    #    Semnet <- list()
+    #    
+    #    #Loop through networks
+    #    for(j in 1:iter)
+    #    {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]}
+#
+ ##      assign(paste("Semnet.",name[i],sep=""),Semnet)
+   # }
     
     ##############################
     #### COMPUTING STATISTICS ####
@@ -341,6 +338,7 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
     #Insert results
     for(i in 1:length(name))
     {
+        bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("Semnet.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
     }

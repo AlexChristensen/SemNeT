@@ -20,6 +20,8 @@ o FIX: output for animation plots in Shiny
 
 o UPDATE: S3method for animation plots
 
+o UPDATE: citations added to Shiny analyses
+
 
 Changes in version 1.3.0
 
