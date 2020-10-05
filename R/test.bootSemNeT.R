@@ -1,10 +1,27 @@
 #' Statistical tests for \code{\link[SemNeT]{bootSemNeT}}
 #' 
-#' @description Computes statistical tests for partial bootstrapped
-#' networks from \code{\link[SemNeT]{bootSemNeT}}. Automatically
-#' computes \emph{t}-tests (\code{\link{t.test}}) or ANOVA
-#' (\code{\link{aov}}) including Tukey's HSD for pairwise comparisons
-#' (\code{\link{TukeyHSD}})
+#' @description Computes statistical tests for bootstrapped
+#' networks from \code{\link[SemNeT]{bootSemNeT}}. Computes ANCOVAs that
+#' control for the number of nodes and edges in the networks and includes
+#' adjusted means and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})
+#' 
+#' @param ... Object(s) from \code{\link[SemNeT]{bootSemNeT}}
+#' 
+#' @param measures Character.
+#' Network measures to be tested.
+#' 
+#' \itemize{
+#' 
+#' \item{\code{\link[SemNeT]{ASPL}}}
+#' {Average shortest path length}
+#' 
+#' \item{\code{\link[SemNeT]{CC}}}
+#' {Clustering coefficient}
+#' 
+#' \item{\code{\link[SemNeT]{Q}}}
+#' {Modularity statistic}
+#' 
+#' }
 #' 
 #' @param formula Character.
 #' A formula for specifying an ANOVA structure. The formula should
@@ -17,8 +34,6 @@
 #' The column names should be the variable names of interest. The
 #' groups should be in the same order as the groups input into
 #' \code{\link[SemNeT]{bootSemNeT}}
-#' 
-#' @param ... Object(s) from \code{\link[SemNeT]{bootSemNeT}}
 #' 
 #' @return Returns a list containing the objects:
 #' 
@@ -68,7 +83,7 @@
 #' two <- sim.fluency(20)
 #' \donttest{
 #' # Run partial bootstrap networks
-#' two.result <- bootSemNeT(one, two, prop = .50, iter = 1000,
+#' two.result <- bootSemNeT(one, two, prop = .50, iter = 100,
 #' sim = "cosine", cores = 2, type = "node", method = "TMFG")
 #' }
 #' # Compute tests
@@ -95,9 +110,9 @@
 #' 
 #' ## Run partial bootstrap networks
 #' boot.fifty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .50,
-#' type = "node", method = "TMFG", cores = 2)
+#' type = "node", method = "TMFG", cores = 2, iter = 100)
 #' boot.sixty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .60,
-#' type = "node", method = "TMFG", cores = 2)
+#' type = "node", method = "TMFG", cores = 2, iter = 100)
 #' 
 #' ## Compute tests
 #' test.bootSemNeT(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
@@ -107,166 +122,181 @@
 #' 
 #' @export
 #Test: Partial Bootstrapped Network Statistics----
-# Updated 22.05.2020
-test.bootSemNeT <- function (..., formula = NULL, groups = NULL)
+# Updated 25.09.2020
+test.bootSemNeT <- function (..., measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
 {
+    #Missing arguments
+    if(missing(measures))
+    {measures <- c("ASPL", "CC", "Q")
+    }else{measures <- match.arg(measures)}
+    
     #Obtain ... in a list
     input <- list(...)
     
     #Names of groups
     name <- unique(gsub("Net", "", gsub("Summ","",gsub("Meas","",names(input[[1]])))))
     
-    #Remove proportion and iter
+    #Remove proportion and itetations
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
     attr(name, "na.action") <- NULL
+    
+    #Check for groups
+    if(is.null(groups))
+    {groups <- name}
+    
+    if(!is.matrix(groups))
+    {groups <- as.matrix(groups)}
     
     #Length of groups
     len <- length(name)
     
+    #Type
+    type <- input[[1]]$type
+    
+    #Proportions
+    if(type == "node")
+    {props <- paste("Proportion (", unlist(lapply(input, function(x){x$prop})), "0)", sep = "")
+    }else{props <- "Case"}
+    
     #Initialize result list
     res <- list()
     
-    #Number of input
-    if(length(input)==1)
+    #Initialize temporary results list
+    temp.res <- list()
+    
+    for(i in 1:length(input))
+    {temp.res[[props[i]]] <- boot.one.test(input[[i]], measures = measures, formula = formula, groups = groups)}
+    
+    # Insert full results
+    res$fullResults <- temp.res
+    
+    #Create tables of results
+    ##Get ANCOVA values
+    
+    if(ncol(groups) == 1)
     {
-        res <- boot.one.test(input[[1]])
-    }else{
-        
-        if(len == 2)
+        acov.vals <- lapply(temp.res, function(x, extra){
+            lapply(x, function(x, extra){
+                x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
+            })
+        })
+    }
+    
+    ##Get Residual degress of freedom
+    res.df <- lapply(temp.res, function(x){
+        lapply(x, function(x){
+            x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
+        })
+    })
+    
+    ##Get adjusted mean values
+    adj.vals <- unlist(lapply(temp.res, function(x){
+        lapply(x, function(x){
+            means <- as.vector(x$adjustedMeans$fit)
+            names(means) <- x$adjustedMeans$variables$Group$levels
+            means
+        })
+    }), recursive = FALSE)
+    
+    adj.vals <- t(simplify2array(adj.vals))
+    
+    if(length(row.names(adj.vals)) > length(measures))
+    {
+        row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+        colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+    }else{row.names(adj.vals) <- measures}
+    
+    #Insert adjusted means
+    res$adjustedMeans <- adj.vals
+    
+    if(ncol(groups) == 1)
+    {
+        ##Loop through to get tables
+        if(length(acov.vals) == 1)
         {
-            #Initialize measure lists
-            aspl <- list()
-            cc <- list()
-            q <- list()
+            #Get measures
+            meas.val <- unlist(acov.vals, recursive = FALSE)
+            #Table measures
+            tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+            #Adjusted means
+            tab.acov <- cbind(round(adj.vals, 3), tab.acov)
+            #Add residual degrees of freedom
+            tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
             
-            #Initialize row names
-            aspl.row <- vector("character", length = length(input))
-            cc.row <- vector("character", length = length(input))
-            q.row <- vector("character", length = length(input))
-            
-            #Loop through input
-            for(i in 1:length(input))
+            # Provided direction if two groups
+            if(length(name) == 2)
             {
-                #Compute tests
-                test <- boot.one.test(input[[i]])
+                #Add direction
+                Direction <- apply(tab.acov, 1, function(x, name){
+                    p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                    
+                    if(p.num <= .05)
+                    {
+                        if(as.numeric(x[1]) > as.numeric(x[2]))
+                        {paste(name[1], ">", name[2], sep = " ")
+                        }else{paste(name[1], "<", name[2], sep = " ")}
+                    }else{"n.s."}
+                }, name = name)
                 
-                #ASPL
-                aspl[[i]] <- test$ASPL
-                aspl.row[i] <- row.names(aspl[[i]])
-                aspl.col <- colnames(aspl[[i]])
-                
-                #CC
-                cc[[i]] <- test$CC
-                cc.row[i] <- row.names(cc[[i]])
-                cc.col <- colnames(cc[[i]])
-                
-                #Q
-                q[[i]] <- test$Q
-                q.row[i] <- row.names(q[[i]])
-                q.col <- colnames(q[[i]])
+                tab.acov <- cbind(tab.acov, Direction)
             }
             
-            #Convert to matrices
-            aspl <- t(sapply(aspl, rbind))
-            cc <- t(sapply(cc, rbind))
-            q <- t(sapply(q, rbind))
+            #Change column name
+            colnames(tab.acov)[length(name)+2] <- "Residual df"
+            colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+            #Change row names
+            row.names(tab.acov) <- measures
             
-            #Name rows
-            row.names(aspl) <- aspl.row
-            row.names(cc) <- cc.row
-            row.names(q) <- q.row
-            
-            #Name columns
-            colnames(aspl) <- aspl.col
-            colnames(cc) <- cc.col
-            colnames(q) <- q.col
-            
-            #Input results
-            res$ASPL <- as.data.frame(aspl)
-            res$CC <- as.data.frame(cc)
-            res$Q <- as.data.frame(q)
+            # Insert table results
+            res$ANCOVA <- tab.acov
             
         }else{
             
-            #Initialize measure lists
-            aspl <- list()
-            cc <- list()
-            q <- list()
-            hsd <- list()
-            
-            #Initialize row names
-            aspl.row <- vector("character", length = length(input))
-            cc.row <- vector("character", length = length(input))
-            q.row <- vector("character", length = length(input))
-            
-            #Loop through input
-            for(i in 1:length(input))
+            for(j in 1:length(measures))
             {
-                #Identify proportion of nodes remaining
-                perc <- input[[i]]$prop
+                #Get measures
+                meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
+                #Get residual degrees of freedom
+                res.val <- lapply(res.df, function(x){x[[measures[j]]]})
+                #Table measures
+                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+                #Adjusted means
+                tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
+                #Add residual degrees of freedom
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 
-                #Compute tests
-                test <- boot.one.test(input[[i]], formula = formula, groups = groups)
-                
-                if(is.null(formula))
+                # Provided direction if two groups
+                if(length(name) == 2)
                 {
-                    #ASPL
-                    aspl[[i]] <- test$ASPL$ANOVA
-                    aspl.row[i] <- row.names(aspl[[i]])
-                    aspl.col <- colnames(aspl[[i]])
-                    hsd$ASPL[[aspl.row[i]]] <- test$ASPL$HSD
+                    #Add direction
+                    Direction <- apply(tab.acov, 1, function(x, name){
+                        p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                        
+                        if(p.num <= .05)
+                        {
+                            if(as.numeric(x[1]) > as.numeric(x[2]))
+                            {paste(name[1], ">", name[2], sep = " ")
+                            }else{paste(name[1], "<", name[2], sep = " ")}
+                        }else{"n.s."}
+                    }, name = name)
                     
-                    #CC
-                    cc[[i]] <- test$CC$ANOVA
-                    cc.row[i] <- row.names(cc[[i]])
-                    cc.col <- colnames(cc[[i]])
-                    hsd$CC[[cc.row[i]]] <- test$CC$HSD
-                    
-                    #Q
-                    q[[i]] <- test$Q$ANOVA
-                    q.row[i] <- row.names(q[[i]])
-                    q.col <- colnames(q[[i]])
-                    hsd$Q[[q.row[i]]] <- test$Q$HSD
-                }else{
-                    #ASPL
-                    aspl[[sprintf("%1.2f", perc)]]$ANOVA <- test$ASPL$ANOVA[[1]]
-                    aspl[[sprintf("%1.2f", perc)]]$HSD <- test$ASPL$HSD[[1]]
-                    
-                    #CC
-                    cc[[sprintf("%1.2f", perc)]]$ANOVA <- test$CC$ANOVA[[1]]
-                    cc[[sprintf("%1.2f", perc)]]$HSD <- test$CC$HSD[[1]]
-                    
-                    #Q
-                    q[[sprintf("%1.2f", perc)]]$ANOVA <- test$Q$ANOVA[[1]]
-                    q[[sprintf("%1.2f", perc)]]$HSD <- test$Q$HSD[[1]]
-                    
-                    hsd <- NULL
+                    tab.acov <- cbind(tab.acov, Direction)
                 }
+                
+                #Change column name
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+                #Change row names
+                row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
+                
+                # Insert table results
+                res$ANCOVA[[measures[j]]] <- tab.acov
+                
+                # Return groups
+                row.names(groups) <- paste("Group", 1:nrow(groups))
+                res$groups <- groups
             }
             
-            if(is.null(formula))
-            {
-                #Convert to matrices
-                aspl <- t(sapply(aspl, round, 4))
-                cc <- t(sapply(cc, round, 4))
-                q <- t(sapply(q, round, 4))
-                
-                #Name rows
-                row.names(aspl) <- aspl.row
-                row.names(cc) <- cc.row
-                row.names(q) <- q.row
-                
-                #Name columns
-                colnames(aspl) <- aspl.col
-                colnames(cc) <- cc.col
-                colnames(q) <- q.col
-            }
-            
-            #Input results
-            res$ASPL <- aspl
-            res$CC <- cc
-            res$Q <- q
-            res$HSD <- hsd
         }
     }
     

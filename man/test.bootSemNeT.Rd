@@ -4,10 +4,31 @@
 \alias{test.bootSemNeT}
 \title{Statistical tests for \code{\link[SemNeT]{bootSemNeT}}}
 \usage{
-test.bootSemNeT(..., formula = NULL, groups = NULL)
+test.bootSemNeT(
+  ...,
+  measures = c("ASPL", "CC", "Q"),
+  formula = NULL,
+  groups = NULL
+)
 }
 \arguments{
 \item{...}{Object(s) from \code{\link[SemNeT]{bootSemNeT}}}
+
+\item{measures}{Character.
+Network measures to be tested.
+
+\itemize{
+
+\item{\code{\link[SemNeT]{ASPL}}}
+{Average shortest path length}
+
+\item{\code{\link[SemNeT]{CC}}}
+{Clustering coefficient}
+
+\item{\code{\link[SemNeT]{Q}}}
+{Modularity statistic}
+
+}}
 
 \item{formula}{Character.
 A formula for specifying an ANOVA structure. The formula should
@@ -65,11 +86,10 @@ lower (\code{lwr}) and upper (\code{upr}) bounds of the 95\% confidence interval
 and the adjusted \emph{p}-value (\code{p.adj})}
 }
 \description{
-Computes statistical tests for partial bootstrapped
-networks from \code{\link[SemNeT]{bootSemNeT}}. Automatically
-computes \emph{t}-tests (\code{\link{t.test}}) or ANOVA
-(\code{\link{aov}}) including Tukey's HSD for pairwise comparisons
-(\code{\link{TukeyHSD}})
+Computes statistical tests for bootstrapped
+networks from \code{\link[SemNeT]{bootSemNeT}}. Computes ANCOVAs that
+control for the number of nodes and edges in the networks and includes
+adjusted means and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})
 }
 \examples{
 # Simulate Dataset
@@ -77,7 +97,7 @@ one <- sim.fluency(20)
 two <- sim.fluency(20)
 \donttest{
 # Run partial bootstrap networks
-two.result <- bootSemNeT(one, two, prop = .50, iter = 1000,
+two.result <- bootSemNeT(one, two, prop = .50, iter = 100,
 sim = "cosine", cores = 2, type = "node", method = "TMFG")
 }
 # Compute tests
@@ -104,9 +124,9 @@ colnames(groups) <- c("gf","caq")
 
 ## Run partial bootstrap networks
 boot.fifty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .50,
-type = "node", method = "TMFG", cores = 2)
+type = "node", method = "TMFG", cores = 2, iter = 100)
 boot.sixty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .60,
-type = "node", method = "TMFG", cores = 2)
+type = "node", method = "TMFG", cores = 2, iter = 100)
 
 ## Compute tests
 test.bootSemNeT(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)

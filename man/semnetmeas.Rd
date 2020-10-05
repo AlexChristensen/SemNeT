@@ -34,8 +34,8 @@ one <- sim.fluency(10)
 # Compute similarity matrix
 cos <- similarity(one, method = "cosine")
 
-# Compute networks using NetworkToolbox
-net <- NetworkToolbox::TMFG(cos)$A
+# Compute networks
+net <- TMFG(cos)
 
 # Compute global network measures
 globmeas <- semnetmeas(net)

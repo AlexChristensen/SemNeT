@@ -290,7 +290,7 @@ compare_netShiny <- function (dat, title, config,
     {
         #Change weights
         if(!weighted)
-        {datalist[[i]] <- NetworkToolbox::binarize(datalist[[i]])}
+        {datalist[[i]] <- binarize(datalist[[i]])}
         
         #Diagonals to zero
         diag(datalist[[i]]) <- 0
@@ -413,9 +413,9 @@ compare_netShiny <- function (dat, title, config,
 #' cos1 <- similarity(one, method = "cosine")
 #' cos2 <- similarity(two, method = "cosine")
 #' 
-#' # Compute networks using NetworkToolbox
-#' net1 <- NetworkToolbox::TMFG(cos1)$A
-#' net2 <- NetworkToolbox::TMFG(cos2)$A
+#' # Compute networks
+#' net1 <- TMFG(cos1)
+#' net2 <- TMFG(cos2)
 #' 
 #' # Compare networks
 #' compare_nets(net1, net2, title = list("One", "Two"), config = "spring")
@@ -685,11 +685,12 @@ randnet.testShiny <- function (dat, iter, cores)
 #' 
 #' @noRd
 #Bootstrapped Semantic Network Analysis----
-#Updated 17.06.2020
+#Updated 03.09.2020
 bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
-                        type = c("case", "node"),
-                        prop = .50, sim, weighted = FALSE,
-                        iter = 1000, cores)
+                             methodArgs = NULL,
+                             type = c("case", "node"),
+                             prop = .50, sim, weighted = FALSE,
+                             iter = 1000, cores)
 {
     ####Missing arguments####
     if(missing(sim))
@@ -704,8 +705,39 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     #Get names of networks
     name <- names(dat)
     
+    #Assign names of dat
+    if(method == "TMFG")
+    {
+        for(i in 1:length(name))
+        {assign(name[i],
+                eq[[i]],
+                envir = environment())}
+    }
+    
     #Create list of input
     datalist <- dat
+    
+    #Assign network function
+    NET.FUNC <- switch(method,
+                       "TMFG" = TMFG,
+                       "CN" = CN,
+                       "NRW" = NRW,
+                       "PF" = PF)
+    
+    #Check for NULL methodArgs
+    if(is.null(methodArgs))
+    {methodArgs <- list()}
+    
+    #Check for missing arguments in function
+    form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
+    
+    if(any(!form.args %in% names(methodArgs)))
+    {
+        need.args <- form.args[which(!form.args %in% names(methodArgs))]
+        
+        for(i in 1:length(need.args))
+        {methodArgs[need.args] <- unlist(formals(NET.FUNC)[need.args])}
+    }
     
     #Number of nodes in full data
     full <- unique(unlist(lapply(datalist,ncol)))
@@ -736,23 +768,16 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
                 if(length(unique(unlist(lapply(datalist,ncol))))!=1)
                 {stop("bootSemNeT(): All datasets must have the same number of columns")}
                 
-                #Error on method
-                if(method != "TMFG")
-                {stop(paste("bootSemNeT(): Node-wise bootstrap is not supported with the", method, "method", sep = " "))}
-                
                 #Randomly sample nodes
-                rand <- sample(full, (full*prop), replace=FALSE)
+                rand <- sample(1:full, (full*prop), replace=FALSE)
                 
                 #Input into data list
                 new[[count]] <- get(name[i], envir = environment())[,rand]
+                
             }else if(type == "case")
             {
-                #Error on method = "TMFG"
-                if(method == "TMFG")
-                {stop("bootSemNeT(): Case-wise bootstrap is not supported with the TMFG method")}
-                
                 #Randomly sample nodes
-                rand <- sample(nrow(get(name[i], envir = environment())),
+                rand <- sample(1:nrow(get(name[i], envir = environment())),
                                nrow(get(name[i], envir = environment())),
                                replace=TRUE)
                 
@@ -765,11 +790,65 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
         }
         
         #Insert data list
-        assign(paste("dl.",name[i],sep=""),new)
+        assign(paste("dl.",name[i],sep=""),new, envir = environment())
     }
     
     #Let user know data generation is finished
     message("done\n")
+    
+    ##################
+    #### EQUATING ####
+    ##################
+    
+    #Check for appropriate conditions
+    if(method == "TMFG" && type == "case")
+    {
+        #Let user know the samples are being equated
+        message("Equating samples...", appendLF = FALSE)
+        
+        # If missing minCase
+        if("minCase" %in% names(methodArgs))
+        {minCase <- methodArgs$minCase
+        }else{minCase <- 2}
+        
+        # Finalize each sample
+        for(i in 1:length(name))
+        {
+            assign(
+                paste("dl.",name[i],sep=""),
+                
+                lapply(get(paste("dl.",name[i],sep=""), envir = environment()),
+                       FUN = finalize,
+                       minCase = minCase),
+                
+                envir = environment()
+            )
+        }
+        
+        if(length(name) > 1)
+        {
+            #Get data to equate into a single list
+            eq.dat <- mget(paste("dl.",name,sep=""), envir = environment())
+            
+            #Initialize equating list
+            eq <- vector("list", length = iter)
+            
+            for(i in 1:iter)
+            {eq[[i]] <- equateShiny(lapply(eq.dat, function(x){x[[i]]}))}
+            
+            for(i in 1:length(name))
+            {
+                assign(
+                    paste("dl.",name[i],sep=""),
+                    unlist(lapply(eq, function(x){x[paste("dl.",name[i],sep="")]}), recursive = FALSE),
+                    envir = environment()
+                )
+            }
+        }
+        
+        #Let user know data generation is finished
+        message("done\n")
+    }
     
     ############################
     #### COMPUTE SIMILARITY ####
@@ -777,14 +856,15 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     
     if(method == "TMFG")
     {
-        #Let user know simliairity is being computed
+        #Let user know simliarity is being computed
         message("Computing similarity measures...\n", appendLF = FALSE)
         
         #Parallel processing
         cl <- parallel::makeCluster(cores)
         
         #Export datalist
-        parallel::clusterExport(cl = cl, varlist = paste("dl.",name,sep=""), envir = environment())
+        parallel::clusterExport(cl = cl, varlist = c(),#paste("dl.",name,sep=""),
+                                envir = environment())
         
         for(i in 1:length(name))
         {
@@ -795,7 +875,7 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
                                         method = sim)
             
             #Insert similarity list
-            assign(paste("sim.",name[i],sep=""),newSim)
+            assign(paste("sim.",name[i],sep=""),newSim, envir = environment())
         }
         
         #Stop Cluster
@@ -813,13 +893,6 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     #### CONSTRUCT NETWORKS ####
     ############################
     
-    #Assign network function
-    NET.FUNC <- switch(method,
-                       TMFG = NetworkToolbox::TMFG,
-                       CN = CN,
-                       NRW = NRW,
-                       PF = PF)
-    
     #Let user know networks are being computed
     message("Estimating networks...\n", appendLF = FALSE)
     
@@ -827,55 +900,84 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = c(paste("sim.",name,sep=""), "NET.FUNC"),
+    parallel::clusterExport(cl = cl, varlist = #c(paste("sim.",name,sep=""),
+                                c("NET.FUNC"),
                             envir = environment())
     
-    for(i in 1:length(name))
+    if(method == "TMFG")
     {
-        #Compute networks
-        newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
-                                    cl = cl,
-                                    FUN = NET.FUNC)
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        depend = methodArgs$depend)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
         
-        #Insert network list
-        assign(paste("net.",name[i],sep=""),newNet)
+    }else if(method == "CN")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        window = methodArgs$window,
+                                        alpha = methodArgs$alpha)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
+    }else if(method == "NRW")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        threshold = methodArgs$threshold)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
+    }else if(method == "PF")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
     }
     
     #Stop Cluster
     parallel::stopCluster(cl)
-    
-    #Grab networks
-    for(i in 1:length(name))
-    {
-        #Initialize semantic network list
-        Semnet <- list()
-        
-        #Loop through networks
-        if(method == "TMFG")
-        {
-            for(j in 1:iter)
-            {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]$A}
-        }else{
-            for(j in 1:iter)
-            {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]}
-        }
-        
-        #Insert semantic network list
-        assign(paste("Semnet.",name[i],sep=""),Semnet)
-    }
     
     ##############################
     #### COMPUTING STATISTICS ####
     ##############################
     
     #Let user know networks are being computed
-    message("Computing statistics...\n", appendLF = FALSE)
+    message("Computing network measures...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = paste("Semnet.",name[i],sep=""), envir = environment())
+    parallel::clusterExport(cl = cl, varlist = c(),#paste("Semnet.",name[i],sep=""),
+                            envir = environment())
     
     for(i in 1:length(name))
     {
@@ -911,7 +1013,7 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     #Insert results
     for(i in 1:length(name))
     {
-        bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("net.",name[i],sep=""), envir = environment())
+        bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("Semnet.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
     }
@@ -998,164 +1100,172 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
 #' 
 #' @noRd
 #Test: Partial Bootstrapped Network Statistics----
-# Updated 05.04.2020
-test.bootSemNeTShiny <- function (input, formula = NULL, groups = NULL)
+# Updated 19.06.2020
+test.bootSemNeTShiny <- function (input, measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
 {
+    #Missing arguments
+    if(missing(measures))
+    {measures <- c("ASPL", "CC", "Q")
+    }else{measures <- match.arg(measures)}
+    
     #Names of groups
-    name <- unique(gsub("Summ","",gsub("Meas","",names(input[[1]]))))
+    name <- unique(gsub("Net", "", gsub("Summ","",gsub("Meas","",names(input[[1]])))))
     
     #Remove proportion and iter
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
     attr(name, "na.action") <- NULL
     
+    #Check for groups
+    if(is.null(groups))
+    {groups <- name}
+    
+    if(!is.matrix(groups))
+    {groups <- as.matrix(groups)}
+    
     #Length of groups
     len <- length(name)
+    
+    #Type
+    type <- input[[1]]$type
+    
+    #Proportions
+    if(type == "node")
+    {props <- paste("Proportion (", unlist(lapply(input, function(x){x$prop})), "0)", sep = "")
+    }else{props <- "Case"}
     
     #Initialize result list
     res <- list()
     
-    #Number of input
-    if(length(input)==1)
+    #Initialize temporary results list
+    temp.res <- list()
+    
+    for(i in 1:length(input))
+    {temp.res[[props[i]]] <- boot.one.testShiny(input[[i]], measures = measures, formula = formula, groups = groups)}
+    
+    # Insert full results
+    res$fullResults <- temp.res
+    
+    #Create tables of results
+    ##Get ANCOVA values
+    acov.vals <- lapply(temp.res, function(x){
+        lapply(x, function(x){
+            x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
+        })
+    })
+    
+    ##Get Residual degress of freedom
+    res.df <- lapply(temp.res, function(x){
+        lapply(x, function(x){
+            x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
+        })
+    })
+    
+    ##Get adjusted mean values
+    adj.vals <- unlist(lapply(temp.res, function(x){
+        lapply(x, function(x){
+            means <- as.vector(x$adjustedMeans$fit)
+            names(means) <- x$adjustedMeans$variables$Group$levels
+            means
+        })
+    }), recursive = FALSE)
+    
+    adj.vals <- t(simplify2array(adj.vals))
+    
+    if(length(row.names(adj.vals)) > length(measures))
     {
-        res <- boot.one.testShiny(input[[1]])
+        row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+        colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+    }else{row.names(adj.vals) <- measures}
+    
+    #Insert adjusted means
+    res$adjustedMeans <- adj.vals
+    
+    ##Loop through to get tables
+    if(length(acov.vals) == 1)
+    {
+        #Get measures
+        meas.val <- unlist(acov.vals, recursive = FALSE)
+        #Table measures
+        tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+        #Adjusted means
+        tab.acov <- cbind(round(adj.vals, 3), tab.acov)
+        #Add residual degrees of freedom
+        tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+        
+        # Provided direction if two groups
+        if(length(name) == 2)
+        {
+            #Add direction
+            Direction <- apply(tab.acov, 1, function(x, name){
+                p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                
+                if(p.num <= .05)
+                {
+                    if(as.numeric(x[1]) > as.numeric(x[2]))
+                    {paste(name[1], ">", name[2], sep = " ")
+                    }else{paste(name[1], "<", name[2], sep = " ")}
+                }else{"n.s."}
+            }, name = name)
+            
+            tab.acov <- cbind(tab.acov, Direction)
+        }
+        
+        #Change column name
+        colnames(tab.acov)[length(name)+2] <- "Residual df"
+        colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+        #Change row names
+        row.names(tab.acov) <- measures
+        
+        # Insert table results
+        res$ANCOVA <- tab.acov
+        
     }else{
         
-        if(len == 2)
+        for(j in 1:length(measures))
         {
-            #Initialize measure lists
-            aspl <- list()
-            cc <- list()
-            q <- list()
+            #Get measures
+            meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
+            #Get residual degrees of freedom
+            res.val <- lapply(res.df, function(x){x[[measures[j]]]})
+            #Table measures
+            tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+            #Adjusted means
+            tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
+            #Add residual degrees of freedom
+            tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
             
-            #Initialize row names
-            aspl.row <- vector("character", length = length(input))
-            cc.row <- vector("character", length = length(input))
-            q.row <- vector("character", length = length(input))
-            
-            #Loop through input
-            for(i in 1:length(input))
+            # Provided direction if two groups
+            if(length(name) == 2)
             {
-                #Compute tests
-                test <- boot.one.testShiny(input[[i]])
+                #Add direction
+                Direction <- apply(tab.acov, 1, function(x, name){
+                    p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                    
+                    if(p.num <= .05)
+                    {
+                        if(as.numeric(x[1]) > as.numeric(x[2]))
+                        {paste(name[1], ">", name[2], sep = " ")
+                        }else{paste(name[1], "<", name[2], sep = " ")}
+                    }else{"n.s."}
+                }, name = name)
                 
-                #ASPL
-                aspl[[i]] <- test$ASPL
-                aspl.row[i] <- row.names(aspl[[i]])
-                aspl.col <- colnames(aspl[[i]])
-                
-                #CC
-                cc[[i]] <- test$CC
-                cc.row[i] <- row.names(cc[[i]])
-                cc.col <- colnames(cc[[i]])
-                
-                #Q
-                q[[i]] <- test$Q
-                q.row[i] <- row.names(q[[i]])
-                q.col <- colnames(q[[i]])
+                tab.acov <- cbind(tab.acov, Direction)
             }
             
-            #Convert to matrices
-            aspl <- t(sapply(aspl, rbind))
-            cc <- t(sapply(cc, rbind))
-            q <- t(sapply(q, rbind))
+            #Change column name
+            colnames(tab.acov)[length(name)+2] <- "Residual df"
+            colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+            #Change row names
+            row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
             
-            #Name rows
-            row.names(aspl) <- aspl.row
-            row.names(cc) <- cc.row
-            row.names(q) <- q.row
+            # Insert table results
+            res$ANCOVA[[measures[j]]] <- tab.acov
             
-            #Name columns
-            colnames(aspl) <- aspl.col
-            colnames(cc) <- cc.col
-            colnames(q) <- q.col
-            
-            #Input results
-            res$ASPL <- as.data.frame(aspl)
-            res$CC <- as.data.frame(cc)
-            res$Q <- as.data.frame(q)
-            
-        }else{
-            
-            #Initialize measure lists
-            aspl <- list()
-            cc <- list()
-            q <- list()
-            hsd <- list()
-            
-            #Initialize row names
-            aspl.row <- vector("character", length = length(input))
-            cc.row <- vector("character", length = length(input))
-            q.row <- vector("character", length = length(input))
-            
-            #Loop through input
-            for(i in 1:length(input))
-            {
-                #Identify proportion of nodes remaining
-                perc <- input[[i]]$prop
-                
-                #Compute tests
-                test <- boot.one.testShiny(input[[i]], formula = formula, groups = groups)
-                
-                if(is.null(formula))
-                {
-                    #ASPL
-                    aspl[[i]] <- test$ASPL$ANOVA
-                    aspl.row[i] <- row.names(aspl[[i]])
-                    aspl.col <- colnames(aspl[[i]])
-                    hsd$ASPL[[aspl.row[i]]] <- test$ASPL$HSD
-                    
-                    #CC
-                    cc[[i]] <- test$CC$ANOVA
-                    cc.row[i] <- row.names(cc[[i]])
-                    cc.col <- colnames(cc[[i]])
-                    hsd$CC[[cc.row[i]]] <- test$CC$HSD
-                    
-                    #Q
-                    q[[i]] <- test$Q$ANOVA
-                    q.row[i] <- row.names(q[[i]])
-                    q.col <- colnames(q[[i]])
-                    hsd$Q[[q.row[i]]] <- test$Q$HSD
-                }else{
-                    #ASPL
-                    aspl[[sprintf("%1.2f", perc)]]$ANOVA <- test$ASPL$ANOVA[[1]]
-                    aspl[[sprintf("%1.2f", perc)]]$HSD <- test$ASPL$HSD[[1]]
-                    
-                    #CC
-                    cc[[sprintf("%1.2f", perc)]] <- test$CC$ANOVA[[1]]
-                    cc[[sprintf("%1.2f", perc)]] <- test$CC$HSD[[1]]
-                    
-                    #Q
-                    q[[sprintf("%1.2f", perc)]] <- test$Q$ANOVA[[1]]
-                    q[[sprintf("%1.2f", perc)]] <- test$Q$HSD[[1]]
-                    
-                    hsd <- NULL
-                }
-            }
-            
-            if(is.null(formula))
-            {
-                #Convert to matrices
-                aspl <- t(sapply(aspl, round, 4))
-                cc <- t(sapply(cc, round, 4))
-                q <- t(sapply(q, round, 4))
-                
-                #Name rows
-                row.names(aspl) <- aspl.row
-                row.names(cc) <- cc.row
-                row.names(q) <- q.row
-                
-                #Name columns
-                colnames(aspl) <- aspl.col
-                colnames(cc) <- cc.col
-                colnames(q) <- q.col
-            }
-            
-            #Input results
-            res$ASPL <- aspl
-            res$CC <- cc
-            res$Q <- q
-            res$HSD <- hsd
+            # Return groups
+            row.names(groups) <- paste("Group", 1:nrow(groups))
+            res$groups <- groups
         }
+        
     }
     
     return(res)
@@ -1230,8 +1340,8 @@ test.bootSemNeTShiny <- function (input, formula = NULL, groups = NULL)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics----
-# Updated 05.04.2020
-boot.one.testShiny <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
+# Updated 25.09.2020
+boot.one.testShiny <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
 {
     #Check for data if formula is not NULL
     if(!is.null(formula))
@@ -1241,7 +1351,7 @@ boot.one.testShiny <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     }
     
     #Get names of networks
-    name <- unique(gsub("Net", "", gsub("Summ","",gsub("Meas","",names(bootSemNeT.obj)))))
+    name <- unique(gsub("Net","",gsub("Summ","",gsub("Meas","",names(bootSemNeT.obj)))))
     
     #Remove proportion and iter
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
@@ -1254,11 +1364,16 @@ boot.one.testShiny <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     if(len < 2)
     {stop("Single samples cannot be tested. Use 'randnet.test' for single samples")}
     
-    #Identify prop of nodes remaining
-    perc <- bootSemNeT.obj$prop
+    #Handle groups
+    if(is.null(groups))
+    {groups <- name}
     
-    if(is.null(perc))
-    {perc <- 1.00}
+    #Enforce matrix
+    groups <- as.matrix(groups)
+    
+    #Check for groups names
+    if(is.null(colnames(groups)))
+    {colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))}
     
     #Identify iterations
     iter <- bootSemNeT.obj$iter
@@ -1267,367 +1382,126 @@ boot.one.testShiny <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
     #### SIGNIFICANCE TESTS ####
     ############################
     
-    #t-test
-    if(len == 2)
-    {
-        ##Function for Cohen's d
-        d <- function(samp1,samp2)
-        {
-            samp1 <- as.vector(samp1)
-            samp2 <- as.vector(samp2)
-            
-            num <- (mean(samp2)-mean(samp1))
-            denom <- sqrt(((sd(samp1)^2)+(sd(samp2)^2))/2)
-            
-            cohensd <- abs(num/denom)
-            
-            return(cohensd)
-        }
-        
-        ##ASPL Tests
-        aspl <- matrix(NA, nrow = 1, ncol = 8)
-        row.names(aspl) <- sprintf("%1.2f", perc)
-        colnames(aspl) <- c("t-statistic", "df", "p-value", "d", "Difference",
-                            "CI95.lower", "CI95.upper","Direction")
-        #ASPL
-        one.aspl <- bootSemNeT.obj[[paste(name[1],"Meas",sep="")]]["ASPL",]
-        two.aspl <- bootSemNeT.obj[[paste(name[2],"Meas",sep="")]]["ASPL",]
-        
-        #t-test
-        test <- t.test(one.aspl, two.aspl, var.equal = TRUE)
-        
-        #Input results into table
-        aspl[sprintf("%1.2f", perc),1] <- round(as.numeric(test$statistic),3)
-        aspl[sprintf("%1.2f", perc),2] <- round(as.numeric(test$parameter),3)
-        aspl[sprintf("%1.2f", perc),3] <- round(as.numeric(test$p.value),3)
-        aspl[sprintf("%1.2f", perc),4] <- round(as.numeric(d(one.aspl,two.aspl)),3)
-        aspl[sprintf("%1.2f", perc),5] <- round(as.numeric(mean(one.aspl)-mean(two.aspl)),3)
-        aspl[sprintf("%1.2f", perc),6] <- round(as.numeric(test$conf.int[1]),3)
-        aspl[sprintf("%1.2f", perc),7] <- round(as.numeric(test$conf.int[2]),3)
-        
-        if(round(as.numeric(test$p.value),3) > .05)
-        {aspl[sprintf("%1.2f", perc),8] <- "n.s."
-        }else{
-            aspl[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                                         paste(name[1],">",name[2],sep=" "),
-                                                         paste(name[2],">",name[1],sep=" ")
-            )
-        }
-        
-        ##CC Tests
-        cc <- matrix(NA, nrow = 1, ncol = 8)
-        row.names(cc) <- sprintf("%1.2f", perc)
-        colnames(cc) <- c("t-statistic", "df", "p-value", "d", "Difference",
-                          "CI95.lower", "CI95.upper","Direction")
-        #CC
-        one.cc <- bootSemNeT.obj[[paste(name[1],"Meas",sep="")]]["CC",]
-        two.cc <- bootSemNeT.obj[[paste(name[2],"Meas",sep="")]]["CC",]
-        
-        #t-test
-        test <- t.test(one.cc, two.cc, var.equal = TRUE)
-        
-        #Input results into table
-        cc[sprintf("%1.2f", perc),1] <- round(as.numeric(test$statistic),3)
-        cc[sprintf("%1.2f", perc),2] <- round(as.numeric(test$parameter),3)
-        cc[sprintf("%1.2f", perc),3] <- round(as.numeric(test$p.value),3)
-        cc[sprintf("%1.2f", perc),4] <- round(as.numeric(d(one.cc,two.cc)),3)
-        cc[sprintf("%1.2f", perc),5] <- round(as.numeric(mean(one.cc)-mean(two.cc)),3)
-        cc[sprintf("%1.2f", perc),6] <- round(as.numeric(test$conf.int[1]),3)
-        cc[sprintf("%1.2f", perc),7] <- round(as.numeric(test$conf.int[2]),3)
-        
-        if(round(as.numeric(test$p.value),3) > .05)
-        {cc[sprintf("%1.2f", perc),8] <- "n.s."
-        }else{
-            cc[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                                       paste(name[1],">",name[2],sep=" "),
-                                                       paste(name[2],">",name[1],sep=" ")
-            )
-        }
-        
-        ##Q Tests
-        q <- matrix(NA, nrow = 1, ncol = 8)
-        row.names(q) <- sprintf("%1.2f", perc)
-        colnames(q) <- c("t-statistic", "df", "p-value", "d", "Difference",
-                         "CI95.lower", "CI95.upper","Direction")
-        #Q
-        one.q <- bootSemNeT.obj[[paste(name[1],"Meas",sep="")]]["Q",]
-        two.q <- bootSemNeT.obj[[paste(name[2],"Meas",sep="")]]["Q",]
-        
-        #t-test
-        test <- t.test(one.q, two.q, var.equal = TRUE)
-        
-        #Input results into table
-        q[sprintf("%1.2f", perc),1] <- round(as.numeric(test$statistic),3)
-        q[sprintf("%1.2f", perc),2] <- round(as.numeric(test$parameter),3)
-        q[sprintf("%1.2f", perc),3] <- round(as.numeric(test$p.value),3)
-        q[sprintf("%1.2f", perc),4] <- round(as.numeric(d(one.q,two.q)),3)
-        q[sprintf("%1.2f", perc),5] <- round(as.numeric(mean(one.q)-mean(two.q)),3)
-        q[sprintf("%1.2f", perc),6] <- round(as.numeric(test$conf.int[1]),3)
-        q[sprintf("%1.2f", perc),7] <- round(as.numeric(test$conf.int[2]),3)
-        
-        if(round(as.numeric(test$p.value),3) > .05)
-        {q[sprintf("%1.2f", perc),8] <- "n.s."
-        }else{
-            q[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                                      paste(name[1],">",name[2],sep=" "),
-                                                      paste(name[2],">",name[1],sep=" ")
-            )
-        }
-        
-        #Input results into list
-        tests <- list()
-        tests$ASPL <- as.data.frame(aspl, stringsAsFactors = FALSE)
-        tests$CC <- as.data.frame(cc, stringsAsFactors = FALSE)
-        tests$Q <- as.data.frame(q, stringsAsFactors = FALSE)
-        
-    }else{ #ANOVA
-        
-        ##Function for partial eta squared
-        partial.eta <- function(ESS, TSS)
-        {
-            p.e <- ESS/TSS
-            
-            return(p.e)
-        }
-        
-        ##ASPL Tests
-        if(is.null(formula))
-        {
-            aspl <- matrix(NA, nrow = 1, ncol = 5)
-            row.names(aspl) <- sprintf("%1.2f", perc)
-            colnames(aspl) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
-        }else{
-            aspl <- list()
-            hsd <- list()
-        }
-        
-        #Initialize group object
-        new.aspl <- vector("numeric", length = iter)
-        
-        #ASPL
-        for(i in 1:len)
-        {
-            #Insert ASPL values
-            new.aspl <- bootSemNeT.obj[[paste(name[i],"Meas",sep="")]]["ASPL",]
-            
-            #Initialize matrix
-            mat <- cbind(rep(name[i], length(new.aspl)),new.aspl)
-            
-            if(i != 1)
-            {new.mat <- rbind(new.mat,mat)
-            }else{new.mat <- mat}
-        }
-        
-        #Convert to data frame
-        aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-        colnames(aov.obj) <- c("Group", "Measure")
-        aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-        aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-        
-        # Check for groups
-        if(!is.null(groups))
-        {
-            aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
-            colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
-            aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-            aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-            
-            for(g in 1:ncol(groups))
-            {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
-        }
-        
-        #ANOVA
-        if(!is.null(formula))
-        {
-            test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
-            aspl[[sprintf("%1.2f", perc)]] <- summary(test)[[1]]
-            hsd[[sprintf("%1.2f", perc)]] <- TukeyHSD(test)
-        }else{
-            test <- aov(Measure ~ Group, data = aov.obj)
-            
-            test.summ <- summary(test)[[1]]
-            
-            #Input results into table
-            aspl[sprintf("%1.2f", perc),"F-statistic"] <- round(test.summ$`F value`[1],3)
-            aspl[sprintf("%1.2f", perc),"group.df"] <- test.summ$Df[1]
-            aspl[sprintf("%1.2f", perc),"residual.df"] <- test.summ$Df[2]
-            aspl[sprintf("%1.2f", perc),"p-value"] <- test.summ$`Pr(>F)`[1]
-            aspl[sprintf("%1.2f", perc),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-            
-            #Tukey's HSD
-            if(test.summ$`Pr(>F)`[1] < .05)
-            {hsd <- TukeyHSD(test)$Group
-            }else{hsd <- "ANOVA was not significant"}
-        }
-        
-        #List for ASPL
-        ASPL <- list()
-        ASPL$ANOVA <- aspl
-        ASPL$HSD <- hsd
-        
-        ##CC Tests
-        if(is.null(formula))
-        {
-            cc <- matrix(NA, nrow = 1, ncol = 5)
-            row.names(cc) <- sprintf("%1.2f", perc)
-            colnames(cc) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
-        }else{
-            cc <- list()
-            hsd <- list()
-        }
-        
-        #Initialize group object
-        new.cc <- vector("numeric", length = iter)
-        
-        #CC
-        for(i in 1:len)
-        {
-            #Insert CC values
-            new.cc <- bootSemNeT.obj[[paste(name[i],"Meas",sep="")]]["CC",]
-            
-            #Initialize matrix
-            mat <- cbind(rep(name[i], length(new.cc)),new.cc)
-            
-            if(i != 1)
-            {new.mat <- rbind(new.mat,mat)
-            }else{new.mat <- mat}
-        }
-        
-        #Convert to data frame
-        aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-        colnames(aov.obj) <- c("Group", "Measure")
-        aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-        aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-        
-        # Check for groups
-        if(!is.null(groups))
-        {
-            aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
-            colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
-            aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-            aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-            
-            for(g in 1:ncol(groups))
-            {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
-        }
-        
-        #ANOVA
-        if(!is.null(formula))
-        {
-            test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
-            cc[[sprintf("%1.2f", perc)]] <- summary(test)[[1]]
-            hsd[[sprintf("%1.2f", perc)]] <- TukeyHSD(test)
-        }else{
-            test <- aov(Measure ~ Group, data = aov.obj)
-            
-            test.summ <- summary(test)[[1]]
-            
-            #Input results into table
-            cc[sprintf("%1.2f", perc),"F-statistic"] <- round(test.summ$`F value`[1],3)
-            cc[sprintf("%1.2f", perc),"group.df"] <- test.summ$Df[1]
-            cc[sprintf("%1.2f", perc),"residual.df"] <- test.summ$Df[2]
-            cc[sprintf("%1.2f", perc),"p-value"] <- test.summ$`Pr(>F)`[1]
-            cc[sprintf("%1.2f", perc),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-            
-            #Tukey's HSD
-            if(test.summ$`Pr(>F)`[1] < .05)
-            {hsd <- TukeyHSD(test)$Group
-            }else{hsd <- "ANOVA was not significant"}
-        }
-        
-        #List for CC
-        CC <- list()
-        CC$ANOVA <- cc
-        CC$HSD <- hsd
-        
-        ##Q Tests
-        if(is.null(formula))
-        {
-            q <- matrix(NA, nrow = 1, ncol = 5)
-            row.names(q) <- sprintf("%1.2f", perc)
-            colnames(q) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
-        }else{
-            q <- list()
-            hsd <- list()
-        }
-        
-        #Initialize group object
-        new.q <- vector("numeric", length = iter)
-        
-        #Q
-        for(i in 1:len)
-        {
-            #Insert Q values
-            new.q <- bootSemNeT.obj[[paste(name[i],"Meas",sep="")]]["Q",]
-            
-            #Initialize matrix
-            mat <- cbind(rep(name[i], length(new.q)),new.q)
-            
-            if(i != 1)
-            {new.mat <- rbind(new.mat,mat)
-            }else{new.mat <- mat}
-        }
-        
-        #Convert to data frame
-        aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-        colnames(aov.obj) <- c("Group", "Measure")
-        aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-        aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-        
-        # Check for groups
-        if(!is.null(groups))
-        {
-            aov.obj <- as.data.frame(cbind(aov.obj,groups), stringsAsFactors = FALSE)
-            colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
-            aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-            aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-            
-            for(g in 1:ncol(groups))
-            {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
-        }
-        
-        #ANOVA
-        if(!is.null(formula))
-        {
-            test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
-            q[[sprintf("%1.2f", perc)]] <- summary(test)[[1]]
-            hsd[[sprintf("%1.2f", perc)]] <- TukeyHSD(test)
-        }else{
-            test <- aov(Measure ~ Group, data = aov.obj)
-            
-            test.summ <- summary(test)[[1]]
-            
-            #Input results into table
-            q[sprintf("%1.2f", perc),"F-statistic"] <- round(test.summ$`F value`[1],3)
-            q[sprintf("%1.2f", perc),"group.df"] <- test.summ$Df[1]
-            q[sprintf("%1.2f", perc),"residual.df"] <- test.summ$Df[2]
-            q[sprintf("%1.2f", perc),"p-value"] <- test.summ$`Pr(>F)`[1]
-            q[sprintf("%1.2f", perc),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-            
-            #Tukey's HSD
-            if(test.summ$`Pr(>F)`[1] < .05)
-            {hsd <- TukeyHSD(test)$Group
-            }else{hsd <- "ANOVA was not significant"}
-        }
-        
-        #List for Q
-        Q <- list()
-        Q$ANOVA <- q
-        Q$HSD <- hsd
-        
-        #Input results into list
-        tests <- list()
-        tests$ASPL <- ASPL
-        tests$CC <- CC
-        tests$Q <- Q
-    }
+    #Input results into list
+    tests <- list()
     
-    # Band-aid fix for case bootstrap (instead of node)
-    if(bootSemNeT.obj$type == "case")
+    #Loop through measures
+    for(i in 1:length(measures))
     {
-        tests <- t(sapply(tests,as.data.frame))
+        #Create ANCOVA data frame
+        for(j in 1:len)
+        {
+            #Insert measure values
+            meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
+            
+            # Nodes
+            nodes <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){ncol(x)}))
+            
+            # Edges
+            edges <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){
+                net <- binarize(x)
+                diag(net) <- 0
+                return(sum(net) / 2)
+            }))
+            
+            #Initialize matrix
+            mat <- cbind(rep(name[j], length(meas)), meas, nodes, edges)
+            
+            if(j != 1)
+            {new.mat <- rbind(new.mat, mat)
+            }else{new.mat <- mat}
+        }
         
-        tests[,-which(colnames(tests) == "Direction")] <- apply(tests[,-which(colnames(tests) == "Direction")],2,as.numeric)
+        #Convert to data frame
+        aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
+        colnames(aov.obj) <- c("Name", "Measure", "Nodes", "Edges")
+        aov.obj$Name <- as.factor(as.character(aov.obj$Name))
+        aov.obj[,2:4] <- apply(aov.obj[,2:4], 2, function(x){as.numeric(as.character(x))})
+        
+        #Organize groups
+        aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
+        
+        #Get column before groups
+        edge.col <- which(colnames(aov.obj) == "Edges")
+        
+        #Convert groups to factors
+        for(g in 1:ncol(groups))
+        {aov.obj[,(edge.col+g)] <- as.factor(as.character(aov.obj[,(edge.col+g)]))}
+        
+        #Remove variables that are all equal
+        keep.vars <- apply(aov.obj[,1:ncol(aov.obj)], 2, function(x){length(unique(x)) != 1})
+        aov.obj <- aov.obj[,keep.vars]
+        
+        #Group mean center
+        ## See Understanding and misunderstanding group mean centering: a commentary on Kelley et al.'s dangerous practice
+        ## Bell, A., Jones, K., & Fairbrother, M. (2018).
+        ## \emph{Quality & Quantity Volume} \emph{52}, 2031-2036.
+        ##https://doi.org/10.1007/s11135-017-0593-5
+        if("Nodes" %in% names(aov.obj))
+        {
+            for(g in 1:nrow(groups))
+            {aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Nodes[which(aov.obj$Group == groups[g,])])}
+        }
+        
+        if("Edges" %in% names(aov.obj))
+        {
+            for(g in 1:nrow(groups))
+            {aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])}
+        }
+        
+        #Formula
+        if(is.null(formula))
+        {formula <- paste("y ~", paste(colnames(groups), collapse = " + "))}
+        
+        #Replace 'y' with 'Measure'
+        formula <- gsub("y", "Measure", formula)
+        
+        #Split formula to add 'Nodes' and 'Edges'
+        split.formula <- unlist(strsplit(formula, split = "~"))
+        
+        #ANOVA formula
+        ##Catch Pathfinder Network method
+        if(all(aov.obj$Nodes - aov.obj$Edges == 1))
+        {aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[4][keep.vars[4]], collapse = " + "), " +", split.formula[2], sep = "")
+        }else{aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3:4][keep.vars[3:4]], collapse = " + "), " +", split.formula[2], sep = "")}
+        
+        #ANOVA
+        aov.test <- aov(as.formula(aov.formula), data = aov.obj)
+        
+        #ANCOVA
+        acov.test <- car::Anova(aov.test, type = "III")
+        
+        #Tidy ANCOVA
+        tidy.acov <- as.data.frame(broom::tidy(acov.test), stringsAsFactors = FALSE)
+        tidy.acov[,-1] <- round(apply(tidy.acov[,-1], 2, as.numeric), 3)
+        
+        #Get partial etas
+        etas <- round(unlist(lapply(acov.test$`Sum Sq`, partial.eta.sq, sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)])))[-c(1,length(acov.test$`Sum Sq`))], 3)
+        
+        #Attach etas to tidy ANCOVA
+        tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
+        
+        #Change column names
+        colnames(tidy.acov) <- c("Term", "Sum of Squares", "df", "F-statistic", "p-value", "Partial Eta Squared")
+        
+        #Change p-values
+        tidy.acov$`p-value` <- ifelse(tidy.acov$`p-value` < .001, "< .001", tidy.acov$`p-value`)
+        
+        # Convert NA to blank values
+        tidy.acov <- as.data.frame(apply(tidy.acov, 2, function(x){trimws(ifelse(is.na(x), "", x))}), stringsAsFactors = FALSE)
+        
+        #Get adjusted means
+        adj.means <- effects::allEffects(aov.test)
+        
+        #Insert ANCOVA
+        tests[[paste(measures[i])]]$ANCOVA <- tidy.acov
+        
+        #Insert adjusted means
+        tests[[paste(measures[i])]]$adjustedMeans <- adj.means[[which(names(adj.means) != "Nodes" & names(adj.means) != "Edges")]]
+        
+        #Get pairwise comparisons
+        if(length(unique(groups[,1])) > 2)
+        {tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)}
     }
     
     return(tests)
@@ -1675,7 +1549,7 @@ plotbootSemNeTShiny <- function (input, groups = NULL, measures = c("ASPL","CC",
     len <- length(input)
     
     #Get names of networks
-    name <- unique(gsub("Summ","",gsub("Meas","",names(input[[1]]))))
+    name <- unique(gsub("Net","",gsub("Summ","",gsub("Meas","",names(input[[1]])))))
     
     #Remove proportion and iter
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
@@ -1773,15 +1647,17 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
     start <- steps
     
     #binarize matrices
-    A <- NetworkToolbox::binarize(A)
-    B <- NetworkToolbox::binarize(B)
+    A <- binarize(A)
+    B <- binarize(B)
+    diag(A) <- 0
+    diag(B) <- 0
     
     #transition matrices
     TA <- matrix(0,nrow=nA,ncol=nA)
     TB <- matrix(0,nrow=nB,ncol=nB)
     
-    degA <- NetworkToolbox::degree(A)
-    degB <- NetworkToolbox::degree(B)
+    degA <- colSums(A)
+    degB <- colSums(B)
     
     for(i in 1:nA)
         for(j in 1:nA)
@@ -1792,8 +1668,8 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
         {TB[i,j] <- B[i,j]/degB[i]}
     
     #distance matrices
-    DA <- NetworkToolbox::distance(A)
-    DB <- NetworkToolbox::distance(B)
+    DA <- distance(A)
+    DB <- distance(B)
     
     # Random walk function
     rw <- function(steps, nA, nB, TA, TB, DA, DB)

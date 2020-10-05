@@ -47,12 +47,12 @@ two <- sim.fluency(10)
 cos1 <- similarity(one, method = "cosine")
 cos2 <- similarity(two, method = "cosine")
 
-# Compute networks using NetworkToolbox
-net1 <- NetworkToolbox::TMFG(cos1)$A
-net2 <- NetworkToolbox::TMFG(cos2)$A
+# Compute networks
+net1 <- TMFG(cos1)
+net2 <- TMFG(cos2)
 \donttest{
 # Run random walk analysis
-rw.results <- randwalk(net1, net2, iter = 1000, cores = 2)
+rw.results <- randwalk(net1, net2, iter = 100, cores = 2)
 }
 \dontshow{rw.results <- randwalk(net1, net2, iter = 10, cores = 2)}
 

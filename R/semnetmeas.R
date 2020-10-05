@@ -24,8 +24,8 @@
 #' # Compute similarity matrix
 #' cos <- similarity(one, method = "cosine")
 #' 
-#' # Compute networks using NetworkToolbox
-#' net <- NetworkToolbox::TMFG(cos)$A
+#' # Compute networks
+#' net <- TMFG(cos)
 #' 
 #' # Compute global network measures
 #' globmeas <- semnetmeas(net)
@@ -41,20 +41,19 @@ semnetmeas <- function (A, meas = c("ASPL", "CC", "Q"), weighted = FALSE)
     
     # Weighted
     if(!weighted)
-    {A <- NetworkToolbox::binarize(A)}
+    {A <- binarize(A)}
     
     # Average shortest path length
     if("ASPL" %in% meas)
-    {ASPL <- NetworkToolbox::pathlengths(A, weighted = weighted)$ASPL}
+    {ASPL <- ASPL(A, weighted = weighted)}
     
     # Clustering coefficient
     if("CC" %in% meas)
-    {CC <- NetworkToolbox::clustcoeff(A, weighted = weighted)$CC}
+    {CC <- CC(A, weighted = weighted)}
     
     # Modularity
-    ## Using igraph because it doesn't get stuck in while loop
     if("Q" %in% meas)
-    {Q <- max(igraph::cluster_louvain(NetworkToolbox::convert2igraph(abs(A)))$modularity)}
+    {Q <- Q(A)}
     
     # Vector of measures
     sn.meas <- unlist(lapply(full[match(meas, full)],get,envir=environment()))

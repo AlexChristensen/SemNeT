@@ -7,7 +7,7 @@
 equate(...)
 }
 \arguments{
-\item{...}{Matrices or data frames.
+\item{...}{Matrices, data frames or a list of matrices and data frames.
 Binary response matrices to be equated}
 }
 \value{
@@ -30,7 +30,6 @@ mat1 <- finalize(bin[c(1:5),])
 
 # Finalize mat2
 mat2 <- finalize(bin[c(6:10),])
-
 
 # Equate mat1 and mat1
 eq <- equate(mat1, mat2)

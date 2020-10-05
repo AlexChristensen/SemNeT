@@ -7,6 +7,7 @@
 bootSemNeT(
   ...,
   method = c("CN", "NRW", "PF", "TMFG"),
+  methodArgs = NULL,
   type = c("case", "node"),
   prop = 0.5,
   sim,
@@ -39,6 +40,10 @@ Current options include:
 {Pathfinder}
 
 }}
+
+\item{methodArgs}{List.
+A list of additional arguments for the network estimation function.
+See links in \code{methods} for additional arguments (see also Examples)}
 
 \item{type}{Character.
 Type of bootstrap to perform
@@ -97,7 +102,7 @@ used from the \code{iter} argument}
 If a \code{paired} network is input, then also returns:
 
 \item{pairedMeas}{A matrix for the network input in the \code{paired}
-arugment, where columns are the semantic network measures
+argument, where columns are the semantic network measures
 from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
 bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
 
@@ -113,17 +118,24 @@ semantic networks and compute global network characteristics
 one <- sim.fluency(20)
 \donttest{
 # Run bootstrap node-drop (partial) networks
-one.result <- bootSemNeT(one, prop = .50, iter = 1000,
+one.result <- bootSemNeT(one, prop = .50, iter = 100,
 sim = "cosine", cores = 2, method = "TMFG", type = "node")
+
+# Run bootstrap case-drop networks
+## Includes additional equating argument: minCase
+one.result <- bootSemNeT(one, iter = 100, sim = "cosine",
+cores = 2, method = "TMFG", type = "case", methodArgs = list(minCase = 2))
 
 }
 # Bootstrap case-wise networks
 ## Get openness data
-low <- open.binary[which(open.group == "Low"),]
-high <- open.binary[which(open.group == "High"),]
+low <- open.clean[which(open.group == "Low"),]
+high <- open.clean[which(open.group == "High"),]
 \donttest{
 ## Run
-open <- bootSemNeT(low, high, iter = 1000, cores = 2, method = "NRW", type = "case")
+### Inlcudes additional NRW argument: threshold
+open <- bootSemNeT(low, high, iter = 100, cores = 2, method = "NRW", type = "case",
+methodArgs = list(threshold = 3))
 
 }
 }

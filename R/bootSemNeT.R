@@ -27,6 +27,10 @@
 #' 
 #' }
 #' 
+#' @param methodArgs List.
+#' A list of additional arguments for the network estimation function.
+#' See links in \code{methods} for additional arguments (see also Examples)
+#' 
 #' @param type Character.
 #' Type of bootstrap to perform
 #' 
@@ -83,7 +87,7 @@
 #' If a \code{paired} network is input, then also returns:
 #' 
 #' \item{pairedMeas}{A matrix for the network input in the \code{paired}
-#' arugment, where columns are the semantic network measures
+#' argument, where columns are the semantic network measures
 #' from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
 #' bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
 #' 
@@ -95,17 +99,24 @@
 #' one <- sim.fluency(20)
 #' \donttest{
 #' # Run bootstrap node-drop (partial) networks
-#' one.result <- bootSemNeT(one, prop = .50, iter = 1000,
+#' one.result <- bootSemNeT(one, prop = .50, iter = 100,
 #' sim = "cosine", cores = 2, method = "TMFG", type = "node")
+#' 
+#' # Run bootstrap case-drop networks
+#' ## Includes additional equating argument: minCase
+#' one.result <- bootSemNeT(one, iter = 100, sim = "cosine",
+#' cores = 2, method = "TMFG", type = "case", methodArgs = list(minCase = 2))
 #' 
 #' }
 #' # Bootstrap case-wise networks
 #' ## Get openness data
-#' low <- open.binary[which(open.group == "Low"),]
-#' high <- open.binary[which(open.group == "High"),]
+#' low <- open.clean[which(open.group == "Low"),]
+#' high <- open.clean[which(open.group == "High"),]
 #' \donttest{
 #' ## Run
-#' open <- bootSemNeT(low, high, iter = 1000, cores = 2, method = "NRW", type = "case")
+#' ### Inlcudes additional NRW argument: threshold
+#' open <- bootSemNeT(low, high, iter = 100, cores = 2, method = "NRW", type = "case",
+#' methodArgs = list(threshold = 3))
 #' 
 #' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
@@ -114,8 +125,9 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 17.06.2020
+# Updated 03.09.2020
 bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
+                        methodArgs = NULL,
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,
                         iter = 1000, cores)
@@ -136,6 +148,28 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
     
     #Create list of input
     datalist <- list(...)
+    
+    #Assign network function
+    NET.FUNC <- switch(method,
+                       "TMFG" = TMFG,
+                       "CN" = CN,
+                       "NRW" = NRW,
+                       "PF" = PF)
+    
+    #Check for NULL methodArgs
+    if(is.null(methodArgs))
+    {methodArgs <- list()}
+    
+    #Check for missing arguments in function
+    form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
+    
+    if(any(!form.args %in% names(methodArgs)))
+    {
+        need.args <- form.args[which(!form.args %in% names(methodArgs))]
+        
+        for(i in 1:length(need.args))
+        {methodArgs[need.args] <- unlist(formals(NET.FUNC)[need.args])}
+    }
     
     #Number of nodes in full data
     full <- unique(unlist(lapply(datalist,ncol)))
@@ -166,23 +200,16 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                 if(length(unique(unlist(lapply(datalist,ncol))))!=1)
                 {stop("bootSemNeT(): All datasets must have the same number of columns")}
                 
-                #Error on method
-                if(method != "TMFG")
-                {stop(paste("bootSemNeT(): Node-wise bootstrap is not supported with the", method, "method", sep = " "))}
-                
                 #Randomly sample nodes
-                rand <- sample(full, (full*prop), replace=FALSE)
+                rand <- sample(1:full, (full*prop), replace=FALSE)
                 
                 #Input into data list
                 new[[count]] <- get(name[i], envir = environment())[,rand]
+                
             }else if(type == "case")
             {
-                #Error on method = "TMFG"
-                if(method == "TMFG")
-                {stop("bootSemNeT(): Case-wise bootstrap is not supported with the TMFG method")}
-                
                 #Randomly sample nodes
-                rand <- sample(nrow(get(name[i], envir = environment())),
+                rand <- sample(1:nrow(get(name[i], envir = environment())),
                                nrow(get(name[i], envir = environment())),
                                replace=TRUE)
                 
@@ -195,11 +222,65 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
         }
         
         #Insert data list
-        assign(paste("dl.",name[i],sep=""),new)
+        assign(paste("dl.",name[i],sep=""),new, envir = environment())
     }
     
     #Let user know data generation is finished
     message("done\n")
+    
+    ##################
+    #### EQUATING ####
+    ##################
+    
+    #Check for appropriate conditions
+    if(method == "TMFG" && type == "case")
+    {
+        #Let user know the samples are being equated
+        message("Equating samples...", appendLF = FALSE)
+        
+        # If missing minCase
+        if("minCase" %in% names(methodArgs))
+        {minCase <- methodArgs$minCase
+        }else{minCase <- 2}
+        
+        # Finalize each sample
+        for(i in 1:length(name))
+        {
+            assign(
+                paste("dl.",name[i],sep=""),
+                
+                lapply(get(paste("dl.",name[i],sep=""), envir = environment()),
+                       FUN = finalize,
+                       minCase = minCase),
+                
+                envir = environment()
+            )
+        }
+        
+        if(length(name) > 1)
+        {
+            #Get data to equate into a single list
+            eq.dat <- mget(paste("dl.",name,sep=""), envir = environment())
+            
+            #Initialize equating list
+            eq <- vector("list", length = iter)
+            
+            for(i in 1:iter)
+            {eq[[i]] <- equateShiny(lapply(eq.dat, function(x){x[[i]]}))}
+            
+            for(i in 1:length(name))
+            {
+                assign(
+                    paste("dl.",name[i],sep=""),
+                    unlist(lapply(eq, function(x){x[paste("dl.",name[i],sep="")]}), recursive = FALSE),
+                    envir = environment()
+                )
+            }
+        }
+        
+        #Let user know data generation is finished
+        message("done\n")
+    }
 
     ############################
     #### COMPUTE SIMILARITY ####
@@ -207,14 +288,15 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
     
     if(method == "TMFG")
     {
-        #Let user know simliairity is being computed
+        #Let user know simliarity is being computed
         message("Computing similarity measures...\n", appendLF = FALSE)
         
         #Parallel processing
         cl <- parallel::makeCluster(cores)
         
         #Export datalist
-        parallel::clusterExport(cl = cl, varlist = paste("dl.",name,sep=""), envir = environment())
+        parallel::clusterExport(cl = cl, varlist = c(),#paste("dl.",name,sep=""),
+                                envir = environment())
         
         for(i in 1:length(name))
         {
@@ -225,7 +307,7 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                                         method = sim)
             
             #Insert similarity list
-            assign(paste("sim.",name[i],sep=""),newSim)
+            assign(paste("sim.",name[i],sep=""),newSim, envir = environment())
         }
         
         #Stop Cluster
@@ -243,13 +325,6 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
     #### CONSTRUCT NETWORKS ####
     ############################
     
-    #Assign network function
-    NET.FUNC <- switch(method,
-                       TMFG = NetworkToolbox::TMFG,
-                       CN = CN,
-                       NRW = NRW,
-                       PF = PF)
-    
     #Let user know networks are being computed
     message("Estimating networks...\n", appendLF = FALSE)
     
@@ -257,52 +332,84 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = c(paste("sim.",name,sep=""), "NET.FUNC"),
+    parallel::clusterExport(cl = cl, varlist = #c(paste("sim.",name,sep=""),
+                                c("NET.FUNC"),
                             envir = environment())
     
-    for(i in 1:length(name))
+    if(method == "TMFG")
     {
-        #Compute networks
-        newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
-                                    cl = cl,
-                                    FUN = NET.FUNC)
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        depend = methodArgs$depend)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
         
-        #Just get networks for TMFG
-        if(method == "TMFG")
-        {newNet <- lapply(newNet, function(x){x$A})}
+    }else if(method == "CN")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        window = methodArgs$window,
+                                        alpha = methodArgs$alpha)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
         
-        #Insert network list
-        assign(paste("Semnet.",name[i],sep=""), newNet)
+    }else if(method == "NRW")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        threshold = methodArgs$threshold)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
+    }else if(method == "PF")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
     }
     
     #Stop Cluster
     parallel::stopCluster(cl)
     
-    #Grab networks
-    #for(i in 1:length(name))
-    #{
-    #    #Initialize semantic network list
-    #    Semnet <- list()
-    #    
-    #    #Loop through networks
-    #    for(j in 1:iter)
-    #    {Semnet[[j]] <- get(paste("net.",name[i],sep=""), envir = environment())[[j]]}
-#
- ##      assign(paste("Semnet.",name[i],sep=""),Semnet)
-   # }
-    
     ##############################
     #### COMPUTING STATISTICS ####
     ##############################
     
-    #Let user know networks are being computed
-    message("Computing statistics...\n", appendLF = FALSE)
+    #Let user know network measures are being computed
+    message("Computing network measures...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = paste("Semnet.",name[i],sep=""), envir = environment())
+    parallel::clusterExport(cl = cl, varlist = c(),#paste("Semnet.",name[i],sep=""),
+                                envir = environment())
     
     for(i in 1:length(name))
     {

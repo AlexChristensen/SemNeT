@@ -35,8 +35,10 @@ ui <- (
                  
                  br(), br(),
                  
-                 actionButton("load_data", label = "Load Data")
+                 actionButton("load_data", label = "Load Data", inline = TRUE),
                  
+                 
+                 actionButton("save_data", label = "Save Data", inline = TRUE)
                ),
                
                # Output
@@ -52,7 +54,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("SEMNA_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
+                 tags$footer(htmlOutput("SEMNA_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 700px; z-index: 1000;")
                  
                )
                
@@ -68,7 +70,7 @@ ui <- (
                  # Network estimation method
                  selectInput("estimation", "Network Estimation Method", c("Community Network (CN)",
                                                                           "Naive Random Walk (NRW)",
-                                                                          "Pathfinder Network (PN)",
+                                                                          "Pathfinder Network (PF)",
                                                                           "Triangulated Maximally Filtered Graph (TMFG)"
                  )),
                  
@@ -77,9 +79,11 @@ ui <- (
                  
                  uiOutput("network_options_2"),
                  
+                 uiOutput("network_options_3"),
+                 
                  actionButton("run_est", label = "Estimate Networks"),
                  
-                 actionButton("reset", label = "Clear Results")
+                 actionButton("save_nets", label = "Save Networks", inline = TRUE)
                  
                ),
                
@@ -110,7 +114,9 @@ ui <- (
                  
                  uiOutput("cores_rand"),
                  
-                 actionButton("run_rand", label = "Run Random Network Analyses")
+                 actionButton("run_rand", label = "Perform Random Network Analyses"),
+                 
+                 actionButton("save_rand", label = "Save Random Network Results", inline = TRUE)
                  
                ),
                
@@ -129,12 +135,16 @@ ui <- (
                
              ),
              
-             # Bootstrap Network Analyses Panel
+             # Bootstrap Analyses Panel
              tabPanel(
-               "Bootstrap Network Analyses",
+               "Bootstrap Analyses",
                
                # Input
                sidebarPanel(
+                 
+                 selectInput("type_select", "Type of Bootstrap",
+                             c("Case", "Node"),
+                             selected = "Case"),
                  
                  uiOutput("type"),
                  
@@ -142,9 +152,11 @@ ui <- (
                  
                  uiOutput("cores_boot"),
                  
-                 actionButton("run_boot", label = "Run Bootstrap Analyses"),
+                 actionButton("run_boot", label = "Perform Bootstrap Analyses"),
                  
-                 actionButton("run_plot", label = "Generate Bootstrap Plots")
+                 actionButton("run_plot", label = "Generate Bootstrap Plots"),
+                 
+                 actionButton("save_boot", label = "Save Bootstrap Analyses", inline = TRUE)
                  
                ),
                
@@ -161,11 +173,46 @@ ui <- (
                    plotOutput("qPlot")
                  ),
                  
-                 tags$footer(htmlOutput("partial_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
+                 tags$footer(htmlOutput("partial_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 600px; z-index: 1000;")
                  
                )
                
              ),
+             
+             # Permutation Analyses Panel
+             #tabPanel(
+            #   "Permutation Analyses",
+            #   
+            #   # Input
+            #   sidebarPanel(
+            #     
+            #     uiOutput("group1"), uiOutput("group2"), uiOutput("alter"),
+            #     
+            #     selectInput("meas_perm", label = "Network Measure",
+            #                 choices = c("Average Shortest Path Length (ASPL)",
+            #                             "Clustering Coefficient (CC)",
+            #                             "Modularity (Q)"
+            #                 )
+            #     ),
+            #     
+            #     numericInput("iters_perm", label = "Number of Iterations", value = 1000, min = 0, step = 100),
+            #     
+            #     uiOutput("cores_perm"),
+            #     
+            #     actionButton("run_perm", label = "Perform Permutation Analyses")
+            #     
+            #   ),
+            #   
+            #   # Output
+            #   tagList(
+            #     
+            #     mainPanel(
+            #       tableOutput("perm_table")
+            #     ),
+            #     
+            #   )
+            #   
+            # ),
              
              # Random Walk Analyses Panel
              tabPanel(
@@ -186,7 +233,9 @@ ui <- (
                  
                  uiOutput("cores_walk"),
                  
-                 actionButton("run_walk", label = "Run Random Walk Analyses")
+                 actionButton("run_walk", label = "Perform Random Walk Analyses"),
+                 
+                 actionButton("save_walk", label = "Save Random Walk Analyses", inline = TRUE)
                  
                ),
                
@@ -214,13 +263,13 @@ ui <- (
                  
                  uiOutput("network_select"),
                  
-                 numericInput("retention", label = "Retention (proportion of activation that remains in spreading node)", value = 0.5, min = 0, max = 1, step = .10),
+                 numericInput("retention", label = "Retention (proportion of activation that remains in spreading node)", value = 0.5, min = 0, max = 1, step = .05),
                  
                  numericInput("time", label = "Number of Time Steps", value = 10, min = 0, max = Inf, step = 1),
                  
-                 numericInput("decay", label = "Decay (activation lost at each time step)", value = 0, min = 0, max = 1, step = .10),
+                 numericInput("decay", label = "Decay (activation lost at each time step)", value = 0, min = 0, max = 1, step = .05),
                  
-                 numericInput("suppress", label = "Suppress (activation less than value is set to zero)", value = 0, min = 0, max = Inf, step = 1),
+                 numericInput("suppress", label = "Suppress (activation less than value is set to zero)", value = 0, min = 0, max = 1, step = .001),
                  
                  actionButton("set_act", label = "Set Activations"),
                  
@@ -228,13 +277,15 @@ ui <- (
                                   uiOutput("node_select")
                  ),
                  
-                 actionButton("run_spr_act", label = "Run Spreading Activation Analyses"),
+                 actionButton("run_spr_act", label = "Perform Spreading Activation Analyses"),
                  
                  selectInput("animate_size", label = "Plot Size",
                              choices = c("Small (500 x 500)", "Medium (900 x 900)", "Large (1400 x 1400)"),
                              selected = "Medium (900 x 900)"),
                  
                  actionButton("animate", label = "Generate Spreading Activation Plot"),
+                 
+                 actionButton("save_act", label = "Save Spreading Activation Analyses", inline = TRUE),
                  
                  actionButton("reset_act", label = "Reset Spreading Activation")
                  
@@ -256,6 +307,22 @@ ui <- (
                )
                
              ),
+            
+            # Save and Reset Results Panel
+            tabPanel(
+              "Save and Reset All Results",
+              
+              # Input
+              sidebarPanel(
+                
+                actionButton("save_master", label = "Save All Results"),
+                
+                br(), br(),
+                
+                actionButton("reset", label = "Clear Results")
+              )
+              
+            ),
              
              # Use shinyalert
              shinyalert::useShinyalert(),

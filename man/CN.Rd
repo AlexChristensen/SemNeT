@@ -4,7 +4,7 @@
 \alias{CN}
 \title{Community Network Estimation}
 \usage{
-CN(data, window = 2, alpha = 0.05)
+CN(data, window = 2, alpha = 0.05, enrich = FALSE)
 }
 \arguments{
 \item{data}{Matrix or data frame.
@@ -19,6 +19,11 @@ Defaults to \code{2}}
 \item{alpha}{Numeric.
 Significance value.
 Defaults to \code{.05}}
+
+\item{enrich}{Boolean.
+Should the network be enriched by connecting
+all nodes in their respective modules?
+Defaults to \code{FALSE}}
 }
 \value{
 Returns a undirected semantic network

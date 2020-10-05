@@ -38,12 +38,12 @@
 #' cos1 <- similarity(one, method = "cosine")
 #' cos2 <- similarity(two, method = "cosine")
 #' 
-#' # Compute networks using NetworkToolbox
-#' net1 <- NetworkToolbox::TMFG(cos1)$A
-#' net2 <- NetworkToolbox::TMFG(cos2)$A
+#' # Compute networks
+#' net1 <- TMFG(cos1)
+#' net2 <- TMFG(cos2)
 #' \donttest{
 #' # Run random walk analysis
-#' rw.results <- randwalk(net1, net2, iter = 1000, cores = 2)
+#' rw.results <- randwalk(net1, net2, iter = 100, cores = 2)
 #' }
 #' \dontshow{rw.results <- randwalk(net1, net2, iter = 10, cores = 2)}
 #' 
@@ -93,15 +93,17 @@ randwalk <- function (A, B, reps = 20, steps = 10,
     start <- steps
     
     #binarize matrices
-    A <- NetworkToolbox::binarize(A)
-    B <- NetworkToolbox::binarize(B)
+    A <- binarize(A)
+    B <- binarize(B)
+    diag(A) <- 0
+    diag(B) <- 0
     
     #transition matrices
     TA <- matrix(0,nrow=nA,ncol=nA)
     TB <- matrix(0,nrow=nB,ncol=nB)
     
-    degA <- NetworkToolbox::degree(A)
-    degB <- NetworkToolbox::degree(B)
+    degA <- colSums(A)
+    degB <- colSums(B)
     
     for(i in 1:nA)
         for(j in 1:nA)
@@ -112,8 +114,8 @@ randwalk <- function (A, B, reps = 20, steps = 10,
         {TB[i,j] <- B[i,j]/degB[i]}
     
     #distance matrices
-    DA <- NetworkToolbox::distance(A)
-    DB <- NetworkToolbox::distance(B)
+    DA <- distance(A)
+    DB <- distance(B)
     
     # Random walk function
     rw <- function(steps, nA, nB, TA, TB, DA, DB)

@@ -16,7 +16,7 @@
 #' 
 #' @examples
 #' # Get data
-#' data <- open.binary
+#' data <- open.clean
 #' 
 #' # Organize group data
 #' ## Get group data
@@ -45,8 +45,12 @@
 NRW <- function(data, threshold = 3)
 {
   # Check if the matrix is numeric
-  if(all(apply(data, 2, is.numeric)))
-  {data <- bin2resp(data, to.data.frame = TRUE)}
+  if(any(apply(data, 2, is.numeric)))
+  {
+    if(max(range(data)) >= 1)
+    {stop("NRW(): Only a response matrix or ordered numeric matrix can be used as input for 'data'")
+    }else{data <- bin2resp(data)}
+  }
   
   # Data matrix
   mat <- as.matrix(data)

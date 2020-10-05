@@ -22,19 +22,17 @@
 #' for the random network distribution
 #' 
 #' @examples 
-#' # Simulate Datasets
-#' one <- sim.fluency(10)
+#' # Get openness data
+#' one <- open.clean[which(open.group == "Low"),]
+#' two <- open.clean[which(open.group == "High"),]
 #' 
-#' # Compute similarity matrix
-#' cos <- similarity(one, method = "cosine")
+#' \donttest{# Compute networks
+#' net.one <- CN(one)
+#' net.two <- CN(two)
 #' 
-#' # Compute networks using NetworkToolbox
-#' net <- NetworkToolbox::TMFG(cos)$A
-#' \donttest{
 #' # Perform random networks test
-#' randnet.test(net, iter = 1000, cores = 2)
+#' randnet.test(net.one, net.two, iter = 100, cores = 2)
 #' }
-#' \dontshow{randnet.test(net, iter = 1, cores = 2)}
 #' 
 #' @references 
 #' Viger, F., & Latapy, M. (2016).
@@ -46,6 +44,8 @@
 #' @importFrom stats dnorm
 #' 
 #' @export
+# Random network test----
+# Updated 03.09.2020
 randnet.test <- function (..., iter, cores)
 {
     #Missing arguments
@@ -82,11 +82,15 @@ randnet.test <- function (..., iter, cores)
     cl <- parallel::makeCluster(cores)
     
     #Export variables
-    parallel::clusterExport(cl, c("data.list", "rand.list"), envir = environment())
+    parallel::clusterExport(cl, varlist = c("data.list", "rand.list"),
+                            envir = environment())
     
     #Compute random networks
     for(i in 1:length(data.list))
     {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){randnet(A = X)}, cl = cl)}
+    
+    #Stop parallel processing
+    parallel::stopCluster(cl)
     
     #Message for begin of network measures
     message("Computing network measures...\n", appendLF = FALSE)
@@ -95,14 +99,16 @@ randnet.test <- function (..., iter, cores)
     net.meas <- vector("list", length = length(name))
     names(net.meas) <- name
     
-    #Export variables
-    parallel::clusterExport(cl, c("net.meas"), envir = environment())
+    #Parallel processing
+    cl <- parallel::makeCluster(cores)
     
+    #Export variables
+    parallel::clusterExport(cl, varlist = c("net.meas"),
+                            envir = environment())
+    
+    #Compute network measures
     for(i in 1:length(data.list))
-    {
-        #Compute network measures
-        net.meas[[i]] <- pbapply::pbsapply(X = rand.list[[i]], FUN = semnetmeas, cl = cl)
-    }
+    {net.meas[[i]] <- pbapply::pbsapply(X = rand.list[[i]], FUN = semnetmeas, cl = cl)}
     
     #Stop parallel processing
     parallel::stopCluster(cl)

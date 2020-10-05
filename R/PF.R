@@ -6,20 +6,14 @@
 #' @param data Matrix or data frame.
 #' A binary response matrix
 #' 
-#' @param progBar Boolean.
-#' Should a progress bar be displayed?
-#' Defaults to \code{TRUE}
-#' 
 #' @return An adjacency matrix
 #' 
 #' @examples
 #' # Obtain data
 #' data <- open.binary
 #' 
-#' \dontrun{
 #' # Estimate network
 #' pf.net <- PF(data)
-#' }
 #' 
 #' @references 
 #' Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008)
@@ -36,12 +30,12 @@
 #' 
 #' @export
 # Pathfinder Network Estimation
-# Updated 29.03.2020
-PF <- function (data, progBar = TRUE)
+# Updated 21.09.2020
+PF <- function (data)
 {
   # Check if the matrix is responses
   if(all(apply(data, 2, is.character)))
-  {data <- resp2bin(data)}
+  {data <- resp2bin(data)$binary}
   
   # Data matrix
   mat <- as.matrix(data)
@@ -56,19 +50,18 @@ PF <- function (data, progBar = TRUE)
   n <- ncol(mat)
   
   # Distance
-  D <- as.matrix(dist(mat, method = "minkowski"))
-  D[upper.tri(D)] <- 0
+  D <- as.matrix(suppressMessages(philentropy::distance(mat, method = "chebyshev")))
   
   # Initialize sparse edge matrix
-  nodeTO <- sort(c(rep(1:n,n)))
-  nodeFROM <- c(rep(1:n,n))
-  nodeWEIGHT <- as.vector(D)
+  nodeTO <- row(D)[lower.tri(D)]
+  nodeFROM <- col(D)[lower.tri(D)]
+  nodeWEIGHT <- D[lower.tri(D)]
   
   # Sparse matrix
   W <- cbind(nodeTO, nodeFROM, nodeWEIGHT)
   
   # Sorted sparse matrix
-  S <- W[order(W[,3], W[,1], decreasing = TRUE),]
+  S <- W[order(W[,3], W[,2], decreasing = FALSE),]
   
   # Remove zeros
   S <- S[-which(S[,3] == 0),]
@@ -85,53 +78,65 @@ PF <- function (data, progBar = TRUE)
   # Pathfinder sparse
   pfs <- matrix(0, nrow = 1, ncol = 3)[-1,]
   
-  if(progBar)
-  {pb <- txtProgressBar(min = 0, max = n_sparse, style = 3)}
-  
-  while(nrow(S) != 0)
+  # Unique distances
+  uniq.D <- unique(S[,3])
+
+  for(i in 1:length(uniq.D))
   {
     # Pathfinder matrix
     pf <- matrix(0, nrow = 1, ncol = 3)[-1,]
     
-    # Target edges
-    target <- which(S[,3] == S[1,3])
-    
-    # Bind with pfs
-    pf <- rbind(pf, S[target,])
-    
-    # Remove edge(s)
-    S <- S[-target,]
-    
-    # Only select edges that are not in same cluster
-    for(i in 1:nrow(pf))
+    # Break if there are no more edges
+    if(nrow(S) != 0)
     {
-      if(clusters[pf[i,1],2] != clusters[pf[i,2],2])
+      # Target edges
+      target <- which(S[,3] == S[1,3])
+      
+      # Bind with pfs
+      pf <- rbind(pf, S[target,])
+      
+      # Remove edge(s)
+      S <- S[-target,]
+      
+      # Check for edges that are not in the same cluster
+      rm.pfs <- vector("logical", length = nrow(pf))
+      
+      for(i in 1:nrow(pf))
+      {rm.pfs[i] <- clusters[pf[i,1],2] == clusters[pf[i,2],2]}
+      
+      if(any(rm.pfs))
+      {pf <- pf[-which(rm.pfs),]}
+      
+      if(!is.matrix(pf))
+      {pf <- t(as.matrix(pf))}
+      
+      # Only select edges that are not in same cluster
+      if(nrow(pf) > 0)
       {
-        # Insert into network
-        pfn[pf[i,1], pf[i,2]] <- pf[i,3]
-        pfn[pf[i,2], pf[i,1]] <- pf[i,3]
-        
-        # Insert into sparse network
-        pfs <- rbind(pfs, pf[i,])
-        
-        # Update clusters
-        if(clusters[pf[i,2],2] != clusters[pf[i,1],2])
-        {clusters[which(clusters[,2] == clusters[pf[i,2],2]),2] <- clusters[pf[i,1],2]}
-        
+        for(i in 1:nrow(pf))
+        {
+          # Insert into network
+          pfn[pf[i,1], pf[i,2]] <- pf[i,3]
+          pfn[pf[i,2], pf[i,1]] <- pf[i,3]
+          
+          # Insert into sparse network
+          pfs <- rbind(pfs, pf[i,])
+          
+          # Update clusters
+          if(clusters[pf[i,2],2] != clusters[pf[i,1],2])
+          {clusters[which(clusters[,2] == clusters[pf[i,1],2]),2] <- clusters[pf[i,2],2]}
+        }
       }
+      
+      # Make sure S remains a matrix for while loop
+      if(is.vector(S))
+      {S <- t(as.matrix(S))}
+      
     }
-    
-    # Make sure S remains a matrix for progress bar
-    if(is.vector(S))
-    {S <- t(as.matrix(S))}
-    
-    if(progBar)
-    {setTxtProgressBar(pb, n_sparse - nrow(S))}
-    
   }
   
-  if(progBar)
-  {close(pb)}
+  # Binarize
+  pfn <- binarize(pfn)
   
   # Name dimensions
   row.names(pfn) <- colnames(data)

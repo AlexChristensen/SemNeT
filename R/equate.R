@@ -3,7 +3,7 @@
 #' \emph{N} number of groups are matched based on their responses so
 #' that every group has the same responses in their data
 #' 
-#' @param ... Matrices or data frames.
+#' @param ... Matrices, data frames or a list of matrices and data frames.
 #' Binary response matrices to be equated
 #' 
 #' @return This function returns a list containing the
@@ -20,7 +20,6 @@
 #' 
 #' # Finalize mat2
 #' mat2 <- finalize(bin[c(6:10),])
-#' 
 #'
 #' # Equate mat1 and mat1
 #' eq <- equate(mat1, mat2)
@@ -33,7 +32,7 @@
 #' 
 #' @export
 # Equate matrices function
-# Updated 03.04.2020
+# Updated 03.09.2020
 equate <- function(...)
 {
     # Equate function

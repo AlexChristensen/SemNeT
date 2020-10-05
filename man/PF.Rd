@@ -4,15 +4,11 @@
 \alias{PF}
 \title{Pathfinder Network}
 \usage{
-PF(data, progBar = TRUE)
+PF(data)
 }
 \arguments{
 \item{data}{Matrix or data frame.
 A binary response matrix}
-
-\item{progBar}{Boolean.
-Should a progress bar be displayed?
-Defaults to \code{TRUE}}
 }
 \value{
 An adjacency matrix
@@ -25,10 +21,8 @@ Network method from Quirin et al. (2008; see also Schvaneveldt, 1990)
 # Obtain data
 data <- open.binary
 
-\dontrun{
 # Estimate network
 pf.net <- PF(data)
-}
 
 }
 \references{

@@ -1,6 +1,37 @@
 # Code for SemNeT----
 server <- function(input, output, session)
 {
+  # Keep previous environment
+  prev.env <<- ls(envir = globalenv())
+  
+  # Check if anything exists in previous environment
+  if(length(prev.env) != 0)
+  {
+    # Initialize textcleaner objects variable
+    tc.object <<- vector(length = length(prev.env))
+    
+    # Check for textcleaner objects
+    for(i in 1:length(prev.env))
+    {tc.object[i] <- class(get(prev.env[i], envir = globalenv())) == "textcleaner"}
+    
+    # Set up environment objects
+    if(sum(tc.object) != 0)
+    {
+      output$clean_ui <- renderUI({
+        selectInput("clean_envir", label = "textcleaner Objects Detected in Environment. Use?",
+                    choices = c("", prev.env[tc.object]), selected = 1)
+      })
+    }
+    
+    if(exists("group"))
+    {
+      output$group_ui <- renderUI({
+        radioButtons("group_envir", label = "R Object 'group' Detected in Environment. Use?",
+                     choices = c("Yes", "No"), inline = TRUE, selected = "Yes")
+      })
+    }
+  }
+  
   # semna citation
   output$SEMNA_cite <- renderUI({
     
@@ -19,9 +50,22 @@ server <- function(input, output, session)
   
   hideTab(inputId = "tabs", target = "Network Estimation")
   hideTab(inputId = "tabs", target = "Random Network Analyses")
-  hideTab(inputId = "tabs", target = "Bootstrap Network Analyses")
+  hideTab(inputId = "tabs", target = "Bootstrap Analyses")
+  #hideTab(inputId = "tabs", target = "Permutation Analyses")
   hideTab(inputId = "tabs", target = "Random Walk Analyses")
   hideTab(inputId = "tabs", target = "Spreading Activation Analyses")
+  hideTab(inputId = "tabs", target = "Save and Reset All Results")
+  
+  ###########################
+  #### HIDE SAVE BUTTONS ####
+  ###########################
+  
+  shinyjs::hide("save_data")
+  shinyjs::hide("save_nets")
+  shinyjs::hide("save_rand")
+  shinyjs::hide("save_boot")
+  shinyjs::hide("save_walk")
+  shinyjs::hide("save_act")
   
   #######################
   #### DATA EXAMPLES ####
@@ -65,38 +109,6 @@ server <- function(input, output, session)
   #### NETWORK ESTIMATION ####
   ############################
   
-  # Keep previous environment
-  prev.env <<- ls(envir = globalenv())
-  
-  # Check if anything exists in previous environment
-  if(length(prev.env) != 0)
-  {
-    # Initialize textcleaner objects variable
-    tc.object <<- vector(length = length(prev.env))
-    
-    # Check for textcleaner objects
-    for(i in 1:length(prev.env))
-    {tc.object[i] <- class(get(prev.env[i], envir = globalenv())) == "textcleaner"}
-    
-    # Set up environment objects
-    if(sum(tc.object) != 0)
-    {
-      output$clean_ui <- renderUI({
-        selectInput("clean_envir", label = "textcleaner Objects Detected in Environment. Use?",
-                    choices = c("", prev.env[tc.object]), selected = 1)
-      })
-    }
-    
-    if(exists("group"))
-    {
-      output$group_ui <- renderUI({
-        radioButtons("group_envir", label = "R Object 'group' Detected in Environment. Use?",
-                     choices = c("Yes", "No"), inline = TRUE, selected = "Yes")
-      })
-    }
-  }
-  
-  
   # Load Data panel
   observeEvent(input$load_data,
                {
@@ -138,6 +150,12 @@ server <- function(input, output, session)
                  
                  # Show network estimation tab
                  showTab(inputId = "tabs", target = "Network Estimation")
+                 
+                 # Show save and reset tab
+                 showTab(inputId = "tabs", target = "Save and Reset All Results")
+                 
+                 # Show save data button
+                 shinyjs::show("save_data")
                  
                  # Print waiting message
                  # FOR R PACKAGE AND WEB
@@ -184,11 +202,17 @@ server <- function(input, output, session)
     
   })
   
+  ## Option 3
+  output$network_options_3 <- renderUI({
+    
+    network <- input$estimation
+    
+    if(network == "Community Network (CN)")
+    {selectInput("enrich", label = paste("Enrich Network"), choices = c(FALSE, TRUE))}
+    
+  })
+  
   # Network Estimation panel
-  
-  ## Hide clear results button
-  shinyjs::hide("reset")
-  
   observeEvent(input$run_est,
                {
                  # Let user know
@@ -202,28 +226,43 @@ server <- function(input, output, session)
                                     "Triangulated Maximally Filtered Graph (TMFG)" = "TMFG",
                                     "Community Network (CN)" = "CN",
                                     "Naive Random Walk (NRW)" = "NRW",
-                                    "Pathfinder Network (PN)" = "PN"
+                                    "Pathfinder Network (PF)" = "PF"
                  )
                  
                  ## Change responses to binary matrix
                  if(network == "TMFG")
-                   if(all(apply(dat, 2, is.character)))
-                   {bin_dat <<- SemNeT:::resp2bin(dat)}
-                 
-                 ## Create new data
-                 for(i in 1:length(uniq))
                  {
-                   assign(paste(uniq[i]),
-                          dat[which(group == uniq[i]),],
-                          envir = globalenv())
+                   if(is.character(unlist(dat)))
+                   {bin_dat <<- SemNeT:::resp2bin(dat)$binary}
+                   
+                   ## Create new data
+                   for(i in 1:length(uniq))
+                   {
+                     assign(paste(uniq[i]),
+                            bin_dat[which(group == uniq[i]),],
+                            envir = globalenv())
+                   }
+                   
+                 }else{
+                   ## Create new data
+                   for(i in 1:length(uniq))
+                   {
+                     assign(paste(uniq[i]),
+                            dat[which(group == uniq[i]),],
+                            envir = globalenv())
+                   }
                  }
                  
                  ## Estimate networks
                  if(network == "CN")
                  {
+                   window_size <<- input$window
+                   sig_alpha <<- as.numeric(input$alpha)
+                   enrichment <<- as.logical(input$enrich)
+                   
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
-                                   function(x){CN(x, window = input$window, alpha = as.numeric(input$alpha))})
+                                   function(x){CN(x, window = window_size, alpha = sig_alpha, enrich = enrichment)})
                    
                    # community network citation
                    output$net_cite <- renderUI({
@@ -239,9 +278,11 @@ server <- function(input, output, session)
                    
                  }else if(network == "NRW")
                  {
+                   thresh <<- input$threshold
+                   
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
-                                   function(x){NRW(x, threshold = input$threshold)})
+                                   function(x){NRW(x, threshold = thresh)})
                    
                    # naive random walk citation
                    output$net_cite <- renderUI({
@@ -255,19 +296,8 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "PN")
+                 }else if(network == "PF")
                  {
-                   # Print waiting message
-                   # FOR R PACKAGE
-                   #shinyalert::shinyalert(title = "Running...",
-                   #                        text = "Check R Console for the Pathfinder Network Estimation Progress",
-                   #                        type = "info")
-                   
-                   # FOR WEB
-                   shinyalert::shinyalert(title = "Running...",
-                                          text = "Results will appear when the Pathfinder Network estimations are completed (do not exit browser)",
-                                          type = "info")
-                   
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
                                    function(x){PF(x)})
@@ -278,6 +308,8 @@ server <- function(input, output, session)
                      HTML(
                        
                        paste('<b>Please cite:</b><br>
+                       Paulsen, J. S., Romero, R., Chan, A., Davis, A. V., Heaton, R. K., & Jeste, D. V. (1996). Impairment of the semantic network in schizophrenia. <em>Psychiatry Research</em>, <em>63(2-3)</em>, 109-121. <a href="https://doi.org/10.1016/0165-1781(96)02901-0">https://doi.org/10.1016/0165-1781(96)02901-0</a>
+                       <br><br>
                        Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008). A quick MST-based algorithm to obtain Pathfinder networks (Inf, n-1). <em>Journal of the American Society for Information Science and Technology</em>, <em>59</em>, 1912-1924. <a href="https://doi.org/10.1002/asi.20904">https://doi.org/10.1002/asi.20904</a>
                        <br><br>
                        Schvaneveldt, R. W. (1990). <em>Pathfinder associative networks: Studies in knowledge organization</em>. Norwood, NJ: Ablex Publishing.
@@ -288,19 +320,13 @@ server <- function(input, output, session)
                    
                  }else if(network == "TMFG")
                  {
-                   ## Create new data
-                   for(i in 1:length(uniq))
-                   {
-                     assign(paste(uniq[i]),
-                            bin_dat[which(group == uniq[i]),],
-                            envir = globalenv())
-                   }
-                   
                    ## Store binary groups
+                   minCase <<- as.numeric(input$minCase)
+                   
                    for(i in 1:length(uniq))
                    {assign(paste(uniq[i]),
                            SemNeT::finalize(get(paste(uniq[i]), envir = globalenv()),
-                                            minCase = as.numeric(input$minCase)),
+                                            minCase = minCase),
                            envir = globalenv())}
                    
                    ## Equate groups
@@ -322,7 +348,7 @@ server <- function(input, output, session)
                                     SemNeT::similarity, method = sim)
                    
                    ## Estimate networks
-                   nets <<- lapply(assoc, function(x){NetworkToolbox::TMFG(x)$A})
+                   nets <<- lapply(assoc, function(x){SemNeT::TMFG(x)})
                    
                    # triangulated maximally filtered graph citation
                    output$net_cite <- renderUI({
@@ -344,7 +370,7 @@ server <- function(input, output, session)
                  meas.mat <<- sapply(meas, c)
                  
                  ## Generate plot
-                 plots <<- SemNeT:::compare_netShiny(nets, config = "spring", weighted = TRUE)
+                 plots <<- SemNeT:::compare_netShiny(nets, config = "spring", weighted = FALSE)
                  
                  ## Render semantic networks plot
                  output$viz <- renderPlot({
@@ -375,24 +401,69 @@ server <- function(input, output, session)
                                                 caption.placement = getOption("xtable.caption.placement", "top"))
                  
                  ## Change later input for bootstrap networks
-                 output$type <- renderUI({
-                   
-                   if(network == "TMFG")
-                   {checkboxGroupInput("percent", label = "Proportion of Nodes Remaining",
-                                       choiceNames = sprintf("%1.2f",seq(.50,.90,.10)),
-                                       choiceValues = seq(.50,.90,.10), inline = TRUE,
-                                       selected = seq(.50,.90,.10))
-                   }else{
-                     removeUI("type", immediate = TRUE)
-                   }
-                   
-                 })
+                 if(network != "TMFG")
+                 {shinyjs::hide("type_select"); shinyjs::hide("type")
+                 }else{shinyjs::show("type_select"); shinyjs::show("type")}
                  
                  # Show analysis tabs
                  showTab(inputId = "tabs", target = "Random Network Analyses")
-                 showTab(inputId = "tabs", target = "Bootstrap Network Analyses")
+                 showTab(inputId = "tabs", target = "Bootstrap Analyses")
+                 #showTab(inputId = "tabs", target = "Permutation Analyses")
                  showTab(inputId = "tabs", target = "Random Walk Analyses")
                  showTab(inputId = "tabs", target = "Spreading Activation Analyses")
+                 
+                 # Update permutation tab
+                 ## Group selection
+                 #if(length(uniq) > 2)
+                 #{
+                #   output$group1 <- renderUI({
+                #     selectInput("group1", label = "Select Group 1",
+                #                 choices = uniq)
+                #   })
+                #   
+                #   output$group2 <- renderUI({
+                #     selectInput("group2", label = "Select Group 2",
+                #                 choices = uniq[-which(uniq == input$group1)])
+                #   })
+                #   
+                #   output$alter <- renderUI({
+                #     
+                #     group1 <<- input$group1
+                #     group2 <<- input$group2
+                #     
+                #     perm_choices <<- c(paste(group1, "<", group2, "(one-tailed)", sep = " "),
+                #                        paste(group1, ">", group2, "(one-tailed)", sep = " "),
+                #                        paste(group1, "!=", group2, "(two-tailed)", sep = " "))
+                #     
+                #     selectInput("alter", label = "Alternative Hypothesis",
+                #                 choices = perm_choices,
+                #                 selected = perm_choices[3]
+                #     )
+                #     
+                #   })
+                #   
+                # }else{
+                #   
+                #   output$alter <- renderUI({
+                #     
+                #     group1 <<- uniq[1]
+                #     group2 <<- uniq[2]
+                #     
+                #     perm_choices <<- c(paste(group1, "<", group2, "(one-tailed)", sep = " "),
+                #                        paste(group1, ">", group2, "(one-tailed)", sep = " "),
+                #                        paste(group1, "!=", group2, "(two-tailed)", sep = " "))
+                #     
+                #     selectInput("alter", label = "Alternative Hypothesis",
+                #                 choices = perm_choices,
+                #                 selected = perm_choices[3]
+                #     )
+                #     
+                #   })
+                   
+                # }
+                 
+                 # Show save networks button
+                 shinyjs::show("save_nets")
                  
                  ## Hide clear results button
                  shinyjs::show("reset")
@@ -442,7 +513,7 @@ server <- function(input, output, session)
                {
                  
                  shinyalert::shinyalert(title = "Are you sure?",
-                                        text = "You are about to erase your output\n(Data will not be erased)",
+                                        text = "You are about to erase your results\n(Data and saved results will not be erased)",
                                         type = "error",
                                         showConfirmButton = TRUE,
                                         showCancelButton = TRUE,
@@ -463,6 +534,7 @@ server <- function(input, output, session)
                                             output$asplPlot <- renderPlot({})
                                             output$ccPlot <- renderPlot({})
                                             output$qPlot <- renderPlot({})
+                                            #output$perm_table <- renderTable({})
                                             output$walk_rand <- renderTable({})
                                             output$spreadr_animate <- renderPlot({})
                                             
@@ -472,7 +544,7 @@ server <- function(input, output, session)
                                                               label = "Network Estimation Method",
                                                               choices = c("Community Network (CN)",
                                                                           "Naive Random Walk (NRW)",
-                                                                          "Pathfinder Network (PN)",
+                                                                          "Pathfinder Network (PF)",
                                                                           "Triangulated Maximally Filtered Graph (TMFG)")
                                             )
                                             
@@ -481,9 +553,18 @@ server <- function(input, output, session)
                                             
                                             # Hide tabs
                                             hideTab(inputId = "tabs", target = "Random Network Analyses")
-                                            hideTab(inputId = "tabs", target = "Bootstrap Network Analyses")
+                                            hideTab(inputId = "tabs", target = "Bootstrap Analyses")
+                                            #hideTab(inputId = "tabs", target = "Permutation Analyses")
                                             hideTab(inputId = "tabs", target = "Random Walk Analyses")
                                             hideTab(inputId = "tabs", target = "Spreading Activation Analyses")
+                                            hideTab(inputId = "tabs", target = "Save and Reset All Results")
+                                            
+                                            # Hide save buttons
+                                            shinyjs::hide("save_nets")
+                                            shinyjs::hide("save_rand")
+                                            shinyjs::hide("save_boot")
+                                            shinyjs::hide("save_walk")
+                                            shinyjs::hide("save_act")
                                             
                                             # Random Network Analyses tab
                                             updateNumericInput(session = session,
@@ -502,7 +583,7 @@ server <- function(input, output, session)
                                               )
                                             }
                                             
-                                            # Bootstrap Network Analyses tab
+                                            # Bootstrap Analyses tab
                                             updateNumericInput(session = session,
                                                                inputId = "iters_boot",
                                                                label = "Number of Iterations",
@@ -530,6 +611,32 @@ server <- function(input, output, session)
                                             
                                             ## Hide plot button
                                             shinyjs::hide("run_plot")
+                                            
+                                            # Permutation Analyses tab
+                                            
+                                            #updateSelectInput(session = session,
+                                            #                  inputId = "meas_perm",
+                                            #                  label = "Network Measure",
+                                            #                  choices = c("Average Shortest Path Length (ASPL)",
+                                            #                              "Clustering Coefficient (CC)",
+                                            #                              "Modularity (Q)"
+                                            #                  )
+                                            #)
+                                            
+                                            #updateNumericInput(session = session,
+                                            #                   inputId = "iters_perm",
+                                            #                   label = "Number of Iterations",
+                                            #                   value = 1000, min = 0, step = 100)
+                                            
+                                            #if(exists("core_perm", envir = globalenv()))
+                                            #{
+                                            #  updateSelectInput(session = session,
+                                            #                    inputId = "cores_perm",
+                                            #                    label = "Number of Processing Cores",
+                                            #                    choices = core_perm,
+                                            #                    selected = ceiling(length(core_boot) / 2)
+                                            #  )
+                                            #}
                                             
                                             # Random Network Analyses tab
                                             updateNumericInput(session = session,
@@ -561,7 +668,7 @@ server <- function(input, output, session)
                                             updateNumericInput(session = session,
                                                                inputId = "retention",
                                                                label = "Retention (proportion of activation that remains in spreading node)",
-                                                               value = 0.5, min = 0, max = 1, step = .10)
+                                                               value = 0.5, min = 0, max = 1, step = .05)
                                             
                                             updateNumericInput(session = session,
                                                                inputId = "time",
@@ -571,12 +678,12 @@ server <- function(input, output, session)
                                             updateNumericInput(session = session,
                                                                inputId = "decay",
                                                                label = "Decay (activation lost at each time step)",
-                                                               value = 0, min = 0, max = 1, step = .10)
+                                                               value = 0, min = 0, max = 1, step = .05)
                                             
                                             updateNumericInput(session = session,
                                                                inputId = "suppress",
                                                                label = "Suppress (activation less than value is set to zero)",
-                                                               value = 0, min = 0, max = Inf, step = 1)
+                                                               value = 0, min = 0, max = 1, step = .001)
                                             
                                             updateSelectInput(session = session,
                                                               inputId = "animate_size",
@@ -603,10 +710,10 @@ server <- function(input, output, session)
                                             shinyjs::hide("run_spr_act")
                                             
                                             if(exists("clean"))
-                                            {rm(list = ls(envir = globalenv())[-match(c("prev.env", "clean", "dat", "group"), ls(globalenv()))], envir = globalenv())
+                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "clean", "dat", "group", prev.env), ls(globalenv()))))], envir = globalenv())
                                             }else if(exists("group") && exists("dat"))
-                                            {rm(list = ls(envir = globalenv())[-match(c("prev.env", "dat", "group"), ls(globalenv()))], envir = globalenv())
-                                            }else{rm(list = ls(envir = globalenv())[-match(c("prev.env", "dat", "group"), ls(globalenv()))], envir = globalenv())}
+                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), prev.env, ls(globalenv()))))], envir = globalenv())
+                                            }else{rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), ls(globalenv()))))], envir = globalenv())}
                                             
                                           }
                                         })
@@ -637,15 +744,10 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                        text = "Check R Console for the Random Network Analyses Progress",
-                 #                        type = "info")
-                 
-                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Results will appear when the Random Network Analyses are completed (do not exit browser)",
-                                        type = "info")
-                 
+                                         text = "Check R Console for the Random Network Analyses Progress",
+                                         type = "info")
+                
                  # Run random networks
                  rand_res <- reactive({
                    
@@ -669,6 +771,9 @@ server <- function(input, output, session)
                                                caption.placement = getOption("xtable.caption.placement", "top")
                  )
                  
+                 # Show save random network analyses button
+                 shinyjs::show("save_rand")
+                 
                }
   )
   
@@ -688,10 +793,23 @@ server <- function(input, output, session)
     )
   })
   
+  output$type <- renderUI({
+    
+    if(input$type_select == "Node")
+    {
+      checkboxGroupInput("percent", label = "Proportion of Nodes Remaining",
+                         choiceNames = sprintf("%1.2f",seq(.50,.90,.10)),
+                         choiceValues = seq(.50,.90,.10), inline = TRUE,
+                         selected = seq(.50,.90,.10)
+      )
+    }
+    
+  })
+  
   ## Hide plot button
   shinyjs::hide("run_plot")
   
-  # Partial Bootstrap Networks panel
+  # Bootstrap Networks panel
   observeEvent(input$run_boot,
                {
                  # Let user know
@@ -702,65 +820,87 @@ server <- function(input, output, session)
                    
                    if(network == "TMFG")
                    {
-                     ## Obtain percentages
-                     percents <- as.numeric(input$percent)
-                     
-                     # Show progress
-                     withProgress({
+                     if(input$type_select == "Node")
+                     {
+                       ## Obtain percentages
+                       percents <<- as.numeric(input$percent)
                        
-                       ## Run partial bootstrap networks
-                       for(i in 1:length(percents))
-                       {
-                         if(exists(paste(percents[i]), envir = globalenv()))
-                         {next
-                         }else{
-                           
-                           # Print waiting message
-                           # FOR R PACKAGE
-                           #shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                           #                      text = "Check R Console for the Bootstrap Network Analyses Progress",
-                           #                      type = "info")
-                           
-                           # FOR WEB
-                           shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
-                                                  text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
-                                                  type = "info")
-                           
-                           # Increase progress
-                           setProgress(value = i)
-                           
-                           assign(paste(percents[i]),
-                                  SemNeT:::bootSemNeTShiny(eq,
-                                                           prop = percents[i],
-                                                           sim = sim,
-                                                           weighted = FALSE,
-                                                           iter = as.numeric(input$iters_boot),
-                                                           cores = as.numeric(input$cores_boot),
-                                                           type = "node",
-                                                           method = network),
-                                  envir = globalenv())
-                           
+                       # Show progress
+                       withProgress({
+                         
+                         ## Run partial bootstrap networks
+                         for(i in 1:length(percents))
+                         {
+                           if(exists(paste(percents[i]), envir = globalenv()))
+                           {next
+                           }else{
+                             
+                             # Print waiting message
+                             # FOR R PACKAGE
+                             shinyalert::shinyalert(title = paste("Running...\n","(Proportion of nodes remaining: ",sprintf("%1.2f", percents[i]),")",sep=""),
+                                                    text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                                    type = "info")
+                             
+                             # Increase progress
+                             setProgress(value = i)
+                             
+                             assign(paste(percents[i]),
+                                    SemNeT:::bootSemNeTShiny(eq,
+                                                             prop = percents[i],
+                                                             sim = sim,
+                                                             weighted = FALSE,
+                                                             iter = as.numeric(input$iters_boot),
+                                                             cores = as.numeric(input$cores_boot),
+                                                             type = "node",
+                                                             method = network),
+                                    envir = globalenv())
+                             
+                           }
                          }
-                       }
+                         
+                       }, message = "Computing bootstraps...", value = 0, min = 1, max = length(percents))
+                     }else{
+                       # Print waiting message
+                       # FOR R PACKAGE
+                       shinyalert::shinyalert(title = "Running...",
+                                              text = "Check R Console for the Bootstrap Network Analyses Progress",
+                                              type = "info")
                        
-                     }, message = "Computing bootstraps...", value = 0, min = 1, max = length(percents))
+                       ## Only one
+                       percents <<- as.numeric(100)
+                       
+                       ## Organize method arguments
+                       methodArgs <- list(minCase = minCase)
+                       
+                       assign(paste(percents),
+                              SemNeT:::bootSemNeTShiny(mget(paste(uniq), envir = globalenv()),
+                                                       weighted = FALSE,
+                                                       iter = as.numeric(input$iters_boot),
+                                                       cores = as.numeric(input$cores_boot),
+                                                       type = "case",
+                                                       method = network,
+                                                       methodArgs = methodArgs),
+                              envir = globalenv())
+                     }
                      
                    }else{
                      
                      # Print waiting message
                      # FOR R PACKAGE
-                     #shinyalert::shinyalert(title = "Running...",
-                     #                       text = "Check R Console for the Bootstrap Network Analyses Progress",
-                     #                       type = "info")
-                     
-                     # FOR WEB
                      shinyalert::shinyalert(title = "Running...",
-                                            text = "Results will appear when the Bootstrap Network Analyses are completed (do not exit browser)",
+                                            text = "Check R Console for the Bootstrap Network Analyses Progress",
                                             type = "info")
                      
-                     
                      ## Only one
-                     percents <- as.numeric(100)
+                     percents <<- as.numeric(100)
+                     
+                     ## Organize method arguments
+                     if(network == "CN")
+                     {methodArgs <- list(window = window_size, alpha = sig_alpha, enrich = enrichment)
+                     }else if(network == "NRW")
+                     {methodArgs <- list(threshold = thresh)
+                     }else if(network == "PF")
+                     {methodArgs <- list()}
                      
                      assign(paste(percents),
                             SemNeT:::bootSemNeTShiny(mget(paste(uniq), envir = globalenv()),
@@ -768,7 +908,8 @@ server <- function(input, output, session)
                                                      iter = as.numeric(input$iters_boot),
                                                      cores = as.numeric(input$cores_boot),
                                                      type = "case",
-                                                     method = network),
+                                                     method = network,
+                                                     methodArgs = methodArgs),
                             envir = globalenv())
                      
                    }
@@ -777,62 +918,59 @@ server <- function(input, output, session)
                  })
                  
                  # Render Tables
-                 if(network == "TMFG")
+                 res_boot <<- boot()
+                 
+                 if(length(percents) == 1)
                  {
                    
-                   if(length(eq) == 2)
-                   {
+                   output$tab <- renderTable({
+                     bootTest <<- list()
                      
-                     res_boot <<- boot()
-                     
-                     ## Average Shortest Path Length
-                     output$aspl <- renderTable({
-                       
-                       bootTest <<- list()
-                       
-                       bootTest$ASPL <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))$ASPL; bootTest$ASPL
-                     }, rownames = TRUE,
-                     caption = "Average Shortest Path Lengths (ASPL)",
-                     caption.placement = getOption("xtable.caption.placement", "top")
-                     )
-                     
-                     ## Clustering Coefficient
-                     output$cc <- renderTable({
-                       bootTest$CC <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))$CC; bootTest$CC
-                     }, rownames = TRUE,
-                     caption = "Clustering Coefficient (CC)",
-                     caption.placement = getOption("xtable.caption.placement", "top")
-                     )
-                     
-                     ## Modularity
-                     output$q <- renderTable({
-                       bootTest$Q <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))$Q; bootTest$Q
-                     }, rownames = TRUE,
-                     caption = "Modularity",
-                     caption.placement = getOption("xtable.caption.placement", "top")
-                     )
-                   }
+                     bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))$ANCOVA; bootTest
+                   }, rownames = TRUE,
+                   caption = "Bootstrap Network Results",
+                   caption.placement = getOption("xtable.caption.placement", "top")
+                   )
                    
                  }else{
                    
-                   res_boot <<- boot()
+                   ## Reset original table
+                   output$tab <- renderTable({})
                    
-                   if(length(uniq) == 2)
-                   {
-                     output$tab <- renderTable({
-                       bootTest <<- list()
-                       
-                       bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE)); bootTest
-                     }, rownames = TRUE,
-                     caption = "Bootstrap Network Results",
-                     caption.placement = getOption("xtable.caption.placement", "top")
-                     )
-                   }
+                   bootTest <<- list()
+                   full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))
+                   
+                   ## Average Shortest Path Length
+                   output$aspl <- renderTable({
+                     bootTest$ASPL <<- full_res$ANCOVA$ASPL; bootTest$ASPL
+                   }, rownames = TRUE,
+                   caption = "Average Shortest Path Length (ASPL)",
+                   caption.placement = getOption("xtable.caption.placement", "top")
+                   )
+                   
+                   ## Clustering Coefficient
+                   output$cc <- renderTable({
+                     bootTest$CC <<- full_res$ANCOVA$CC; bootTest$CC
+                   }, rownames = TRUE,
+                   caption = "Clustering Coefficient (CC)",
+                   caption.placement = getOption("xtable.caption.placement", "top")
+                   )
+                   
+                   ## Modularity
+                   output$q <- renderTable({
+                     bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
+                   }, rownames = TRUE,
+                   caption = "Modularity",
+                   caption.placement = getOption("xtable.caption.placement", "top")
+                   )
                    
                  }
                  
                  ## Show plot button
                  shinyjs::show("run_plot")
+                 
+                 # Show save bootstrap analyses button
+                 shinyjs::show("save_boot")
                  
                }
   )
@@ -858,6 +996,148 @@ server <- function(input, output, session)
                }
                
   )
+  
+  ##################################
+  #### PERMUTATION NETWORK TEST ####
+  ##################################
+  
+  # Permutation
+  #output$cores_perm <- renderUI({
+  #  
+  #  core_perm <<- seq(1,parallel::detectCores()-1,1)
+  #  names(core_perm) <- paste(core_perm)
+  #  
+  #  selectInput("cores_perm", label = "Number of Processing Cores",
+  #              choices = core_perm,
+  #              selected = ceiling(length(core_perm) / 2)
+  #  )
+  #})
+  
+  # Permutation panel
+  #observeEvent(input$run_perm,
+  #             {
+  #               # Let user know
+  #               showNotification("Computing statistics...")
+  #               
+  #               # Get alternative hypothesis
+  #               if(input$alter == perm_choices[1])
+  #               {alternative <<- "less"
+  #               }else if(input$alter == perm_choices[2])
+  #               {alternative <<- "greater"
+  #               }else{alternative <<- "two.tailed"}
+  #               
+  #               measure <<- switch(input$meas_perm,
+  #                                  "Average Shortest Path Length (ASPL)" = "ASPL",
+  #                                  "Clustering Coefficient (CC)" = "CC",
+  #                                  "Modularity (Q)" = "Q"
+  #                                  
+  #               )
+  #               
+  #               # Get samples
+  #               sample1 <<- dat[which(group == group1),]
+  #               sample2 <<- dat[which(group == group2),]
+  #               
+  #               perm <- reactive({
+  #                 
+  #                 # Print waiting message
+  #                 # FOR R PACKAGE
+  #                 shinyalert::shinyalert(title = "Running...",
+  #                                       text = "Check R Console for the Permutation Analyses Progress",
+  #                                       type = "info")
+  #                 
+  #                 # Compute permutated samples if 
+  #                 if(!exists("perm.table", envir = globalenv()))
+  #                 {
+  #                   if(network == "TMFG")
+  #                   {
+  #                     
+  #                     perm.res <<- permSemNeT(sample1 = sample1,
+  #                                             sample2 = sample2,
+  #                                             iter = as.numeric(input$iters_perm),
+  #                                             method = network,
+  #                                             sim = sim,
+  #                                             minCase = minCase,
+  #                                             weighted = FALSE,
+  #                                             measure = measure,
+  #                                             alternative = alternative,
+  #                                             cores = as.numeric(input$cores_perm),
+  #                                             prev.perm = NULL
+  #                     )
+  #                     
+  #                   }else if(network == "CN")
+  #                   {
+  #                     perm.res <<- permSemNeT(sample1 = sample1,
+  #                                             sample2 = sample2,
+  #                                             iter = as.numeric(input$iters_perm),
+  #                                             method = network,
+  #                                             weighted = FALSE,
+  #                                             measure = measure,
+  #                                             alternative = alternative,
+  #                                             cores = as.numeric(input$cores_perm),
+  #                                             prev.perm = NULL,
+  #                                             window = window_size,
+  #                                             alpha = sig_alpha,
+  #                                             enrich = enrichment,
+  #                                             groups = c(group1, group2)
+  #                     )
+  #                     
+  #                   }else if(network == "NRW")
+  #                   {
+  #                     perm.res <<- permSemNeT(sample1 = sample1,
+  #                                             sample2 = sample2,
+  #                                             iter = as.numeric(input$iters_perm),
+  #                                             method = network,
+  #                                             weighted = FALSE,
+  #                                             measure = measure,
+  #                                             alternative = alternative,
+  #                                             cores = as.numeric(input$cores_perm),
+  #                                             prev.perm = NULL,
+  #                                             threshold = thresh,
+  #                                             groups = c(group1, group2)
+  #                     )
+  #                     
+  #                   }else if(network == "PF")
+  #                   {
+  #                     perm.res <<- permSemNeT(sample1 = sample1,
+  #                                             sample2 = sample2,
+  #                                             iter = as.numeric(input$iters_perm),
+  #                                             method = network,
+  #                                             weighted = FALSE,
+  #                                             measure = measure,
+  #                                             alternative = alternative,
+  #                                             cores = as.numeric(input$cores_perm),
+  #                                             prev.perm = NULL,
+  #                                             groups = c(group1, group2)
+  #                     )
+  #                     
+  #                   }
+  #                   
+  #                 }else{
+  #                   
+  #                   perm.res <<- permSemNeT(prev.perm = perm.res,
+  #                                           measure = measure,
+  #                                           alternative = alternative,
+  #                                           cores = as.numeric(input$cores_perm),
+  #                                           groups = c(group1, group2))
+  #                   
+  #                 }
+  #                 
+  #                 return(perm.res)
+  #                 
+  #               })
+  #               
+  #               # Render Tables
+  #               perm_table <- perm()
+  #               
+  #               if(!exists("perm.table", envir = globalenv()))
+  #               {perm.table <<- perm_table$result 
+  #               }else if(!measure %in% row.names(perm.table))
+  #               {perm.table <<- rbind(perm.table, perm_table$result)}
+  #               
+  #               output$perm_table <- renderTable({perm.table}, rownames = TRUE)
+  #               
+  #             }
+  #)
   
   ##############################
   #### RANDOM WALK ANALYSIS ####
@@ -907,14 +1187,9 @@ server <- function(input, output, session)
                  
                  # Print waiting message
                  # FOR R PACKAGE
-                 #shinyalert::shinyalert(title = "Running...",
-                 #                        text = "Check R Console for the Random Walk Analyses Progress",
-                 #                        type = "info")
-                 
-                 # FOR WEB
                  shinyalert::shinyalert(title = "Running...",
-                                        text = "Results will appear when the Random Walk Analyses are completed (do not exit browser)",
-                                        type = "info")
+                                         text = "Check R Console for the Random Walk Analyses Progress",
+                                         type = "info")
                  
                  # Run random networks
                  rand_walk <- reactive({
@@ -934,6 +1209,9 @@ server <- function(input, output, session)
                                                  caption = "Random Walk Results",
                                                  caption.placement = getOption("xtable.caption.placement", "top")
                  )
+                 
+                 # Show save random walk analyses button
+                 shinyjs::show("save_walk")
                  
                }
   )
@@ -1121,7 +1399,7 @@ server <- function(input, output, session)
                      setProgress(value = i)
                      
                      # Plots
-                     SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa, time = i, size = plot_size)
+                     suppressWarnings(SemNeT:::spreadrShinyPlot(network = nets[[net_name]], spreadr.output = sa, time = i, size = plot_size))
                      time_list[[i]] <<- recordPlot()
                    }
                    
@@ -1155,6 +1433,9 @@ server <- function(input, output, session)
                  
                  ## Show spreadr animate
                  shinyjs::show("spreadr_animate")
+                 
+                 # Show save spreading activation analyses button
+                 shinyjs::show("save_act")
                  
                  ## Show reset activation
                  shinyjs::show("reset_act")
@@ -1190,6 +1471,9 @@ server <- function(input, output, session)
                  ## Hide reset activation
                  shinyjs::hide("reset_act")
                  
+                 ## Hide save spreading activation analyses button
+                 shinyjs::hide("save_act")
+                 
                  ## Hide plot size
                  shinyjs::hide("animate_size")
                  
@@ -1198,6 +1482,397 @@ server <- function(input, output, session)
                  
                  ## Hide animate slider
                  shinyjs::hide("spreadr_animate")
+                 
+               }
+  )
+  
+  # Save events
+  ## Data
+  observeEvent(input$save_data,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save Data",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("dat", envir = globalenv()))
+                     {saveList$data <<- dat}
+                     
+                     if(exists("group", envir = globalenv()))
+                     {saveList$group <<- group}
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Data was saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
+                 
+               }
+  )
+  
+  ## Networks
+  observeEvent(input$save_nets,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save Networks",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("nets", envir = globalenv()))
+                     {saveList$network <<- nets}
+                     
+                     if(exists("meas.mat", envir = globalenv()))
+                     {saveList$measures <<- meas.mat}
+                     
+                     if(exists("plots", envir = globalenv()))
+                     {saveList$comparePlot <<- plots}
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Networks were saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
+                 
+               }
+  )
+  
+  ## Random Network Analyses
+  observeEvent(input$save_rand,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save Random Network Analyses",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("nets", envir = globalenv()))
+                     {saveList$network <<- nets}
+                     
+                     if(exists("meas.mat", envir = globalenv()))
+                     {saveList$measures <<- meas.mat}
+                     
+                     if(exists("plots", envir = globalenv()))
+                     {saveList$comparePlot <<- plots}
+                     
+                     if(exists("rand.res", envir = globalenv()))
+                     {saveList$randomTest <<- rand.res}
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Random Network Analyses were saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
+                 
+               }
+  )
+  
+  ## Bootstrap Analyses
+  observeEvent(input$save_boot,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save Bootstrap Analyses",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("nets", envir = globalenv()))
+                     {saveList$network <<- nets}
+                     
+                     if(exists("meas.mat", envir = globalenv()))
+                     {saveList$measures <<- meas.mat}
+                     
+                     if(exists("plots", envir = globalenv()))
+                     {saveList$comparePlot <<- plots}
+                     
+                     if(exists("res_boot", envir = globalenv()))
+                     {saveList$bootstrap <<- unlist(res_boot, recursive = FALSE)}
+                     
+                     if(exists("bootTest", envir = globalenv()))
+                     {saveList$bootstrapTest <<- bootTest}
+                     
+                     if(exists("pbplot", envir = globalenv()))
+                     {saveList$bootstrapPlot <<- pbplot}
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Bootstrap Analyses were saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
+                 
+               }
+  )
+  
+  ## Random Walk Analyses
+  observeEvent(input$save_walk,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save Random Walk Analyses",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("nets", envir = globalenv()))
+                     {saveList$network <<- nets}
+                     
+                     if(exists("meas.mat", envir = globalenv()))
+                     {saveList$measures <<- meas.mat}
+                     
+                     if(exists("plots", envir = globalenv()))
+                     {saveList$comparePlot <<- plots}
+                     
+                     if(exists("rw", envir = globalenv()))
+                     {saveList$randomWalk <<- rw}
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Random Walk Analyses were saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
+                 
+               }
+  )
+  
+  ## Spreading Activation Analyses
+  observeEvent(input$save_act,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save Spreading Activation Analyses",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("nets", envir = globalenv()))
+                     {saveList$network <<- nets}
+                     
+                     if(exists("meas.mat", envir = globalenv()))
+                     {saveList$measures <<- meas.mat}
+                     
+                     if(exists("plots", envir = globalenv()))
+                     {saveList$comparePlot <<- plots}
+                     
+                     if(exists("sa", envir = globalenv()))
+                     {saveList$spreadingActivation <<- sa}
+                     
+                     if(exists("plot_list", envir = globalenv()))
+                     {
+                       if(any(!is.null(unlist(plot_list))))
+                       {saveList$spreadingActivationPlot <<- plot_list}
+                     }
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Spreading Activation Analyses were saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
+                 
+               }
+  )
+  
+  ## Master save
+  observeEvent(input$save_master,
+               {
+                 
+                 # Allow user to type name for object
+                 shinyalert::shinyalert(
+                   title = "Save All Results",
+                   text = "Enter name for object:",
+                   type = "input",
+                   callbackR = function(value){
+                     
+                     # Get name for object
+                     res.name <<- value
+                     
+                     # Add name to previous environment so it's not removed
+                     prev.env <<- c(prev.env, res.name)
+                     
+                     # Create list
+                     saveList <<- list()
+                     
+                     if(exists("dat", envir = globalenv()))
+                     {saveList$data <<- dat}
+                     
+                     if(exists("group", envir = globalenv()))
+                     {saveList$group <<- group}
+                     
+                     if(exists("nets", envir = globalenv()))
+                     {saveList$network <<- nets}
+                     
+                     if(exists("meas.mat", envir = globalenv()))
+                     {saveList$measures <<- meas.mat}
+                     
+                     if(exists("plots", envir = globalenv()))
+                     {saveList$comparePlot <<- plots}
+                     
+                     if(exists("rand.res", envir = globalenv()))
+                     {saveList$randomTest <<- rand.res}
+                     
+                     if(exists("res_boot", envir = globalenv()))
+                     {saveList$bootstrap <<- unlist(res_boot, recursive = FALSE)}
+                     
+                     if(exists("bootTest", envir = globalenv()))
+                     {saveList$bootstrapTest <<- bootTest}
+                     
+                     if(exists("pbplot", envir = globalenv()))
+                     {saveList$bootstrapPlot <<- pbplot}
+                     
+                     #if(exists("perm.table", envir = globalenv()))
+                     #{saveList$permutationTest <<- perm.table}
+                     
+                     if(exists("rw", envir = globalenv()))
+                     {saveList$randomWalk <<- rw}
+                     
+                     if(exists("sa", envir = globalenv()))
+                     {saveList$spreadingActivation <<- sa}
+                     
+                     if(exists("plot_list", envir = globalenv()))
+                     {
+                       if(any(!is.null(unlist(plot_list))))
+                       {saveList$spreadingActivationPlot <<- plot_list}
+                     }
+                     
+                     # Assign save list to result name
+                     assign(
+                       x = res.name,
+                       value = saveList,
+                       envir = globalenv()
+                     )
+                     
+                     # Let user know save was successful
+                     shinyalert::shinyalert(
+                       title = "Save Successful",
+                       text = paste("Spreading Activation Analyses were saved as '", res.name, "'", sep = ""),
+                       type = "info"
+                     )
+                   }
+                 )
                  
                }
   )
@@ -1235,6 +1910,9 @@ server <- function(input, output, session)
     
     if(exists("pbplot", envir = globalenv()))
     {resultShiny$bootstrapPlot <<- pbplot}
+    
+    #if(exists("perm.table", envir = globalenv()))
+    #{resultShiny$permutationTest <<- perm.table}
     
     if(exists("rw", envir = globalenv()))
     {resultShiny$randomWalk <<- rw}

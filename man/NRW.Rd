@@ -25,7 +25,7 @@ method described in Lerner, Ogrocki, and Thomas (2009)
 }
 \examples{
 # Get data
-data <- open.binary
+data <- open.clean
 
 # Organize group data
 ## Get group data

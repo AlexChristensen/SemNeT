@@ -25,9 +25,9 @@ two <- sim.fluency(10)
 cos1 <- similarity(one, method = "cosine")
 cos2 <- similarity(two, method = "cosine")
 
-# Compute networks using NetworkToolbox
-net1 <- NetworkToolbox::TMFG(cos1)$A
-net2 <- NetworkToolbox::TMFG(cos2)$A
+# Compute networks
+net1 <- TMFG(cos1)
+net2 <- TMFG(cos2)
 
 # Convert to Cytoscape format
 cyto1 <- convert2cytoscape(net1)
@@ -42,7 +42,7 @@ write.csv(cyto2, file.path(tempdir(), "cyto2.csv"), row.names = FALSE)
 Shannon, P., Markiel, A., Ozier, O., Baliga, N. S., Wang, J. T., Ramage, D., ... & Ideker, T. (2003).
 Cytoscape: A software environment for integrated models of biomolecular interaction networks.
 \emph{Genome Research}, \emph{13}, 2498-2504.
-doi:\href{http://www.genome.org/cgi/doi/10.1101/gr.1239303}{10.1101/gr.1239303}
+doi:\href{https://genome.cshlp.org/content/13/11/2498}{10.1101/gr.1239303}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

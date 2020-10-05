@@ -32,19 +32,17 @@ of semantic networks against the global measures of equivalent
 size (and density) random networks
 }
 \examples{
-# Simulate Datasets
-one <- sim.fluency(10)
+# Get openness data
+one <- open.clean[which(open.group == "Low"),]
+two <- open.clean[which(open.group == "High"),]
 
-# Compute similarity matrix
-cos <- similarity(one, method = "cosine")
+\donttest{# Compute networks
+net.one <- CN(one)
+net.two <- CN(two)
 
-# Compute networks using NetworkToolbox
-net <- NetworkToolbox::TMFG(cos)$A
-\donttest{
 # Perform random networks test
-randnet.test(net, iter = 1000, cores = 2)
+randnet.test(net.one, net.two, iter = 100, cores = 2)
 }
-\dontshow{randnet.test(net, iter = 1, cores = 2)}
 
 }
 \references{

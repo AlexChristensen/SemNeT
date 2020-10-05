@@ -15,6 +15,11 @@
 #' Significance value.
 #' Defaults to \code{.05}
 #' 
+#' @param enrich Boolean.
+#' Should the network be enriched by connecting
+#' all nodes in their respective modules?
+#' Defaults to \code{FALSE}
+#' 
 #' @return Returns a undirected semantic network
 #' 
 #' @examples
@@ -45,19 +50,23 @@
 #' 
 #' @export
 #' 
-# Commmunity Network----
-# Updated 15.04.2020
-CN <- function (data, window = 2, alpha = .05)
+# Community Network----
+# Updated 13.09.2020
+CN <- function (data, window = 2, alpha = .05, enrich = FALSE)
 {
   # Compute statistical co-occurrence
   adj <- stat.cooccur(data, window = window, alpha = alpha)
   
   # Get component structure
-  comp <- suppressWarnings(igraph::components(NetworkToolbox::convert2igraph(adj)))
+  comp <- suppressWarnings(igraph::components(convert2igraph(adj)))
   
   # Retain responses in the largest connected component
   adj <- adj[which(comp$membership == which.max(comp$csize)),
              which(comp$membership == which.max(comp$csize))]
+  
+  # Check for network enrichment
+  if(enrich)
+  {adj <- enrich.network(adj, gtom(adj))}
   
   return(adj)
 }

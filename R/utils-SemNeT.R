@@ -62,7 +62,7 @@ bad.response <- function (word, ...)
 #' 
 #' @noRd
 # Response matrix to binary matrix
-# Updated 15.04.2020
+# Updated 16.09.2020
 resp2bin <- function (resp)
 {
   # Data matrix
@@ -84,9 +84,47 @@ resp2bin <- function (resp)
   
   # Loop through and replace
   for(i in 1:n)
-  {bin.mat[i,na.omit(match(mat[i,], colnames(bin.mat)))] <- 1}
+  {
+    target.resps <- na.omit(match(mat[i,], colnames(bin.mat)))
+    bin.mat[i,target.resps] <- 1:length(target.resps)
+  }
   
-  return(bin.mat)
+  # Result list
+  res <- list()
+  res$binary <- binarize(bin.mat)
+  res$order <- bin.mat
+  
+  class(res) <- "resp2bin"
+  
+  return(res)
+}
+
+#' @noRd
+# Sets up TMFG for bootstrap and permutation----
+# Updated 01.09.2020
+tmfg_setup <- function(..., minCase)
+{
+  if(is.null(minCase))
+  {minCase <- 2}
+  
+  name <- as.character(substitute(list(...)))
+  name <- name[-which(name=="list")]
+  
+  dat <- list(...)
+  
+  for(i in 1:length(dat))
+  {
+    if(is.character(unlist(dat[[i]])))
+    {dat[[i]] <- resp2bin(dat[[i]])$binary}
+    
+    dat[[i]] <- finalize(dat[[i]], minCase)
+  }
+  
+  names(dat) <- name
+  
+  eq <- equateShiny(dat)
+  
+  return(eq)
 }
 
 #' Binary Responses to Character Responses
@@ -116,63 +154,66 @@ resp2bin <- function (resp)
 #' 
 #' @noRd
 # Binary to Response----
-# Updated 15.04.2020
+# Updated 16.09.2020
 bin2resp <- function (rmat, to.data.frame = FALSE)
 {
-  #grab response names
-  name <- colnames(rmat)
-  
-  #number of responses
-  n <- ncol(rmat)
-  
-  #initialize matrix
-  mat <- matrix(NA,nrow=nrow(rmat),ncol=ncol(rmat))
-  
-  #loop for each name
-  for(i in 1:n)
-  {mat[,i] <- ifelse(rmat[,i]==1,name[i],NA)}
-  
-  #number of participants
-  p <- nrow(rmat)
-  
-  #initialize participant list
-  part <- list()
-  
-  #loop for each participant
-  for(j in 1:p)
+  # Check for resp2bin class
+  if(class(rmat) == "resp2bin" || {all(apply(rmat, 2, is.numeric)) && max(rmat) > 1})
   {
-    resps <- na.omit(mat[j,])
-    attributes(resps)$na.action <- NULL
-    part[[row.names(rmat)[j]]] <- resps
-  }
-  
-  #convert output to data frame
-  if(to.data.frame)
-  {
-    nlen <- vector("numeric",length=length(part))
+    # Get ordered responses
+    ordered <- rmat$order
     
-    num <- length(nlen)
+    # Maximum responses
+    max.resp <- max(rowSums(binarize(ordered)))
     
-    for(i in 1:num)
-    {nlen[i] <- length(part[[i]])}
+    # Initialize matrix
+    mat <- matrix(NA, nrow = nrow(ordered), ncol = max.resp)
+    colnames(mat) <- paste("Response_", formatC(1:max.resp,
+                                                digits = nchar(max.resp) - 1,
+                                                flag = 0,
+                                                format = "d"), sep = "")
+    row.names(mat) <- row.names(ordered)
     
-    mlen <- max(nlen)
-    
-    part.df <- matrix("",nrow=mlen,ncol=num)
-    
-    for(i in 1:num)
+    for(i in 1:nrow(ordered))
     {
-      reps <- mlen - nlen[i]
+      target <- ordered[i,]
       
-      part.df[,i] <- c(unlist(part[[i]]),rep("",reps))
+      responses <- target[as.vector(target != 0)]
+      
+      named.responses <- names(responses[order(responses)])
+      
+      mat[i,1:length(named.responses)] <- named.responses
     }
     
-    part <- as.data.frame(part.df)
-    colnames(part) <- row.names(rmat)
-    part <- t(part)
+  }else{
+    
+    # Maximum responses
+    max.resp <- max(rowSums(rmat))
+    
+    # Initialize matrix
+    mat <- matrix(NA, nrow = nrow(rmat), ncol = max.resp)
+    colnames(mat) <- paste("Response_", formatC(1:max.resp,
+                                                digits = nchar(max.resp) - 1,
+                                                flag = 0,
+                                                format = "d"), sep = "")
+    row.names(mat) <- row.names(rmat)
+    
+    for(i in 1:nrow(rmat))
+    {
+      target <- rmat[i,]
+      
+      responses <- target[as.vector(target != 0)]
+      
+      named.responses <- names(responses)
+      
+      mat[i,1:length(named.responses)] <- named.responses
+    }
   }
   
-  return(part)
+  if(to.data.frame)
+  {mat <- as.data.frame(mat, stringsAsFactors = FALSE)}
+  
+  return(mat)
 }
 
 #' Organization function for \link[SemNeT]{plot.bootSemNeT}
@@ -584,7 +625,7 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 #' 
 #' @noRd
 # Random Network----
-# Updated 20.04.2020
+# Updated 03.09.2020
 randnet <- function (nodes = NULL, edges = NULL, A = NULL)
 {
   if(is.null(A))
@@ -619,13 +660,11 @@ randnet <- function (nodes = NULL, edges = NULL, A = NULL)
     diag(A) <- 0
     
     # Compute degree
-    degrees <- NetworkToolbox::degree(A)
+    degrees <- colSums(binarize(A))
     
     # Get degrees based on directed or undirected
     # Use igraph
-    if(is.list(degrees))
-    {rand <- as.matrix(igraph::as_adj(igraph::sample_degseq(out.deg = degrees$outDegree, in.deg = degrees$inDegree, method = "vl")))
-    }else{rand <- as.matrix(igraph::as_adj(igraph::sample_degseq(out.deg = degrees, method = "vl")))}
+    rand <- as.matrix(igraph::as_adj(igraph::sample_degseq(out.deg = degrees, method = "vl")))
   }
   
   return(rand)
@@ -746,10 +785,10 @@ randnet <- function (nodes = NULL, edges = NULL, A = NULL)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics----
-# Updated 21.05.2020
-boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
+# Updated 25.09.2020
+boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
 {
-  #Check for 'partboot' object
+  #Check for 'bootSemNeT' object
   if(class(bootSemNeT.obj) != "bootSemNeT")
   {stop("Object input into 'bootSemNeT.obj' is not a 'bootSemNeT' object")}
   
@@ -774,11 +813,16 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
   if(len < 2)
   {stop("Single samples cannot be tested. Use 'randnet.test' for single samples")}
   
-  #Identify prop of nodes remaining
-  perc <- bootSemNeT.obj$prop
+  #Handle groups
+  if(is.null(groups))
+  {groups <- name}
   
-  if(is.null(perc))
-  {perc <- 1.00}
+  #Enforce matrix
+  groups <- as.matrix(groups)
+  
+  #Check for groups names
+  if(is.null(colnames(groups)))
+  {colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))}
   
   #Identify iterations
   iter <- bootSemNeT.obj$iter
@@ -787,367 +831,126 @@ boot.one.test <- function (bootSemNeT.obj, formula = NULL, groups = NULL)
   #### SIGNIFICANCE TESTS ####
   ############################
   
-  #t-test
-  if(len == 2)
-  {
-    ##Function for Cohen's d
-    d <- function(samp1,samp2)
-    {
-      samp1 <- as.vector(samp1)
-      samp2 <- as.vector(samp2)
-      
-      num <- (mean(samp2)-mean(samp1))
-      denom <- sqrt(((sd(samp1)^2)+(sd(samp2)^2))/2)
-      
-      cohensd <- abs(num/denom)
-      
-      return(cohensd)
-    }
-    
-    ##ASPL Tests
-    aspl <- matrix(NA, nrow = 1, ncol = 8)
-    row.names(aspl) <- sprintf("%1.2f", perc)
-    colnames(aspl) <- c("t-statistic", "df", "p-value", "d", "Difference",
-                        "CI95.lower", "CI95.upper","Direction")
-    #ASPL
-    one.aspl <- bootSemNeT.obj[[paste(name[1],"Meas",sep="")]]["ASPL",]
-    two.aspl <- bootSemNeT.obj[[paste(name[2],"Meas",sep="")]]["ASPL",]
-    
-    #t-test
-    test <- t.test(one.aspl, two.aspl, var.equal = TRUE)
-    
-    #Input results into table
-    aspl[sprintf("%1.2f", perc),1] <- round(as.numeric(test$statistic),3)
-    aspl[sprintf("%1.2f", perc),2] <- round(as.numeric(test$parameter),3)
-    aspl[sprintf("%1.2f", perc),3] <- round(as.numeric(test$p.value),3)
-    aspl[sprintf("%1.2f", perc),4] <- round(as.numeric(d(one.aspl,two.aspl)),3)
-    aspl[sprintf("%1.2f", perc),5] <- round(as.numeric(mean(one.aspl)-mean(two.aspl)),3)
-    aspl[sprintf("%1.2f", perc),6] <- round(as.numeric(test$conf.int[1]),3)
-    aspl[sprintf("%1.2f", perc),7] <- round(as.numeric(test$conf.int[2]),3)
-    
-    if(round(as.numeric(test$p.value),3) > .05)
-    {aspl[sprintf("%1.2f", perc),8] <- "n.s."
-    }else{
-      aspl[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                               paste(name[1],">",name[2],sep=" "),
-                                               paste(name[2],">",name[1],sep=" ")
-      )
-    }
-    
-    ##CC Tests
-    cc <- matrix(NA, nrow = 1, ncol = 8)
-    row.names(cc) <- sprintf("%1.2f", perc)
-    colnames(cc) <- c("t-statistic", "df", "p-value", "d", "Difference",
-                      "CI95.lower", "CI95.upper","Direction")
-    #CC
-    one.cc <- bootSemNeT.obj[[paste(name[1],"Meas",sep="")]]["CC",]
-    two.cc <- bootSemNeT.obj[[paste(name[2],"Meas",sep="")]]["CC",]
-    
-    #t-test
-    test <- t.test(one.cc, two.cc, var.equal = TRUE)
-    
-    #Input results into table
-    cc[sprintf("%1.2f", perc),1] <- round(as.numeric(test$statistic),3)
-    cc[sprintf("%1.2f", perc),2] <- round(as.numeric(test$parameter),3)
-    cc[sprintf("%1.2f", perc),3] <- round(as.numeric(test$p.value),3)
-    cc[sprintf("%1.2f", perc),4] <- round(as.numeric(d(one.cc,two.cc)),3)
-    cc[sprintf("%1.2f", perc),5] <- round(as.numeric(mean(one.cc)-mean(two.cc)),3)
-    cc[sprintf("%1.2f", perc),6] <- round(as.numeric(test$conf.int[1]),3)
-    cc[sprintf("%1.2f", perc),7] <- round(as.numeric(test$conf.int[2]),3)
-    
-    if(round(as.numeric(test$p.value),3) > .05)
-    {cc[sprintf("%1.2f", perc),8] <- "n.s."
-    }else{
-      cc[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                             paste(name[1],">",name[2],sep=" "),
-                                             paste(name[2],">",name[1],sep=" ")
-      )
-    }
-    
-    ##Q Tests
-    q <- matrix(NA, nrow = 1, ncol = 8)
-    row.names(q) <- sprintf("%1.2f", perc)
-    colnames(q) <- c("t-statistic", "df", "p-value", "d", "Difference",
-                     "CI95.lower", "CI95.upper","Direction")
-    #Q
-    one.q <- bootSemNeT.obj[[paste(name[1],"Meas",sep="")]]["Q",]
-    two.q <- bootSemNeT.obj[[paste(name[2],"Meas",sep="")]]["Q",]
-    
-    #t-test
-    test <- t.test(one.q, two.q, var.equal = TRUE)
-    
-    #Input results into table
-    q[sprintf("%1.2f", perc),1] <- round(as.numeric(test$statistic),3)
-    q[sprintf("%1.2f", perc),2] <- round(as.numeric(test$parameter),3)
-    q[sprintf("%1.2f", perc),3] <- round(as.numeric(test$p.value),3)
-    q[sprintf("%1.2f", perc),4] <- round(as.numeric(d(one.q,two.q)),3)
-    q[sprintf("%1.2f", perc),5] <- round(as.numeric(mean(one.q)-mean(two.q)),3)
-    q[sprintf("%1.2f", perc),6] <- round(as.numeric(test$conf.int[1]),3)
-    q[sprintf("%1.2f", perc),7] <- round(as.numeric(test$conf.int[2]),3)
-    
-    if(round(as.numeric(test$p.value),3) > .05)
-    {q[sprintf("%1.2f", perc),8] <- "n.s."
-    }else{
-      q[sprintf("%1.2f", perc),8] <- ifelse(sign(test$statistic)==1,
-                                            paste(name[1],">",name[2],sep=" "),
-                                            paste(name[2],">",name[1],sep=" ")
-      )
-    }
-    
-    #Input results into list
-    tests <- list()
-    tests$ASPL <- as.data.frame(aspl, stringsAsFactors = FALSE)
-    tests$CC <- as.data.frame(cc, stringsAsFactors = FALSE)
-    tests$Q <- as.data.frame(q, stringsAsFactors = FALSE)
-    
-  }else{ #ANOVA
-    
-    ##Function for partial eta squared
-    partial.eta <- function(ESS, TSS)
-    {
-      p.e <- ESS/TSS
-      
-      return(p.e)
-    }
-    
-    ##ASPL Tests
-    if(is.null(formula))
-    {
-      aspl <- matrix(NA, nrow = 1, ncol = 5)
-      row.names(aspl) <- sprintf("%1.2f", perc)
-      colnames(aspl) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
-    }else{
-      aspl <- list()
-      hsd <- list()
-    }
-    
-    #Initialize group object
-    new.aspl <- vector("numeric", length = iter)
-    
-    #ASPL
-    for(i in 1:len)
-    {
-      #Insert ASPL values
-      new.aspl <- bootSemNeT.obj[[paste(name[i],"Meas",sep="")]]["ASPL",]
-      
-      #Initialize matrix
-      mat <- cbind(rep(name[i], length(new.aspl)),new.aspl)
-      
-      if(i != 1)
-      {new.mat <- rbind(new.mat,mat)
-      }else{new.mat <- mat}
-    }
-    
-    #Convert to data frame
-    aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-    colnames(aov.obj) <- c("Group", "Measure")
-    aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-    aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-    
-    # Check for groups
-    if(!is.null(groups))
-    {
-      aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
-      colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
-      aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-      aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-      
-      for(g in 1:ncol(groups))
-      {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
-    }
-    
-    #ANOVA
-    if(!is.null(formula))
-    {
-      test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
-      aspl[[sprintf("%1.2f", perc)]] <- summary(test)[[1]]
-      hsd[[sprintf("%1.2f", perc)]] <- TukeyHSD(test)
-    }else{
-      test <- aov(Measure ~ Group, data = aov.obj)
-      
-      test.summ <- summary(test)[[1]]
-      
-      #Input results into table
-      aspl[sprintf("%1.2f", perc),"F-statistic"] <- round(test.summ$`F value`[1],3)
-      aspl[sprintf("%1.2f", perc),"group.df"] <- test.summ$Df[1]
-      aspl[sprintf("%1.2f", perc),"residual.df"] <- test.summ$Df[2]
-      aspl[sprintf("%1.2f", perc),"p-value"] <- test.summ$`Pr(>F)`[1]
-      aspl[sprintf("%1.2f", perc),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-      
-      #Tukey's HSD
-      if(test.summ$`Pr(>F)`[1] < .05)
-      {hsd <- TukeyHSD(test)$Group
-      }else{hsd <- "ANOVA was not significant"}
-    }
-    
-    #List for ASPL
-    ASPL <- list()
-    ASPL$ANOVA <- aspl
-    ASPL$HSD <- hsd
-    
-    ##CC Tests
-    if(is.null(formula))
-    {
-      cc <- matrix(NA, nrow = 1, ncol = 5)
-      row.names(cc) <- sprintf("%1.2f", perc)
-      colnames(cc) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
-    }else{
-      cc <- list()
-      hsd <- list()
-    }
-    
-    #Initialize group object
-    new.cc <- vector("numeric", length = iter)
-    
-    #CC
-    for(i in 1:len)
-    {
-      #Insert CC values
-      new.cc <- bootSemNeT.obj[[paste(name[i],"Meas",sep="")]]["CC",]
-      
-      #Initialize matrix
-      mat <- cbind(rep(name[i], length(new.cc)),new.cc)
-      
-      if(i != 1)
-      {new.mat <- rbind(new.mat,mat)
-      }else{new.mat <- mat}
-    }
-    
-    #Convert to data frame
-    aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-    colnames(aov.obj) <- c("Group", "Measure")
-    aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-    aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-    
-    # Check for groups
-    if(!is.null(groups))
-    {
-      aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
-      colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
-      aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-      aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-      
-      for(g in 1:ncol(groups))
-      {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
-    }
-    
-    #ANOVA
-    if(!is.null(formula))
-    {
-      test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
-      cc[[sprintf("%1.2f", perc)]] <- summary(test)[[1]]
-      hsd[[sprintf("%1.2f", perc)]] <- TukeyHSD(test)
-    }else{
-      test <- aov(Measure ~ Group, data = aov.obj)
-      
-      test.summ <- summary(test)[[1]]
-      
-      #Input results into table
-      cc[sprintf("%1.2f", perc),"F-statistic"] <- round(test.summ$`F value`[1],3)
-      cc[sprintf("%1.2f", perc),"group.df"] <- test.summ$Df[1]
-      cc[sprintf("%1.2f", perc),"residual.df"] <- test.summ$Df[2]
-      cc[sprintf("%1.2f", perc),"p-value"] <- test.summ$`Pr(>F)`[1]
-      cc[sprintf("%1.2f", perc),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-      
-      #Tukey's HSD
-      if(test.summ$`Pr(>F)`[1] < .05)
-      {hsd <- TukeyHSD(test)$Group
-      }else{hsd <- "ANOVA was not significant"}
-    }
-    
-    #List for CC
-    CC <- list()
-    CC$ANOVA <- cc
-    CC$HSD <- hsd
-    
-    ##Q Tests
-    if(is.null(formula))
-    {
-      q <- matrix(NA, nrow = 1, ncol = 5)
-      row.names(q) <- sprintf("%1.2f", perc)
-      colnames(q) <- c("F-statistic", "group.df", "residual.df", "p-value", "p.eta.sq")
-    }else{
-      q <- list()
-      hsd <- list()
-    }
-    
-    #Initialize group object
-    new.q <- vector("numeric", length = iter)
-    
-    #Q
-    for(i in 1:len)
-    {
-      #Insert Q values
-      new.q <- bootSemNeT.obj[[paste(name[i],"Meas",sep="")]]["Q",]
-      
-      #Initialize matrix
-      mat <- cbind(rep(name[i], length(new.q)),new.q)
-      
-      if(i != 1)
-      {new.mat <- rbind(new.mat,mat)
-      }else{new.mat <- mat}
-    }
-    
-    #Convert to data frame
-    aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-    colnames(aov.obj) <- c("Group", "Measure")
-    aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-    aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-    
-    # Check for groups
-    if(!is.null(groups))
-    {
-      aov.obj <- as.data.frame(cbind(aov.obj,rep.rows(groups, iter)), stringsAsFactors = FALSE)
-      colnames(aov.obj) <- c("Group", "Measure", colnames(groups))
-      aov.obj$Group <- as.factor(as.character(aov.obj$Group))
-      aov.obj$Measure <- as.numeric(as.character(aov.obj$Measure))
-      
-      for(g in 1:ncol(groups))
-      {aov.obj[,(2+g)] <- as.factor(as.character(aov.obj[,(2+g)]))}
-    }
-    
-    #ANOVA
-    if(!is.null(formula))
-    {
-      test <- aov(as.formula(gsub("y", "Measure", formula)), data = aov.obj)
-      q[[sprintf("%1.2f", perc)]] <- summary(test)[[1]]
-      hsd[[sprintf("%1.2f", perc)]] <- TukeyHSD(test)
-    }else{
-      test <- aov(Measure ~ Group, data = aov.obj)
-      
-      test.summ <- summary(test)[[1]]
-      
-      #Input results into table
-      q[sprintf("%1.2f", perc),"F-statistic"] <- round(test.summ$`F value`[1],3)
-      q[sprintf("%1.2f", perc),"group.df"] <- test.summ$Df[1]
-      q[sprintf("%1.2f", perc),"residual.df"] <- test.summ$Df[2]
-      q[sprintf("%1.2f", perc),"p-value"] <- test.summ$`Pr(>F)`[1]
-      q[sprintf("%1.2f", perc),"p.eta.sq"] <- partial.eta(test.summ$`Sum Sq`[1],sum(test.summ$`Sum Sq`))
-      
-      #Tukey's HSD
-      if(test.summ$`Pr(>F)`[1] < .05)
-      {hsd <- TukeyHSD(test)$Group
-      }else{hsd <- "ANOVA was not significant"}
-    }
-    
-    #List for Q
-    Q <- list()
-    Q$ANOVA <- q
-    Q$HSD <- hsd
-    
-    #Input results into list
-    tests <- list()
-    tests$ASPL <- ASPL
-    tests$CC <- CC
-    tests$Q <- Q
-  }
+  #Input results into list
+  tests <- list()
   
-  # Band-aid fix for case bootstrap (instead of node)
-  if(bootSemNeT.obj$type == "case")
+  #Loop through measures
+  for(i in 1:length(measures))
   {
-    tests <- t(sapply(tests,as.data.frame))
+    #Create ANCOVA data frame
+    for(j in 1:len)
+    {
+      #Insert measure values
+      meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
+      
+      # Nodes
+      nodes <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){ncol(x)}))
+      
+      # Edges
+      edges <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){
+        net <- binarize(x)
+        diag(net) <- 0
+        return(sum(net) / 2)
+      }))
+      
+      #Initialize matrix
+      mat <- cbind(rep(name[j], length(meas)), meas, nodes, edges)
+      
+      if(j != 1)
+      {new.mat <- rbind(new.mat, mat)
+      }else{new.mat <- mat}
+    }
     
-    tests[,-which(colnames(tests) == "Direction")] <- apply(tests[,-which(colnames(tests) == "Direction")],2,as.numeric)
+    #Convert to data frame
+    aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
+    colnames(aov.obj) <- c("Name", "Measure", "Nodes", "Edges")
+    aov.obj$Name <- factor(as.character(aov.obj$Name))
+    aov.obj[,2:4] <- apply(aov.obj[,2:4], 2, function(x){as.numeric(as.character(x))})
+    
+    #Organize groups
+    aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
+    
+    #Get column before groups
+    edge.col <- which(colnames(aov.obj) == "Edges")
+    
+    #Convert groups to factors
+    for(g in 1:ncol(groups))
+    {aov.obj[,(edge.col+g)] <- as.factor(as.character(aov.obj[,(edge.col+g)]))}
+    
+    #Remove variables that are all equal
+    keep.vars <- apply(aov.obj[,1:ncol(aov.obj)], 2, function(x){length(unique(x)) != 1})
+    aov.obj <- aov.obj[,keep.vars]
+    
+    #Group mean center
+    ## See Understanding and misunderstanding group mean centering: a commentary on Kelley et al.'s dangerous practice
+    ## Bell, A., Jones, K., & Fairbrother, M. (2018).
+    ## \emph{Quality & Quantity Volume} \emph{52}, 2031-2036.
+    ##https://doi.org/10.1007/s11135-017-0593-5
+    if("Nodes" %in% names(aov.obj))
+    {
+      for(g in 1:nrow(groups))
+      {aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Nodes[which(aov.obj$Group == groups[g,])])}
+    }
+    
+    if("Edges" %in% names(aov.obj))
+    {
+      for(g in 1:nrow(groups))
+      {aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])}
+    }
+    
+    #Formula
+    if(is.null(formula))
+    {formula <- paste("y ~", paste(colnames(groups), collapse = " + "))}
+    
+    #Replace 'y' with 'Measure'
+    formula <- gsub("y", "Measure", formula)
+    
+    #Split formula to add 'Nodes' and 'Edges'
+    split.formula <- unlist(strsplit(formula, split = "~"))
+    
+    #ANOVA formula
+    ##Catch Pathfinder Network method
+    if(all(aov.obj$Nodes - aov.obj$Edges == 1))
+    {aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[4][keep.vars[4]], collapse = " + "), " +", split.formula[2], sep = "")
+    }else{aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3:4][keep.vars[3:4]], collapse = " + "), " +", split.formula[2], sep = "")}
+    
+    #ANOVA
+    aov.test <- aov(as.formula(aov.formula), data = aov.obj)
+    
+    #ANCOVA
+    acov.test <- car::Anova(aov.test, type = "III")
+    
+    #Tidy ANCOVA
+    tidy.acov <- as.data.frame(broom::tidy(acov.test), stringsAsFactors = FALSE)
+    tidy.acov[,-1] <- round(apply(tidy.acov[,-1], 2, as.numeric), 3)
+    
+    #Get partial etas
+    etas <- round(unlist(lapply(acov.test$`Sum Sq`, partial.eta.sq, sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)])))[-c(1,length(acov.test$`Sum Sq`))], 3)
+    
+    #Attach etas to tidy ANCOVA
+    tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
+    
+    #Change column names
+    colnames(tidy.acov) <- c("Term", "Sum of Squares", "df", "F-statistic", "p-value", "Partial Eta Squared")
+    
+    #Change p-values
+    tidy.acov$`p-value` <- ifelse(tidy.acov$`p-value` < .001, "< .001", tidy.acov$`p-value`)
+    
+    # Convert NA to blank values
+    tidy.acov <- as.data.frame(apply(tidy.acov, 2, function(x){trimws(ifelse(is.na(x), "", x))}), stringsAsFactors = FALSE)
+    
+    #Get adjusted means
+    adj.means <- effects::allEffects(aov.test)
+    
+    #Insert ANCOVA
+    tests[[paste(measures[i])]]$ANCOVA <- tidy.acov
+    
+    #Insert adjusted means
+    tests[[paste(measures[i])]]$adjustedMeans <- adj.means[[which(names(adj.means) != "Nodes" & names(adj.means) != "Edges")]]
+    
+    #Get pairwise comparisons
+    if(length(unique(groups[,1])) > 2)
+    {tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)}
   }
   
   return(tests)
@@ -1286,10 +1089,9 @@ rel.freq <- function(data)
   return(rel_freq)
 }
 
-#' Statistical Co-occurence (sub-routine for Goni)
+#' Statistical Co-occurence (sub-routine for \code{\link[SemNeT]{CN}})
 #' 
-#' @description Computes the statistical co-occurence of responses+36
-#' 60.23
+#' @description Computes the statistical co-occurence of responses
 #' 
 #' @param data Matrix or data frame.
 #' Preprocessed verbal fluency data
@@ -1310,12 +1112,16 @@ rel.freq <- function(data)
 #' 
 #' @noRd
 # Statistical Co-occurrence----
-# Updated 27.03.2020
+# Updated 16.09.2020
 stat.cooccur <- function(data, window = 2, alpha = .05)
 {
   # Check if the matrix is numeric
   if(any(apply(data, 2, is.numeric)))
-  {stop("CN(): Only a response matrix can be used as input for 'data'")}
+  {
+    if(max(range(data)) == 1)
+    {stop("CN(): Only a response matrix or ordered numeric matrix can be used as input for 'data'")
+    }else{data <- bin2resp(data)}
+  }
   
   # Data matrix
   mat <- as.matrix(data)
@@ -1383,7 +1189,115 @@ stat.cooccur <- function(data, window = 2, alpha = .05)
   return(adj)
 }
 
+#' Generalized Topological Overlap (sub-routine for \code{\link[SemNeT]{CN}})
+#' 
+#' @description Computes the genearlized topological overlap
+#' 
+#' @param A Matrix or data frame.
+#' A \code{\link[SemNeT]{CN}} estimated matrix
+#' 
+#' @param steps Numeric.
+#' Number of connections away from original node.
+#' Defaults to \code{2}
+#' 
+#' @return A weighted topological overlap matrix
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Generalized Topological Overlap----
+# Updated 13.09.2020
+gtom <- function (A, steps = 2)
+{
+  # Initial matrix state
+  bm <- A
+  bmAux <- bm
+  numNodes <- ncol(A)
+  
+  # Compute generalized topological overlap
+  for(j in 2:steps)
+  {
+    for(i in 1:numNodes)
+    {
+      # Neighbors of node i
+      neighbors <- unname(which(bm[i,] == 1))
+      neighbors <- as.vector(neighbors)
+      
+      if(length(neighbors) == 1)
+      {bm.neighbors <- t(as.matrix(bm[neighbors,]))
+      }else{bm.neighbors <- bm[neighbors,]}
+      
+      # Neighbors of neighbors of node i
+      neighborsOfNeighbors <- unname(unlist(apply(bm.neighbors, 1, function(x){which(x == 1)})))
+      # All neighbors
+      allNeighbors <- setdiff(unique(neighborsOfNeighbors),i)
+      # Input into new matrix
+      bmAux[i,allNeighbors] <- 1
+      bmAux[allNeighbors,i] <- 1
+    }
+    
+    bm <- bmAux
+  }
+  
+  numeratorMatrix <- bm %*% bm + A + diag(1, ncol(A))
+  
+  bmSum <- colSums(bm)
+  
+  repmat <- matrix(rep(bmSum, ncol(A)), nrow = ncol(A), byrow = TRUE)
+  
+  trepmat <- t(repmat)
+  
+  denominatorMatrix <- -A +  pmin(repmat, trepmat) + 1
+  
+  GTOM <- numeratorMatrix / denominatorMatrix
+  
+  return(GTOM)
+}
 
+#' Enrich Network (sub-routine for \code{\link[SemNeT]{CN}})
+#' 
+#' @description Connections all nodes within their respective modules
+#' 
+#' @param A Matrix or data frame.
+#' A \code{\link[SemNeT]{CN}} estimated matrix
+#' 
+#' @param GTOM Matrix or data frame.
+#' Output from \code{\link[SemNeT]{gtom}}
+#' 
+#' @return An enriched \code{\link[SemNeT]{CN}} network
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @importFrom stats hclust cutree as.dist
+#' 
+#' @noRd
+# Enrich Network----
+# Updated 13.09.2020
+enrich.network <- function(A, GTOM)
+{
+  # Get dissimilarity matrix
+  dis.sim <- as.dist(1 - GTOM, upper = TRUE)
+  
+  # Get linkage
+  Z <- hclust(d = dis.sim, method = "average")
+  
+  # Cut based on Goni et al. (2011)
+  modules <- cutree(Z, h = 0.35)
+  
+  # Number of modules
+  numModules <- max(modules)
+  
+  for(i in 1:numModules)
+  {
+    neighMod <- which(modules == i)
+    A[neighMod, neighMod] <- 1
+  }
+  
+  # Remove diagonal
+  diag(A) <- 0
+  
+  return(A)
+}
 
 #' @noRd
 ### cosine.R from lsa package (now archived)
@@ -1453,3 +1367,199 @@ rep.rows <- function (mat, times)
   
   return(new.mat)
 }
+
+#' @noRd
+# Partial eta squared----
+# Updated 02.09.2020
+partial.eta.sq <- function(ESS, RSS)
+{ESS / (ESS + RSS)}
+
+#' Convert Network(s) to igraph's Format
+#' @description Converts single or multiple networks into \code{\link{igraph}}'s format for network analysis
+#' 
+#' @param A Adjacency matrix (network matrix) or brain connectivity array
+#' (from \code{\link[NetworkToolbox]{convertConnBrainMat}})
+#' 
+#' @param neural Is input a brain connectivity array (i.e., m x m x n)?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} to convert each brain connectivity matrix
+#' 
+#' @return Returns a network matrix in \code{\link{igraph}}'s format or
+#' returns a list of brain connectivity matrices each of which have been
+#' convert to \code{\link{igraph}}'s format
+#' 
+#' @examples
+#' # Pearson's correlation only for CRAN checks
+#' A <- TMFG(neoOpen, normal = FALSE)$A
+#' 
+#' igraphNetwork <- convert2igraph(A)
+#' 
+#' \dontrun{ 
+#' neuralarray <- convertConnBrainMat()
+#' 
+#' igraphNeuralList <- convert2igraph(neuralarray, neural = TRUE)
+#' }
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Convert matrices to igraph format (from NetworkToolbox)----
+# Updated 02.09.2020
+convert2igraph <- function (A, neural = FALSE)
+{
+  if(!neural)
+  {
+    net <- igraph::as.igraph(qgraph::qgraph(A,DoNotPlot=TRUE))
+    return(net)
+  }else if(neural)
+  {
+    netlist <- list()
+    
+    n<-length(A)/nrow(A)/ncol(A)
+    
+    pb <- txtProgressBar(max=n, style = 3)
+    
+    for(i in 1:n)
+    {
+      netlist[[i]] <- igraph::as.igraph(qgraph::qgraph(A[,,i],DoNotPlot=TRUE))
+      setTxtProgressBar(pb, i)
+    }
+    close(pb)
+    
+    return(netlist)
+  }
+}
+#----
+
+#' Distance
+#' @description Computes distance matrix of the network
+#' 
+#' @param A An adjacency matrix of network data
+#' 
+#' @param weighted Is the network weighted?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} for weighted measure of distance
+#' 
+#' @return A distance matrix of the network
+#' 
+#' @examples
+#' # Pearson's correlation only for CRAN checks
+#' A <- TMFG(neoOpen, normal = FALSE)$A
+#' 
+#' #Unweighted
+#' Du <- distance(A)
+#' 
+#' #Weighted
+#' Dw <- distance(A, weighted = TRUE)
+#' 
+#' @references 
+#' Rubinov, M., & Sporns, O. (2010). 
+#' Complex network measures of brain connectivity: Uses and interpretations. 
+#' \emph{NeuroImage}, \emph{52}, 1059-1069.
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Distance (SemNeT)----
+# Updated 02.09.2020
+distance<-function (A, weighted = FALSE)
+{
+  if(nrow(A)!=ncol(A))
+  {stop("Input not an adjacency matrix")}
+  if(!weighted)
+  {B<-ifelse(A!=0,1,0)
+  l<-1
+  Lpath<-B
+  D<-B
+  Idx<-matrix(TRUE,nrow=nrow(B),ncol=ncol(B))
+  while(any(Idx))
+  {
+    l<-l+1
+    Lpath<-(as.matrix(Lpath))%*%(as.matrix(B))
+    for(e in 1:nrow(Lpath))
+      for(w in 1:ncol(Lpath))
+        Idx[e,w]<-(Lpath[e,w]!=0&&(D[e,w]==0))
+    D[Idx]<-l
+  }
+  
+  D[!D]<-Inf
+  diag(D)<-0
+  }else if(weighted){
+    G<-ifelse(1/A==Inf,0,1/A)
+    
+    if(any(G==-Inf))
+    {G<-ifelse(G==-Inf,0,G)}
+    
+    if(any(!G==t(G)))
+    {if(max(abs(G-t(G)))<1e-10)
+    {G<-(G+G)/2}}
+    
+    n<-ncol(G)
+    D<-matrix(Inf,nrow=n,ncol=n)
+    diag(D)<-0
+    B<-matrix(0,nrow=n,ncol=n)
+    
+    for(u in 1:n)
+    {
+      S<-matrix(TRUE,nrow=n,ncol=1)
+      L1<-G
+      V<-u
+      while(TRUE)
+      {
+        S[V]<-0
+        L1[,V]<-0
+        for(v in V)
+        {
+          W<-which(L1[v,]!=0)
+          d<-apply(rbind(D[u,W],(D[u,v]+L1[v,W])),2,min)    
+          wi<-apply(rbind(D[u,W],(D[u,v]+L1[v,W])),2,which.min)
+          D[u,W]<-d
+          ind<-W[wi==2]
+          B[u,ind]<-B[u,v]+1
+        }
+        
+        minD<-suppressWarnings(min(D[u,S==TRUE]))
+        if(length(minD)==0||is.infinite(minD)){break}
+        
+        V<-which(D[u,]==minD)
+      }
+    }
+  }
+  
+  D<-ifelse(D==Inf,0,D)
+  
+  colnames(D)<-colnames(A)
+  row.names(D)<-colnames(A)
+  return(D)
+}
+#----
+
+#' Binarize Network
+#' 
+#' @description Converts weighted adjacency matrix to a binarized adjacency matrix
+#' 
+#' @param A An adjacency matrix of network data (or an array of matrices)
+#' 
+#' @return Returns an adjacency matrix of 1's and 0's
+#' 
+#' @examples
+#' # Pearson's correlation only for CRAN checks
+#' A <- TMFG(neoOpen, normal = FALSE)$A
+#' 
+#' neoB <- binarize(A)
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Binarize (SemNeT)----
+# Updated 02.09.2020
+binarize <- function (A)
+{
+  A <- as.matrix(A)
+  bin <- ifelse(A!=0,1,0)
+  row.names(bin) <- row.names(A)
+  colnames(bin) <- colnames(A)
+  
+  return(bin)
+}
+#----
