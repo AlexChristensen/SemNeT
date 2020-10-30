@@ -68,13 +68,23 @@ response.analysis <- function(...)
   totals.res <- t.test(totals[[1]], totals[[2]], var.equal = TRUE)
   
   #Prepare results vector
-  res.totals <- numeric(9)
+  res.totals <- numeric(10)
   names(res.totals) <- c(
     paste("M", name[1]), paste("SD", name[1]),
     paste("M", name[2]), paste("SD", name[2]),
     "t-statistic", "df", "p-value",
-    paste("95%", c("Lower", "Upper"))
+    paste("95%", c("Lower", "Upper")),
+    "Cohen's d"
   )
+  
+  d <- function(one, two){
+    num <- mean(one, na.rm = TRUE) - mean(two, na.rm = TRUE)
+    denom <- sqrt(
+      (sd(one, na.rm = TRUE)^2 + sd(two, na.rm = TRUE)^2) / 2
+    )
+    
+    return(abs(num / denom))
+  }
   
   res.totals[1] <- mean(totals[[1]], na.rm = TRUE)
   res.totals[2] <- sd(totals[[1]], na.rm = TRUE)
@@ -84,6 +94,7 @@ response.analysis <- function(...)
   res.totals[6] <- totals.res$parameter
   res.totals[7] <- totals.res$p.value
   res.totals[8:9] <- totals.res$conf.int
+  res.totals[10] <- d(totals[[1]], totals[[2]])
   
   res$total <- round(res.totals, 3)
   
@@ -105,11 +116,12 @@ response.analysis <- function(...)
   }
   
   #Prepare results vector
-  res.uniq <- numeric(8)
+  res.uniq <- numeric(9)
   names(res.uniq) <- c("Total Across Groups",
                        paste("Total", name),
                        paste("Unique", name),
-                       "McNemar's X^2", "df", "p-value")
+                       "McNemar's X^2", "df", "p-value",
+                       "Phi (effect size)")
   
   #Get unique totals
   uniq.totals <- colSums(uniq.mat)
@@ -132,6 +144,7 @@ response.analysis <- function(...)
   res.uniq[6] <- uniq.res$statistic
   res.uniq[7] <- uniq.res$parameter
   res.uniq[8] <- uniq.res$p.value
+  res.uniq[9] <- abs(cor(uniq.mat)[1,2])
   
   res$unique <- round(res.uniq, 3)
   
