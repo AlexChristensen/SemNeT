@@ -1440,13 +1440,25 @@ boot.one.testShiny <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"),
         if("Nodes" %in% names(aov.obj))
         {
             for(g in 1:nrow(groups))
-            {aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Nodes[which(aov.obj$Group == groups[g,])])}
+            {
+                if(length(unique((aov.obj$Nodes[which(aov.obj$Group == groups[g,])]))) == 1){
+                    aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- 0
+                }else{
+                    aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Nodes[which(aov.obj$Group == groups[g,])])
+                }
+            }
         }
         
         if("Edges" %in% names(aov.obj))
         {
             for(g in 1:nrow(groups))
-            {aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])}
+            {
+                if(length(unique((aov.obj$Edges[which(aov.obj$Group == groups[g,])]))) == 1){
+                    aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- 0
+                }else{
+                    aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])
+                }
+            }
         }
         
         #Formula
