@@ -118,12 +118,14 @@ server <- function(input, output, session)
                  if(!is.null(input$clean_envir) || !is.null(input$group_envir))
                  {
                    # Load data from R environment
-                   if(input$clean_envir != "")
+                   if(input$clean_envir != ""){
                      dat <<- get(input$clean_envir, envir = globalenv())$responses$clean
+                   }
                    
                    # Load group from R environment
-                   if(input$group_envir == "Yes")
-                   {group <<- group}
+                   if(input$group_envir == "Yes"){
+                     group <<- group
+                   }
                  }
                  
                  # Load preprocessed data
