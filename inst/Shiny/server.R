@@ -178,17 +178,27 @@ server <- function(input, output, session)
     
     network <- input$estimation
     
-    if(network == "Community Network (CN)")
-    {numericInput("window", label = "Window Size", value = 2, min = 1, max = Inf)
-    }else if(network == "Naive Random Walk (NRW)")
-    {numericInput("threshold", label = "Threshold (Minimum Number of Co-occurrences)", value = 3, min = 1, max = Inf)
-    }else if(network == "Triangulated Maximally Filtered Graph (TMFG)")
-    {selectInput("assoc", label = "Association Measure", choices = c("Angular", "Cosine",
+    if(network == "Community Network (CN)"){
+      
+      shinyBS::tipify(
+        numericInput("window", label = "Window Size", value = 2, min = 1, max = Inf),
+        "Sets the distance for co-occurrence from a given response (e.g., the default is 2 responses before and after a given response)"
+      )
+      
+    }else if(network == "Naive Random Walk (NRW)"){
+      
+      numericInput("threshold", label = "Threshold (Minimum Number of Co-occurrences)", value = 3, min = 1, max = Inf)
+      
+    }else if(network == "Triangulated Maximally Filtered Graph (TMFG)"){
+      
+      selectInput("assoc", label = "Association Measure", choices = c("Angular", "Cosine",
                                                                      "Euclidean Distance",
                                                                      "Faith", "Jaccard Index",
                                                                      "Pearson's Correlation",
                                                                      "RR"), selected = "Cosine"
-    )}
+      )
+      
+    }
     
   })
   
@@ -197,8 +207,13 @@ server <- function(input, output, session)
     
     network <- input$estimation
     
-    if(network == "Community Network (CN)")
-    {selectInput("alpha", label = paste("Significance Level"), choices = c(.05, .01, .001))
+    if(network == "Community Network (CN)"){
+      
+      shinyBS::tipify(
+        selectInput("alpha", label = paste("Significance Level"), choices = c(.05, .01, .001)),
+        "Sets &alpha; to infer whether responses co-occurred by random chance using a binomial distribution"
+      )
+      
     }else if(network == "Triangulated Maximally Filtered Graph (TMFG)")
     {numericInput("minCase", label = "Minimum Number of Responses", value = 2, min = 1, max = Inf)}
     
