@@ -2032,7 +2032,7 @@ server <- function(input, output, session)
     
     # Print message to user to let them know output saved as resultShiny
     message(
-      '\n\nThe last analyses and results have been saved in the object "resultShiny" in R\'s environment'
+      '\n\nThe last analyses and results in `SemNeTShiny()` have been saved in an object called "resultShiny" in R\'s environment'
     )
     
     # Remove plots from user view
