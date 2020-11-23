@@ -179,23 +179,62 @@ server <- function(input, output, session)
     network <- input$estimation
     
     if(network == "Community Network (CN)"){
-      
-      shinyBS::tipify(
-        numericInput("window", label = "Window Size", value = 2, min = 1, max = Inf),
-        "Sets the distance for co-occurrence from a given response (e.g., the default is 2 responses before and after a given response)"
+    
+      tagList(
+        
+        tags$style(
+          ".tooltip-inner {
+                 width: 350px;
+               }"
+        ),
+        
+        shinyBS::tipify(
+          numericInput("window", label = "Window Size", value = 2, min = 1, max = Inf),
+          "Sets the distance for co-occurrence from a given response (e.g., the default is 2 responses before and after a given response)",
+          placement = "right"
+        )
+        
       )
       
     }else if(network == "Naive Random Walk (NRW)"){
       
-      numericInput("threshold", label = "Threshold (Minimum Number of Co-occurrences)", value = 3, min = 1, max = Inf)
+      tagList(
+        
+        tags$style(
+          ".tooltip-inner {
+                 width: 350px;
+               }"
+        ),
+        
+        shinyBS::tipify(
+          numericInput("threshold", label = "Threshold", value = 3, min = 1, max = Inf),
+          "Sets the threshold for the minimum number of co-occurrences between two responses in the random walks for there to be an edge between them in the network",
+          placement = "right"
+        )
+        
+      )
       
     }else if(network == "Triangulated Maximally Filtered Graph (TMFG)"){
       
-      selectInput("assoc", label = "Association Measure", choices = c("Angular", "Cosine",
-                                                                     "Euclidean Distance",
-                                                                     "Faith", "Jaccard Index",
-                                                                     "Pearson's Correlation",
-                                                                     "RR"), selected = "Cosine"
+      tagList(
+        
+        tags$style(
+          ".tooltip-inner {
+                 width: 350px;
+               }"
+        ),
+        
+        shinyBS::tipify(
+          selectInput("assoc", label = "Association Measure", choices = c("Angular", "Cosine",
+                                                                          "Euclidean Distance",
+                                                                          "Faith", "Jaccard Index",
+                                                                          "Pearson's Correlation",
+                                                                          "RR"), selected = "Cosine"
+          ),
+          "Association measure that is used to compute an association matrix (e.g., correlation matrix). There are many options but cosine similarity and Pearson's correlation are the most commonly used. Cosine produces values between 0 and 1; Pearson's correlation produces values between -1 and 1",
+          placement = "right"
+        )
+        
       )
       
     }
@@ -209,13 +248,41 @@ server <- function(input, output, session)
     
     if(network == "Community Network (CN)"){
       
-      shinyBS::tipify(
-        selectInput("alpha", label = paste("Significance Level"), choices = c(.05, .01, .001)),
-        "Sets &alpha; to infer whether responses co-occurred by random chance using a binomial distribution"
+      tagList(
+        
+        tags$style(
+          ".tooltip-inner {
+                 width: 350px;
+               }"
+        ),
+        
+        shinyBS::tipify(
+          selectInput("alpha", label = paste("Significance Level"), choices = c(.05, .01, .001)),
+          "Sets &alpha; to infer whether responses co-occurred by random chance using a binomial distribution",
+          placement = "right"
+        )
+        
       )
       
-    }else if(network == "Triangulated Maximally Filtered Graph (TMFG)")
-    {numericInput("minCase", label = "Minimum Number of Responses", value = 2, min = 1, max = Inf)}
+    }else if(network == "Triangulated Maximally Filtered Graph (TMFG)"){
+      
+      tagList(
+        
+        tags$style(
+          ".tooltip-inner {
+                 width: 350px;
+               }"
+        ),
+        
+        shinyBS::tipify(
+          numericInput("minCase", label = "Minimum Number of Responses", value = 2, min = 1, max = Inf),
+          "The minimum number of responses provided by at least <em>n</em> participants across the groups. Must be equal to 2 for Pearson's correlation",
+          placement = "right"
+        )
+        
+      )
+      
+    }
     
   })
   
@@ -224,8 +291,25 @@ server <- function(input, output, session)
     
     network <- input$estimation
     
-    if(network == "Community Network (CN)")
-    {selectInput("enrich", label = paste("Enrich Network"), choices = c(FALSE, TRUE))}
+    if(network == "Community Network (CN)"){
+      
+      tagList(
+        
+        tags$style(
+          ".tooltip-inner {
+                 width: 350px;
+               }"
+        ),
+        
+        shinyBS::tipify(
+          selectInput("enrich", label = paste("Enrich Network"), choices = c(FALSE, TRUE)),
+          "Whether to use a clustering approach to connect all nodes that are in the same cluster. Most commonly <em>not</em> used in the literature (i.e., FALSE), however, Go&ntilde;i et al. (2011) demonstrated greater agreement for clustering and switching with human raters when the networks were enriched (i.e., TRUE)",
+          placement = "right"
+        )
+        
+      )
+    
+    }
     
   })
   
@@ -1945,6 +2029,11 @@ server <- function(input, output, session)
     
     # Remove all other variables from global environment
     rm(list = ls(envir = globalenv())[-match(c("resultShiny", prev.env), ls(globalenv()))], envir = globalenv())
+    
+    # Print message to user to let them know output saved as resultShiny
+    message(
+      '\n\nThe last analyses and results have been saved in the object "resultShiny" in R\'s environment'
+    )
     
     # Remove plots from user view
     if(!is.null(dev.list()))
