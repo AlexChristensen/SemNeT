@@ -1,3 +1,16 @@
+Changes in version 1.4.1
+
+o FIX: unequal nodes and edges in `test.bootSemNeT` (GitHub Issue #3)
+
+o UPDATE: tooltips added to network estimation methods in Shiny
+
+o UPDATE: associated Shiny packages messages suppressed on Shiny startup
+
+o UPDATE: message for Shiny results output
+
+o UPDATE: `test.bootSemNeT` no longer uses number of nodes in ANCOVA
+
+
 Changes in version 1.4.0
 
 o UPDATE: output names for `randwalk`
