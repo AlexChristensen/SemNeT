@@ -785,7 +785,7 @@ randnet <- function (nodes = NULL, edges = NULL, A = NULL)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics----
-# Updated 25.09.2020
+# Updated 24.11.2020
 boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
 {
   #Check for 'bootSemNeT' object
@@ -844,7 +844,7 @@ boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), form
       meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
       
       # Nodes
-      nodes <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){ncol(x)}))
+      #nodes <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){ncol(x)}))
       
       # Edges
       edges <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){
@@ -854,7 +854,8 @@ boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), form
       }))
       
       #Initialize matrix
-      mat <- cbind(rep(name[j], length(meas)), meas, nodes, edges)
+      mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
+                   edges)
       
       if(j != 1)
       {new.mat <- rbind(new.mat, mat)
@@ -863,9 +864,10 @@ boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), form
     
     #Convert to data frame
     aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-    colnames(aov.obj) <- c("Name", "Measure", "Nodes", "Edges")
+    colnames(aov.obj) <- c("Name", "Measure", #"Nodes",
+                           "Edges")
     aov.obj$Name <- factor(as.character(aov.obj$Name))
-    aov.obj[,2:4] <- apply(aov.obj[,2:4], 2, function(x){as.numeric(as.character(x))})
+    aov.obj[,2:3] <- apply(aov.obj[,2:3], 2, function(x){as.numeric(as.character(x))})
     
     #Organize groups
     aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
@@ -886,17 +888,17 @@ boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), form
     ## Bell, A., Jones, K., & Fairbrother, M. (2018).
     ## \emph{Quality & Quantity Volume} \emph{52}, 2031-2036.
     ##https://doi.org/10.1007/s11135-017-0593-5
-    if("Nodes" %in% names(aov.obj))
-    {
-      for(g in 1:nrow(groups))
-      {
-        if(length(unique((aov.obj$Nodes[which(aov.obj$Group == groups[g,])]))) == 1){
-          aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- 0
-        }else{
-          aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Nodes[which(aov.obj$Group == groups[g,])])
-        }
-      }
-    }
+    #if("Nodes" %in% names(aov.obj))
+    #{
+    #  for(g in 1:nrow(groups))
+    #  {
+    #    if(length(unique((aov.obj$Nodes[which(aov.obj$Group == groups[g,])]))) == 1){
+    #      aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- 0
+    #    }else{
+    #      aov.obj$Nodes[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Nodes[which(aov.obj$Group == groups[g,])])
+    #    }
+    #  }
+    #}
     
     if("Edges" %in% names(aov.obj))
     {
@@ -922,9 +924,11 @@ boot.one.test <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), form
     
     #ANOVA formula
     ##Catch Pathfinder Network method
-    if(all(aov.obj$Nodes - aov.obj$Edges == 1))
-    {aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[4][keep.vars[4]], collapse = " + "), " +", split.formula[2], sep = "")
-    }else{aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3:4][keep.vars[3:4]], collapse = " + "), " +", split.formula[2], sep = "")}
+    #if(all(aov.obj$Nodes - aov.obj$Edges == 1))
+    #{aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[4][keep.vars[4]], collapse = " + "), " +", split.formula[2], sep = "")
+    #}else{
+      aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
+    #}
     
     #ANOVA
     aov.test <- aov(as.formula(aov.formula), data = aov.obj)
