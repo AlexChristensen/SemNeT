@@ -153,9 +153,6 @@ server <- function(input, output, session)
                  # Show network estimation tab
                  showTab(inputId = "tabs", target = "Network Estimation")
                  
-                 # Show save and reset tab
-                 showTab(inputId = "tabs", target = "Save and Reset All Results")
-                 
                  # Show save data button
                  shinyjs::show("save_data")
                  
@@ -512,6 +509,8 @@ server <- function(input, output, session)
                  #showTab(inputId = "tabs", target = "Permutation Analyses")
                  showTab(inputId = "tabs", target = "Random Walk Analyses")
                  showTab(inputId = "tabs", target = "Spreading Activation Analyses")
+                 # Show save and reset tab
+                 showTab(inputId = "tabs", target = "Save and Reset All Results")
                  
                  # Update permutation tab
                  ## Group selection
