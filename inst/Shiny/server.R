@@ -368,7 +368,7 @@ server <- function(input, output, session)
                      HTML(
                        
                        paste('<b>Please cite:</b><br>
-                       Goni, J., Arrondo, G., Sepulcre, J., Martincorena, I., de Mendizabel, N. V., Corominas-Murtra, B., ... & Villoslada, P. (2011). The semantic organization of the animal category: Evidence from semantic verbal fluency and network theory. <em>Cognitive Processing</em>, <em>12</em>, 183-196. <a href="https://doi.org/10.1007/s10339-010-0372-x">https://doi.org/10.1007/s10339-010-0372-x</a>
+                       Goni, J., Arrondo, G., Sepulcre, J., Martincorena, I., de Mendizabel, N. V., Corominas-Murtra, B., ... & Villoslada, P. (2011). The semantic organization of the animal category: Evidence from semantic verbal fluency and network theory. <em>Cognitive Processing</em>, <em>12</em>, 183&ndash;196. <a href="https://doi.org/10.1007/s10339-010-0372-x">https://doi.org/10.1007/s10339-010-0372-x</a>
                              ')
                      )
                      
@@ -388,7 +388,7 @@ server <- function(input, output, session)
                      HTML(
                        
                        paste('<b>Please cite:</b><br>
-                       Lerner, A. J., Ogrocki, P. K., & Thomas, P. J. (2009). Network graph analysis of category fluency testing. <em>Cognitive and Behavioral Neurology</em>, <em>22</em>, 45-52. <a href="https://doi.org/10.1097/WNN.0b013e318192ccaf">https://doi.org/10.1097/WNN.0b013e318192ccaf</a>
+                       Lerner, A. J., Ogrocki, P. K., & Thomas, P. J. (2009). Network graph analysis of category fluency testing. <em>Cognitive and Behavioral Neurology</em>, <em>22</em>, 45&ndash;52. <a href="https://doi.org/10.1097/WNN.0b013e318192ccaf">https://doi.org/10.1097/WNN.0b013e318192ccaf</a>
                              ')
                      )
                      
@@ -406,9 +406,9 @@ server <- function(input, output, session)
                      HTML(
                        
                        paste('<b>Please cite:</b><br>
-                       Paulsen, J. S., Romero, R., Chan, A., Davis, A. V., Heaton, R. K., & Jeste, D. V. (1996). Impairment of the semantic network in schizophrenia. <em>Psychiatry Research</em>, <em>63(2-3)</em>, 109-121. <a href="https://doi.org/10.1016/0165-1781(96)02901-0">https://doi.org/10.1016/0165-1781(96)02901-0</a>
+                       Paulsen, J. S., Romero, R., Chan, A., Davis, A. V., Heaton, R. K., & Jeste, D. V. (1996). Impairment of the semantic network in schizophrenia. <em>Psychiatry Research</em>, <em>63</em>, 109&ndash;121. <a href="https://doi.org/10.1016/0165-1781(96)02901-0">https://doi.org/10.1016/0165-1781(96)02901-0</a>
                        <br><br>
-                       Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008). A quick MST-based algorithm to obtain Pathfinder networks (Inf, n-1). <em>Journal of the American Society for Information Science and Technology</em>, <em>59</em>, 1912-1924. <a href="https://doi.org/10.1002/asi.20904">https://doi.org/10.1002/asi.20904</a>
+                       Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008). A quick MST-based algorithm to obtain Pathfinder networks (&infin;, <em>n</em> - 1). <em>Journal of the American Society for Information Science and Technology</em>, <em>59</em>, 1912&ndash;1924. <a href="https://doi.org/10.1002/asi.20904">https://doi.org/10.1002/asi.20904</a>
                        <br><br>
                        Schvaneveldt, R. W. (1990). <em>Pathfinder associative networks: Studies in knowledge organization</em>. Norwood, NJ: Ablex Publishing.
                              ')
@@ -454,7 +454,7 @@ server <- function(input, output, session)
                      HTML(
                        
                        paste('<b>Please cite:</b><br>
-                       Massara, G. P., Di Matteo, T., & Aste, T. (2016). Network filtering for big data: Triangulated maximally filtered graph. <em>Journal of Complex Networks</em>, <em>5</em>, 161-178. <a href="https://doi.org/10.1093/comnet/cnw015">https://doi.org/10.1093/comnet/cnw015</a>
+                       Massara, G. P., Di Matteo, T., & Aste, T. (2016). Network filtering for big data: Triangulated maximally filtered graph. <em>Journal of Complex Networks</em>, <em>5</em>, 161&ndash;178. <a href="https://doi.org/10.1093/comnet/cnw015">https://doi.org/10.1093/comnet/cnw015</a>
                              ')
                      )
                      
@@ -581,7 +581,7 @@ server <- function(input, output, session)
                      paste('<b>Please cite:</b><br>
                        Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
                        <br><br>
-                       Viger, F., & Latapy, M. (2016). Efficient and simple generation of random simple connected graphs with prescribed degree sequence. <em>Journal of Complex Networks</em>, <em>4</em>, 15-37. <a href="https://doi.org/10.1093/comnet/cnv013">https://doi.org/10.1093/comnet/cnv013</a>
+                       Viger, F., & Latapy, M. (2016). Efficient and simple generation of random simple connected graphs with prescribed degree sequence. <em>Journal of Complex Networks</em>, <em>4</em>, 15&ndash;37. <a href="https://doi.org/10.1093/comnet/cnv013">https://doi.org/10.1093/comnet/cnv013</a>
                              ')
                    )
                    
@@ -589,17 +589,32 @@ server <- function(input, output, session)
                  
                  
                  # partial bootstrap citation
-                 if(network == "TMFG")
-                 {
+                 if(network == "TMFG"){
                    output$partial_cite <- renderUI({
                      
                      HTML(
                        
-                       paste('<b>Please cite:</b><br>
-                       Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018). Remotely close associations: Openness to experience and semantic memory structure. <em>European Journal of Personality</em>, <em>32</em>, 480-492. <a href="https://doi.org/10.1002/per.2157">https://doi.org/10.1002/per.2157</a>
+                       paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       <br>
+                       Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
+                       <br><br>
+                       <b>Please cite:</b><br>
+                       Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018). Remotely close associations: Openness to experience and semantic memory structure. <em>European Journal of Personality</em>, <em>32</em>, 480&ndash;492. <a href="https://doi.org/10.1002/per.2157">https://doi.org/10.1002/per.2157</a>
                        <br><br>
                        Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
                              ')
+                     )
+                     
+                   })
+                 }else{
+                   output$partial_cite <- renderUI({
+                     
+                     HTML(
+                       
+                       paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       <br>
+                       Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
+                       ')
                      )
                      
                    })
@@ -1249,7 +1264,7 @@ server <- function(input, output, session)
     HTML(
       
       paste('<b>Please cite:</b><br>
-            Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individiuals with random walks. In <em>Proceeding of the 38th annual meeting of the cognitive science society</em> (pp. 313-318). Austin, TX. Retrieved from <a href="https://cogsci.mindmodeling.org/2016/papers/0066/index.html">https://cogsci.mindmodeling.org/2016/papers/0066/index.html</a>')
+            Kenett, Y. N., & Austerweil, J. L. (2016). Examining search processes in low and high creative individiuals with random walks. In <em>Proceeding of the 38th annual meeting of the cognitive science society</em> (pp. 313&ndash;318). Austin, TX. Retrieved from <a href="https://cogsci.mindmodeling.org/2016/papers/0066/index.html">https://cogsci.mindmodeling.org/2016/papers/0066/index.html</a>')
       
     )
     
@@ -1326,7 +1341,7 @@ server <- function(input, output, session)
     HTML(
       
       paste('<b>Please cite:</b><br>
-            Siew, C. S. Q. (2019). spreadr: An R package to simulate spreading activation in a network. <em>Behavior Research Methods</em>, <em>51</em>, 910-929. <a href="https://doi.org/10.3758/s13428-018-1186-5">https://doi.org/10.3758/s13428-018-1186-5</a>')
+            Siew, C. S. Q. (2019). spreadr: An R package to simulate spreading activation in a network. <em>Behavior Research Methods</em>, <em>51</em>, 910&ndash;929. <a href="https://doi.org/10.3758/s13428-018-1186-5">https://doi.org/10.3758/s13428-018-1186-5</a>')
       
     )
     
