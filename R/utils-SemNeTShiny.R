@@ -1099,8 +1099,8 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
 #' @noRd
-#Test: Partial Bootstrapped Network Statistics----
-# Updated 19.06.2020
+#Test: Bootstrapped Network Statistics----
+# Updated 01.12.2020
 test.bootSemNeTShiny <- function (input, measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
 {
     #Missing arguments
@@ -1191,6 +1191,8 @@ test.bootSemNeTShiny <- function (input, measures = c("ASPL", "CC", "Q"), formul
         tab.acov <- cbind(round(adj.vals, 3), tab.acov)
         #Add residual degrees of freedom
         tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+        #Recheck names
+        name <- colnames(tab.acov)[1:length(name)]
         
         # Provided direction if two groups
         if(length(name) == 2)
@@ -1233,6 +1235,8 @@ test.bootSemNeTShiny <- function (input, measures = c("ASPL", "CC", "Q"), formul
             tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
             #Add residual degrees of freedom
             tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+            #Recheck names
+            name <- colnames(tab.acov)[1:length(name)]
             
             # Provided direction if two groups
             if(length(name) == 2)

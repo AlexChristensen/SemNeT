@@ -8,9 +8,22 @@
 #' rows are participants and columns are verbal fluency
 #' responses
 #' 
+#' @param type Character.
+#' Type of \code{threshold} to apply.
+#' \itemize{
+#' 
+#' \item{\code{"num"}}
+#' {Minimum number of co-occurrences}
+#' 
+#' \item{\code{"prop"}}
+#' {Minimum proportion of co-occurrences}
+#' 
+#' }
+#' Defaults to \code{"nodes"}
+#' 
 #' @param threshold Numeric.
-#' Minimum number of total co-occurrences to be included
-#' in the network
+#' Value of the minimum number or proportion of co-occurrences.
+#' Defaults to \code{3} for \code{"num"} and \code{.05} for \code{"prop"}
 #' 
 #' @return Returns a undirected semantic network
 #' 
@@ -41,9 +54,33 @@
 #' @export
 #' 
 # Naive Random Walk Network----
-# Updated 03.27.2020
-NRW <- function(data, threshold = 3)
+# Updated 01.12.2020
+NRW <- function(data, type = c("num", "prop"), threshold)
 {
+  # Check for type
+  if(missing(type)){
+    type <- "num"
+  }else{type <- match.arg(type)}
+  
+  # Check for threshold
+  if(missing(threshold)){
+    threshold <- switch(type,
+      "num" = 3,
+      "prop" = .05
+    )
+  }else{
+    # Check for appropriate values
+    if(type == "num"){
+      if(threshold < 1){
+        stop("'threshold' must be greater than 1")
+      }
+    }else if(type == "prop"){
+      if(threshold > 1 || threshold < 0){
+        stop("'threshold' must be greater than 0 and less than 1")
+      }
+    }
+  }
+  
   # Check if the matrix is numeric
   if(any(apply(data, 2, is.numeric)))
   {
@@ -64,7 +101,7 @@ NRW <- function(data, threshold = 3)
   # Unique responses
   uniq.resp <- sort(na.omit(unique(as.vector(mat))))
   
-  # Initalize binary matrix
+  # Initialize binary matrix
   bin.mat <- matrix(0, nrow = length(uniq.resp), ncol = length(uniq.resp))
   colnames(bin.mat) <- uniq.resp
   row.names(bin.mat) <- uniq.resp
@@ -89,14 +126,29 @@ NRW <- function(data, threshold = 3)
                               (which(full == target[j])+1))])
       
       # Input into binary response matrix
-      bin.mat[target[j], sides] <- 1
-      bin.mat[sides, target[j]] <- 1
+      if(length(sides) != 0){
+        
+        bin.mat[target[j], sides] <- bin.mat[target[j], sides] + 1
+        bin.mat[sides, target[j]] <- bin.mat[sides, target[j]] + 1
+        
+      }
     }
   }
   
-  # Remove responses less than threshold
-  bin.mat <- bin.mat[-which(rowSums(bin.mat) < threshold),
-                     -which(colSums(bin.mat) < threshold)]
+  # Compute proportion (if type = "prop")
+  if(type == "prop"){
+    bin.mat <- bin.mat / nrow(data)
+  }
+  
+  # Change values less than threshold to zero
+  bin.mat[bin.mat < threshold] <- 0
+  
+  # Change values greater than zero to one
+  bin.mat[bin.mat >= threshold] <- 1
+  
+  # Remove nodes with no connections
+  bin.mat <- bin.mat[-which(colSums(bin.mat) == 0),
+                     -which(colSums(bin.mat) == 0)]
   
   return(bin.mat)
 }

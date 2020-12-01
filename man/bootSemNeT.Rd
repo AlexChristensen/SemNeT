@@ -7,7 +7,7 @@
 bootSemNeT(
   ...,
   method = c("CN", "NRW", "PF", "TMFG"),
-  methodArgs = NULL,
+  methodArgs = list(),
   type = c("case", "node"),
   prop = 0.5,
   sim,
@@ -43,7 +43,7 @@ Current options include:
 
 \item{methodArgs}{List.
 A list of additional arguments for the network estimation function.
-See links in \code{methods} for additional arguments (see also Examples)}
+See links in argument \code{method} for additional arguments (see also Examples)}
 
 \item{type}{Character.
 Type of bootstrap to perform
@@ -135,7 +135,7 @@ high <- open.clean[which(open.group == "High"),]
 ## Run
 ### Inlcudes additional NRW argument: threshold
 open <- bootSemNeT(low, high, iter = 100, cores = 2, method = "NRW", type = "case",
-methodArgs = list(threshold = 3))
+methodArgs = list(type = "num", threshold = 3))
 
 }
 }

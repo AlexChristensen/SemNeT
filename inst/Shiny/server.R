@@ -204,8 +204,9 @@ server <- function(input, output, session)
         ),
         
         shinyBS::tipify(
-          numericInput("threshold", label = "Threshold", value = 3, min = 1, max = Inf),
-          "Sets the threshold for the minimum number of co-occurrences between two responses in the random walks for there to be an edge between them in the network",
+          selectInput("NRW_type", label = paste("Number or Proportion of Minimum Co-Occurrences"),
+                      choices = c("Number", "Proportion")),
+          "Whehter the minimum number of co-occurrences should be a specific number (e.g., 3) or a proportion of co-occurrences given the sample size (e.g., .05)",
           placement = "right"
         )
         
@@ -260,6 +261,55 @@ server <- function(input, output, session)
         )
         
       )
+      
+    }else if(network == "Naive Random Walk (NRW)"){
+      
+      # Handles warning for initialization
+      if(!is.null(input$NRW_type)){
+        
+        if(input$NRW_type == "Number"){
+          
+          tagList(
+            
+            tags$style(
+              ".tooltip-inner {
+                 width: 350px;
+               }"
+            ),
+            
+            shinyBS::tipify(
+              
+              numericInput("threshold", label = "Threshold", value = 3, min = 1, max = Inf, step = 1),
+              "Sets the threshold for the minimum number of co-occurrences between two responses in the random walks for there to be an edge between them in the network",
+              placement = "right"
+              
+            )
+            
+          )
+          
+        }else if(input$NRW_type == "Proportion"){
+          
+          tagList(
+            
+            tags$style(
+              ".tooltip-inner {
+                 width: 350px;
+               }"
+            ),
+            
+            shinyBS::tipify(
+              
+              numericInput("threshold", label = "Threshold", value = .05, min = .01, max = 1, step = .01),
+              "Sets the threshold for the minimum number of co-occurrences between two responses in the random walks for there to be an edge between them in the network",
+              placement = "right"
+              
+            )
+            
+          )
+          
+        }
+        
+      }
       
     }else if(network == "Triangulated Maximally Filtered Graph (TMFG)"){
       
@@ -376,11 +426,17 @@ server <- function(input, output, session)
                    
                  }else if(network == "NRW")
                  {
+                   
+                   nrw_type <<- switch(input$NRW_type,
+                                       "Number" = "num",
+                                       "Proportion" = "prop"
+                   )
+                   
                    thresh <<- input$threshold
                    
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
-                                   function(x){NRW(x, threshold = thresh)})
+                                   function(x){NRW(x, type = nrw_type, threshold = thresh)})
                    
                    # naive random walk citation
                    output$net_cite <- renderUI({
@@ -1013,7 +1069,7 @@ server <- function(input, output, session)
                      if(network == "CN")
                      {methodArgs <- list(window = window_size, alpha = sig_alpha, enrich = enrichment)
                      }else if(network == "NRW")
-                     {methodArgs <- list(threshold = thresh)
+                     {methodArgs <- list(type = nrw_type, threshold = thresh)
                      }else if(network == "PF")
                      {methodArgs <- list()}
                      

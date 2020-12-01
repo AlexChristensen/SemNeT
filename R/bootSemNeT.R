@@ -29,7 +29,7 @@
 #' 
 #' @param methodArgs List.
 #' A list of additional arguments for the network estimation function.
-#' See links in \code{methods} for additional arguments (see also Examples)
+#' See links in argument \code{method} for additional arguments (see also Examples)
 #' 
 #' @param type Character.
 #' Type of bootstrap to perform
@@ -116,7 +116,7 @@
 #' ## Run
 #' ### Inlcudes additional NRW argument: threshold
 #' open <- bootSemNeT(low, high, iter = 100, cores = 2, method = "NRW", type = "case",
-#' methodArgs = list(threshold = 3))
+#' methodArgs = list(type = "num", threshold = 3))
 #' 
 #' }
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
@@ -125,9 +125,9 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 03.09.2020
+# Updated 01.12.2020
 bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
-                        methodArgs = NULL,
+                        methodArgs = list(),
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,
                         iter = 1000, cores)
@@ -156,19 +156,40 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                        "NRW" = NRW,
                        "PF" = PF)
     
-    #Check for NULL methodArgs
-    if(is.null(methodArgs))
-    {methodArgs <- list()}
-    
     #Check for missing arguments in function
     form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
     
-    if(any(!form.args %in% names(methodArgs)))
-    {
+    #Get arguments
+    if(any(!form.args %in% names(methodArgs))){
+        
+        #Find which arguments are needed
         need.args <- form.args[which(!form.args %in% names(methodArgs))]
         
-        for(i in 1:length(need.args))
-        {methodArgs[need.args] <- unlist(formals(NET.FUNC)[need.args])}
+        #Get default arguments for methods
+        if(method == "CN"){
+            
+            if("window" %in% need.args){methodArgs$window <- 2}
+            if("alpha" %in% need.args){methodArgs$alpha <- .05}
+            if("enrich" %in% need.args){methodArgs$enrich <- FALSE}
+            
+        }else if(method == "NRW"){
+            
+            if("type" %in% need.args){methodArgs$type <- "num"}
+            if("threshold" %in% need.args){
+                
+                if(methodArgs$type == "num"){
+                    
+                    methodArgs$threshold <- 3
+                    
+                }else if(methodArgs$type == "prop"){
+                    
+                    methodArgs$threshold <- .05
+                    
+                }
+            
+            }
+            
+        }
     }
     
     #Number of nodes in full data
@@ -373,6 +394,7 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
             newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
                                         cl = cl,
                                         FUN = NET.FUNC,
+                                        type = methodArgs$type,
                                         threshold = methodArgs$threshold)
             
             #Insert network list

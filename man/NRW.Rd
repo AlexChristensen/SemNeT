@@ -4,7 +4,7 @@
 \alias{NRW}
 \title{Naive Random Walk Network Estimation}
 \usage{
-NRW(data, threshold = 3)
+NRW(data, type = c("num", "prop"), threshold)
 }
 \arguments{
 \item{data}{Matrix or data frame.
@@ -12,9 +12,22 @@ A preprocessed verbal fluency matrix where
 rows are participants and columns are verbal fluency
 responses}
 
+\item{type}{Character.
+Type of \code{threshold} to apply.
+\itemize{
+
+\item{\code{"num"}}
+{Minimum number of co-occurrences}
+
+\item{\code{"prop"}}
+{Minimum proportion of co-occurrences}
+
+}
+Defaults to \code{"nodes"}}
+
 \item{threshold}{Numeric.
-Minimum number of total co-occurrences to be included
-in the network}
+Value of the minimum number or proportion of co-occurrences.
+Defaults to \code{3} for \code{"num"} and \code{.05} for \code{"prop"}}
 }
 \value{
 Returns a undirected semantic network
