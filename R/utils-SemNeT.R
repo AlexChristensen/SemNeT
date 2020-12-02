@@ -61,7 +61,7 @@ bad.response <- function (word, ...)
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
 #' @noRd
-# Response matrix to binary matrix
+# Response matrix to binary matrix----
 # Updated 16.09.2020
 resp2bin <- function (resp)
 {
