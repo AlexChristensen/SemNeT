@@ -39,7 +39,7 @@
 #' 
 #' @export
 # Response analysis
-# Updated 30.10.2020
+# Updated 02.12.2020
 response.analysis <- function(...)
 {
   #Get names of data objects
@@ -53,7 +53,7 @@ response.analysis <- function(...)
   for(i in 1:length(datalist)){
     
     if(all(apply(datalist[[i]], 2, is.character))){
-      datalist[[i]] <- SemNeT:::resp2bin(datalist[[i]])$binary
+      datalist[[i]] <- resp2bin(datalist[[i]])$binary
     }
     
   }

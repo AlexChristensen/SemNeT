@@ -125,7 +125,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 01.12.2020
+# Updated 02.12.2020
 bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                         methodArgs = list(),
                         type = c("case", "node"),
@@ -188,6 +188,10 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                 }
             
             }
+            
+        }else if(method == "TMFG"){
+            
+            if("depend" %in% need.args){methodArgs$depend <- FALSE}
             
         }
     }

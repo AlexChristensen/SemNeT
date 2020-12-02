@@ -33,6 +33,7 @@
 #' @export
 #'
 #Simulate Verbal Fluency Data----
+# Updated 02.12.2020
 sim.fluency <- function(nodes, cases, random = FALSE)
 {
     # Defaults
