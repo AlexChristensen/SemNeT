@@ -18,17 +18,51 @@ server <- function(input, output, session)
     if(sum(tc.object) != 0)
     {
       output$clean_ui <- renderUI({
-        selectInput("clean_envir", label = "textcleaner Objects Detected in Environment. Use?",
-                    choices = c("", prev.env[tc.object]), selected = 1)
+        
+        tagList(
+          
+          tags$style(
+            ".tooltip-inner {
+                 width: 350px;
+               }"
+          ),
+          
+          shinyBS::tipify(
+            selectInput("clean_envir", label = "textcleaner Objects",
+                        choices = c("", prev.env[tc.object]), selected = 2),
+            "<code>textcleaner</code> objects that were found in your R environment. SemNeTShiny will automatically load the proper data from the object for semantic network analysis",
+            placement = "right"
+          )
+          
+        )
+        
       })
     }
     
     if(exists("group"))
     {
+      
       output$group_ui <- renderUI({
-        radioButtons("group_envir", label = "R Object 'group' Detected in Environment. Use?",
-                     choices = c("Yes", "No"), inline = TRUE, selected = "Yes")
+        
+        tagList(
+          
+          tags$style(
+            ".tooltip-inner {
+                 width: 350px;
+               }"
+          ),
+          
+          shinyBS::tipify(
+            radioButtons("group_envir", label = "'group' Object. Use?",
+                         choices = c("Yes", "No"), inline = TRUE, selected = "Yes"),
+            "A <code>group</code> object that was found in your R environment",
+            placement = "right"
+          )
+          
+        )
+        
       })
+    
     }
   }
   

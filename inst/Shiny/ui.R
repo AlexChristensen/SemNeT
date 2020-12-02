@@ -46,6 +46,8 @@ ui <- (
                  
                  mainPanel(
                    
+                   HTML('<center><img src = "SemNeT.png" width = "500", ></center>'),
+                   
                    tableOutput("example_data_response"),
                    
                    tableOutput("example_data_binary"),
