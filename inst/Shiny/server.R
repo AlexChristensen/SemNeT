@@ -2073,7 +2073,7 @@ server <- function(input, output, session)
                      # Let user know save was successful
                      shinyalert::shinyalert(
                        title = "Save Successful",
-                       text = paste("Spreading Activation Analyses were saved as '", res.name, "'", sep = ""),
+                       text = paste("All results were saved as '", res.name, "'", sep = ""),
                        type = "info"
                      )
                    }
