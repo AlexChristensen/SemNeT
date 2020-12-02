@@ -16,6 +16,8 @@ o UPDATE: Shiny with new `NRW` arguments
 
 o UPDATE: Shiny now provides effect sizes for partial eta squared in Bootstrap Network Analyses tab
 
+o FIX: `PF` remove zeros bug (when there were no zero distances, then an empty matrix was given)
+
 
 Changes in version 1.4.0
 
