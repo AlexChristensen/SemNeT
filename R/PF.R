@@ -30,7 +30,7 @@
 #' 
 #' @export
 # Pathfinder Network Estimation
-# Updated 21.09.2020
+# Updated 02.12.2020
 PF <- function (data)
 {
   # Check if the matrix is responses
@@ -45,6 +45,7 @@ PF <- function (data)
   
   # Co-occurrence
   mat <- t(mat) %*% mat
+  diag(mat) <- 0
   
   # Number of nodes
   n <- ncol(mat)
@@ -64,7 +65,9 @@ PF <- function (data)
   S <- W[order(W[,3], W[,2], decreasing = FALSE),]
   
   # Remove zeros
-  S <- S[-which(S[,3] == 0),]
+  if(any(S[,3] == 0)){
+    S <- S[-which(S[,3] == 0),]
+  }
   
   # Number of rows in sparse matrix
   n_sparse <- nrow(S)
