@@ -756,6 +756,12 @@ server <- function(input, output, session)
                                             # Update citation
                                             output$net_cite <- renderUI({})
                                             
+                                            # Update to tabs
+                                            updateNavbarPage(session = session,
+                                                             inputId = "tabs",
+                                                             selected = "Network Estimation"
+                                                             )
+                                            
                                             # Hide tabs
                                             hideTab(inputId = "tabs", target = "Random Network Analyses")
                                             hideTab(inputId = "tabs", target = "Bootstrap Analyses")
@@ -2073,7 +2079,7 @@ server <- function(input, output, session)
                      # Let user know save was successful
                      shinyalert::shinyalert(
                        title = "Save Successful",
-                       text = paste("All results were saved as '", res.name, "'", sep = ""),
+                       text = paste("Spreading Activation Analyses were saved as '", res.name, "'", sep = ""),
                        type = "info"
                      )
                    }
