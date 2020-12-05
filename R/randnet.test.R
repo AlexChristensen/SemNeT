@@ -45,7 +45,7 @@
 #' 
 #' @export
 # Random network test----
-# Updated 03.09.2020
+# Updated 05.12.2020
 randnet.test <- function (..., iter, cores)
 {
     #Missing arguments
@@ -76,7 +76,7 @@ randnet.test <- function (..., iter, cores)
     names(rand.list) <- name
     
     #Message for begin random networks
-    message("Generating random networks...", appendLF = FALSE)
+    message("Generating random networks...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)

@@ -526,7 +526,7 @@ randnet.testShiny <- function (dat, iter, cores)
     message(styletext(styletext("\nRandom Network Analyses\n", defaults = "underline"), defaults = "bold"))
     
     #Message for begin random networks
-    message("Generating random networks...", appendLF = FALSE)
+    message("Generating random networks...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
