@@ -61,23 +61,15 @@ NRW <- function(data, type = c("num", "prop"), threshold = 0)
   if(missing(type)){
     type <- "num"
   }else{type <- match.arg(type)}
-  
-  # Check for threshold
-  if(missing(threshold)){
-    threshold <- switch(type,
-      "num" = 0,
-      "prop" = 0
-    )
-  }else{
-    # Check for appropriate values
-    if(type == "num"){
-      if(threshold < 0){
-        stop("'threshold' must be greater than or equal to 0")
-      }
-    }else if(type == "prop"){
-      if(threshold > 1 || threshold < 0){
-        stop("'threshold' must be greater than or equal to 0 and less than 1")
-      }
+
+  # Check for appropriate threshold values
+  if(type == "num"){
+    if(threshold < 0){
+      stop("'threshold' must be greater than or equal to 0")
+    }
+  }else if(type == "prop"){
+    if(threshold > 1 || threshold < 0){
+      stop("'threshold' must be greater than or equal to 0 and less than 1")
     }
   }
   
@@ -144,11 +136,15 @@ NRW <- function(data, type = c("num", "prop"), threshold = 0)
   bin.mat[bin.mat < threshold] <- 0
   
   # Change values greater than zero to one
-  bin.mat[bin.mat >= threshold] <- 1
-  
-  # Remove nodes with no connections
-  bin.mat <- bin.mat[-which(colSums(bin.mat) == 0),
-                     -which(colSums(bin.mat) == 0)]
+  if(threshold != 0){
+    bin.mat[bin.mat >= threshold] <- 1
+    
+    # Remove nodes with no connections
+    bin.mat <- bin.mat[-which(colSums(bin.mat) == 0),
+                       -which(colSums(bin.mat) == 0)]
+  }else{
+    bin.mat[bin.mat != 0] <- 1
+  }
   
   return(bin.mat)
 }
