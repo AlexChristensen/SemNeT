@@ -75,6 +75,9 @@ randnet.test <- function (..., iter, cores)
     rand.list <- vector("list", length = length(name))
     names(rand.list) <- name
     
+    # Message that this is for random network
+    message(styletext(styletext("\nRandom Network Analyses\n", defaults = "underline"), defaults = "bold"))
+    
     #Message for begin random networks
     message("Generating random networks...", appendLF = FALSE)
     

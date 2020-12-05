@@ -742,6 +742,9 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
     #Number of nodes in full data
     full <- unique(unlist(lapply(datalist,ncol)))
     
+    # Message that this is for bootstrap
+    message(styletext(styletext("\nBootstrap Analyses\n", defaults = "underline"), defaults = "bold"))
+    
     #######################
     #### GENERATE DATA ####
     #######################
@@ -1780,6 +1783,9 @@ randwalkShiny <- function (dat, nameA, nameB, reps = 20, steps = 10,
     
     # Initialize parallelization results
     pb.res <- vector("list", length = length(steps))
+    
+    # Message that this is for random walk
+    message(styletext(styletext("\nRandom Walk Analyses\n", defaults = "underline"), defaults = "bold"))
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)

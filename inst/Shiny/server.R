@@ -1865,7 +1865,7 @@ server <- function(input, output, session)
                      # Let user know save was successful
                      shinyalert::shinyalert(
                        title = "Save Successful",
-                       text = paste("All Analyses were saved as '", res.name, "'", sep = ""),
+                       text = paste("All results were saved as '", res.name, "'", sep = ""),
                        type = "info"
                      )
                    }
@@ -2087,7 +2087,7 @@ server <- function(input, output, session)
                                             if(exists("clean", envir = globalenv()))
                                             {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "clean", "dat", "group", prev.env), ls(globalenv()))))], envir = globalenv())
                                             }else if(exists("group", envir = globalenv()) && exists("dat", envir = globalenv()))
-                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), prev.env, ls(globalenv()))))], envir = globalenv())
+                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), prev.env), ls(globalenv())))], envir = globalenv())
                                             }else{rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), ls(globalenv()))))], envir = globalenv())}
                                             
                                           }
