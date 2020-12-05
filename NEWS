@@ -1,3 +1,8 @@
+Changes in version 1.4.2
+
+o FIX: bug in reset of Shiny application
+
+
 Changes in version 1.4.1
 
 o FIX: unequal nodes and edges in `test.bootSemNeT` (GitHub Issue #3)
