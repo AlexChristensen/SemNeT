@@ -728,19 +728,32 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
                        "NRW" = NRW,
                        "PF" = PF)
     
-    #Check for NULL methodArgs
-    if(is.null(methodArgs))
-    {methodArgs <- list()}
-    
     #Check for missing arguments in function
     form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
     
-    if(any(!form.args %in% names(methodArgs)))
-    {
+    #Get arguments
+    if(any(!form.args %in% names(methodArgs))){
+        
+        #Find which arguments are needed
         need.args <- form.args[which(!form.args %in% names(methodArgs))]
         
-        for(i in 1:length(need.args))
-        {methodArgs[need.args] <- unlist(formals(NET.FUNC)[need.args])}
+        #Get default arguments for methods
+        if(method == "CN"){
+            
+            if("window" %in% need.args){methodArgs$window <- 2}
+            if("alpha" %in% need.args){methodArgs$alpha <- .05}
+            if("enrich" %in% need.args){methodArgs$enrich <- FALSE}
+            
+        }else if(method == "NRW"){
+            
+            if("type" %in% need.args){methodArgs$type <- "num"}
+            if("threshold" %in% need.args){methodArgs$threshold <- 0}
+            
+        }else if(method == "TMFG"){
+            
+            if("depend" %in% need.args){methodArgs$depend <- FALSE}
+            
+        }
     }
     
     #Number of nodes in full data
