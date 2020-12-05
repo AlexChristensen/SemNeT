@@ -496,6 +496,7 @@ plot.compareShiny <- function (x, ...)
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
 #' @noRd
+# Random Network Analyses Shiny----
 randnet.testShiny <- function (dat, iter, cores)
 {
     #Missing arguments
@@ -520,6 +521,9 @@ randnet.testShiny <- function (dat, iter, cores)
     #Initialize random networks list
     rand.list <- vector("list", length = length(name))
     names(rand.list) <- name
+    
+    # Message that this is for random network
+    message(styletext(styletext("\nRandom Network Analyses\n", defaults = "underline"), defaults = "bold"))
     
     #Message for begin random networks
     message("Generating random networks...", appendLF = FALSE)
