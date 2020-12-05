@@ -175,19 +175,7 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
         }else if(method == "NRW"){
             
             if("type" %in% need.args){methodArgs$type <- "num"}
-            if("threshold" %in% need.args){
-                
-                if(methodArgs$type == "num"){
-                    
-                    methodArgs$threshold <- 3
-                    
-                }else if(methodArgs$type == "prop"){
-                    
-                    methodArgs$threshold <- .05
-                    
-                }
-            
-            }
+            if("threshold" %in% need.args){methodArgs$threshold <- 0}
             
         }else if(method == "TMFG"){
             

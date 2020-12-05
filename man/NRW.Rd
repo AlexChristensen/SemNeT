@@ -4,7 +4,7 @@
 \alias{NRW}
 \title{Naive Random Walk Network Estimation}
 \usage{
-NRW(data, type = c("num", "prop"), threshold)
+NRW(data, type = c("num", "prop"), threshold = 0)
 }
 \arguments{
 \item{data}{Matrix or data frame.
@@ -27,7 +27,7 @@ Defaults to \code{"nodes"}}
 
 \item{threshold}{Numeric.
 Value of the minimum number or proportion of co-occurrences.
-Defaults to \code{3} for \code{"num"} and \code{.05} for \code{"prop"}}
+Defaults to \code{0} for both \code{"num"} and \code{"prop"}}
 }
 \value{
 Returns a undirected semantic network

@@ -313,7 +313,7 @@ server <- function(input, output, session)
             
             shinyBS::tipify(
               
-              numericInput("threshold", label = "Threshold", value = 3, min = 1, max = Inf, step = 1),
+              numericInput("threshold", label = "Threshold", value = 0, min = 0, max = ncol(dat), step = 1),
               "Sets the threshold for the minimum number of co-occurrences between two responses in the random walks for there to be an edge between them in the network",
               placement = "right"
               
@@ -333,7 +333,7 @@ server <- function(input, output, session)
             
             shinyBS::tipify(
               
-              numericInput("threshold", label = "Threshold", value = .05, min = .01, max = 1, step = .01),
+              numericInput("threshold", label = "Threshold", value = 0, min = 0, max = 1, step = .01),
               "Sets the threshold for the minimum number of co-occurrences between two responses in the random walks for there to be an edge between them in the network",
               placement = "right"
               
