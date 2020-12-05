@@ -19,7 +19,7 @@
 #' {Minimum proportion of co-occurrences}
 #' 
 #' }
-#' Defaults to \code{"nodes"}
+#' Defaults to \code{"num"}
 #' 
 #' @param threshold Numeric.
 #' Value of the minimum number or proportion of co-occurrences.
