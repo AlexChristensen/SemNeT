@@ -713,223 +713,6 @@ server <- function(input, output, session)
                }
   )
   
-  # Reset
-  observeEvent(input$reset,
-               {
-                 
-                 shinyalert::shinyalert(title = "Are you sure?",
-                                        text = "You are about to erase your results\n(Data and saved results will not be erased)",
-                                        type = "error",
-                                        showConfirmButton = TRUE,
-                                        showCancelButton = TRUE,
-                                        callbackR = function(x)
-                                        {
-                                          if(x)
-                                          {
-                                            showNotification("Results cleared")
-                                            
-                                            # Refresh tables and plots
-                                            output$viz <- renderPlot({})
-                                            output$measures <- renderTable({})
-                                            output$randnet <- renderTable({})
-                                            output$aspl <- renderTable({})
-                                            output$cc <- renderTable({})
-                                            output$q <- renderTable({})
-                                            output$tab <- renderTable({})
-                                            output$asplPlot <- renderPlot({})
-                                            output$ccPlot <- renderPlot({})
-                                            output$qPlot <- renderPlot({})
-                                            #output$perm_table <- renderTable({})
-                                            output$walk_rand <- renderTable({})
-                                            output$spreadr_animate <- renderPlot({})
-                                            
-                                            # Network Estimation tab
-                                            updateSelectInput(session = session,
-                                                              inputId = "estimation",
-                                                              label = "Network Estimation Method",
-                                                              choices = c("Community Network (CN)",
-                                                                          "Naive Random Walk (NRW)",
-                                                                          "Pathfinder Network (PF)",
-                                                                          "Triangulated Maximally Filtered Graph (TMFG)")
-                                            )
-                                            
-                                            # Update citation
-                                            output$net_cite <- renderUI({})
-                                            
-                                            # Update to tabs
-                                            updateNavbarPage(session = session,
-                                                             inputId = "tabs",
-                                                             selected = "Network Estimation"
-                                                             )
-                                            
-                                            # Hide tabs
-                                            hideTab(inputId = "tabs", target = "Random Network Analyses")
-                                            hideTab(inputId = "tabs", target = "Bootstrap Analyses")
-                                            #hideTab(inputId = "tabs", target = "Permutation Analyses")
-                                            hideTab(inputId = "tabs", target = "Random Walk Analyses")
-                                            hideTab(inputId = "tabs", target = "Spreading Activation Analyses")
-                                            hideTab(inputId = "tabs", target = "Save and Reset All Results")
-                                            
-                                            # Hide save buttons
-                                            shinyjs::hide("save_nets")
-                                            shinyjs::hide("save_rand")
-                                            shinyjs::hide("save_boot")
-                                            shinyjs::hide("save_walk")
-                                            shinyjs::hide("save_act")
-                                            
-                                            # Random Network Analyses tab
-                                            updateNumericInput(session = session,
-                                                               inputId = "iters_rand",
-                                                               label = "Number of Iterations",
-                                                               value = 1000, min = 0, step = 100)
-                                            
-                                            
-                                            if(exists("core_rand", envir = globalenv()))
-                                            {
-                                              updateSelectInput(session = session,
-                                                                inputId = "cores_rand",
-                                                                label = "Number of Processing Cores",
-                                                                choices = core_rand,
-                                                                selected = ceiling(length(core_rand) / 2)
-                                              )
-                                            }
-                                            
-                                            # Bootstrap Analyses tab
-                                            updateNumericInput(session = session,
-                                                               inputId = "iters_boot",
-                                                               label = "Number of Iterations",
-                                                               value = 1000, min = 0, step = 100)
-                                            
-                                            if(exists("core_boot", envir = globalenv()))
-                                            {
-                                              updateSelectInput(session = session,
-                                                                inputId = "cores_boot",
-                                                                label = "Number of Processing Cores",
-                                                                choices = core_boot,
-                                                                selected = ceiling(length(core_boot) / 2)
-                                              )
-                                            }
-                                            
-                                            if(network == "TMFG")
-                                            {
-                                              updateCheckboxGroupInput(session = session,
-                                                                       "percent", label = "Proportion of Nodes Remaining",
-                                                                       choiceNames = sprintf("%1.2f",seq(.50,.90,.10)),
-                                                                       choiceValues = seq(.50,.90,.10), inline = TRUE,
-                                                                       selected = seq(.50,.90,.10)
-                                              )
-                                            }
-                                            
-                                            ## Hide plot button
-                                            shinyjs::hide("run_plot")
-                                            
-                                            # Permutation Analyses tab
-                                            
-                                            #updateSelectInput(session = session,
-                                            #                  inputId = "meas_perm",
-                                            #                  label = "Network Measure",
-                                            #                  choices = c("Average Shortest Path Length (ASPL)",
-                                            #                              "Clustering Coefficient (CC)",
-                                            #                              "Modularity (Q)"
-                                            #                  )
-                                            #)
-                                            
-                                            #updateNumericInput(session = session,
-                                            #                   inputId = "iters_perm",
-                                            #                   label = "Number of Iterations",
-                                            #                   value = 1000, min = 0, step = 100)
-                                            
-                                            #if(exists("core_perm", envir = globalenv()))
-                                            #{
-                                            #  updateSelectInput(session = session,
-                                            #                    inputId = "cores_perm",
-                                            #                    label = "Number of Processing Cores",
-                                            #                    choices = core_perm,
-                                            #                    selected = ceiling(length(core_boot) / 2)
-                                            #  )
-                                            #}
-                                            
-                                            # Random Network Analyses tab
-                                            updateNumericInput(session = session,
-                                                               inputId = "reps",
-                                                               label = "Number of Repetitions",
-                                                               value = 20, min = 0, max = Inf, step = 5)
-                                            
-                                            updateNumericInput(session = session,
-                                                               inputId = "steps",
-                                                               label = "Number of Steps",
-                                                               value = 10, min = 0, max = Inf, step = 1)
-                                            
-                                            updateNumericInput(session = session,
-                                                               inputId = "iters_walk",
-                                                               label = "Number of Iterations",
-                                                               value = 10000, min = 0, max = Inf, step = 1000)
-                                            
-                                            if(exists("core_walk", envir = globalenv()))
-                                            {
-                                              updateSelectInput(session = session,
-                                                                inputId = "cores_walk",
-                                                                label = "Number of Processing Cores",
-                                                                choices = core_walk,
-                                                                selected = ceiling(length(core_walk) / 2)
-                                              )
-                                            }
-                                            
-                                            # Spreading Activation Analyses tab
-                                            updateNumericInput(session = session,
-                                                               inputId = "retention",
-                                                               label = "Retention (proportion of activation that remains in spreading node)",
-                                                               value = 0.5, min = 0, max = 1, step = .05)
-                                            
-                                            updateNumericInput(session = session,
-                                                               inputId = "time",
-                                                               label = "Number of Time Steps",
-                                                               value = 10, min = 0, max = Inf, step = 1)
-                                            
-                                            updateNumericInput(session = session,
-                                                               inputId = "decay",
-                                                               label = "Decay (activation lost at each time step)",
-                                                               value = 0, min = 0, max = 1, step = .05)
-                                            
-                                            updateNumericInput(session = session,
-                                                               inputId = "suppress",
-                                                               label = "Suppress (activation less than value is set to zero)",
-                                                               value = 0, min = 0, max = 1, step = .001)
-                                            
-                                            updateSelectInput(session = session,
-                                                              inputId = "animate_size",
-                                                              label = "Plot Size",
-                                                              choices = c("Small (500 x 500)", "Medium (900 x 900)", "Large (1400 x 1400)"),
-                                                              selected = "Medium (900 x 900)"
-                                            )
-                                            
-                                            ## Show inputs
-                                            shinyjs::show("network_select")
-                                            shinyjs::show("retention")
-                                            shinyjs::show("time")
-                                            shinyjs::show("decay")
-                                            shinyjs::show("suppress")
-                                            shinyjs::show("set_act")
-                                            
-                                            ## Hide inputs
-                                            shinyjs::hide("animate")
-                                            shinyjs::hide("animate_size")
-                                            shinyjs::hide("animate_slider")
-                                            shinyjs::hide("reset_act")
-                                            shinyjs::hide("reset")
-                                            shinyjs::hide("node_select")
-                                            shinyjs::hide("run_spr_act")
-                                            
-                                            if(exists("clean"))
-                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "clean", "dat", "group", prev.env), ls(globalenv()))))], envir = globalenv())
-                                            }else if(exists("group") && exists("dat"))
-                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), prev.env, ls(globalenv()))))], envir = globalenv())
-                                            }else{rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), ls(globalenv()))))], envir = globalenv())}
-                                            
-                                          }
-                                        })
-               })
-  
   #############################
   #### RANDOM NETWORK TEST ####
   #############################
@@ -2007,7 +1790,10 @@ server <- function(input, output, session)
                }
   )
   
-  ## Master save
+  #####################
+  #### MASTER SAVE ####
+  #####################
+
   observeEvent(input$save_master,
                {
                  
@@ -2079,7 +1865,7 @@ server <- function(input, output, session)
                      # Let user know save was successful
                      shinyalert::shinyalert(
                        title = "Save Successful",
-                       text = paste("Spreading Activation Analyses were saved as '", res.name, "'", sep = ""),
+                       text = paste("All Analyses were saved as '", res.name, "'", sep = ""),
                        type = "info"
                      )
                    }
@@ -2087,6 +1873,226 @@ server <- function(input, output, session)
                  
                }
   )
+  
+  ###############
+  #### RESET ####
+  ###############
+  
+  observeEvent(input$reset,
+               {
+                 
+                 shinyalert::shinyalert(title = "Are you sure?",
+                                        text = "You are about to erase your results\n(Data and saved results will not be erased)",
+                                        type = "error",
+                                        showConfirmButton = TRUE,
+                                        showCancelButton = TRUE,
+                                        callbackR = function(x)
+                                        {
+                                          if(x)
+                                          {
+                                            showNotification("Results cleared")
+                                            
+                                            # Refresh tables and plots
+                                            output$viz <- renderPlot({})
+                                            output$measures <- renderTable({})
+                                            output$randnet <- renderTable({})
+                                            output$aspl <- renderTable({})
+                                            output$cc <- renderTable({})
+                                            output$q <- renderTable({})
+                                            output$tab <- renderTable({})
+                                            output$asplPlot <- renderPlot({})
+                                            output$ccPlot <- renderPlot({})
+                                            output$qPlot <- renderPlot({})
+                                            #output$perm_table <- renderTable({})
+                                            output$walk_rand <- renderTable({})
+                                            output$spreadr_animate <- renderPlot({})
+                                            
+                                            # Network Estimation tab
+                                            updateSelectInput(session = session,
+                                                              inputId = "estimation",
+                                                              label = "Network Estimation Method",
+                                                              choices = c("Community Network (CN)",
+                                                                          "Naive Random Walk (NRW)",
+                                                                          "Pathfinder Network (PF)",
+                                                                          "Triangulated Maximally Filtered Graph (TMFG)")
+                                            )
+                                            
+                                            # Update citation
+                                            output$net_cite <- renderUI({})
+                                            
+                                            # Update to tabs
+                                            updateNavbarPage(session = session,
+                                                             inputId = "tabs",
+                                                             selected = "Network Estimation"
+                                            )
+                                            
+                                            # Hide tabs
+                                            hideTab(inputId = "tabs", target = "Random Network Analyses")
+                                            hideTab(inputId = "tabs", target = "Bootstrap Analyses")
+                                            #hideTab(inputId = "tabs", target = "Permutation Analyses")
+                                            hideTab(inputId = "tabs", target = "Random Walk Analyses")
+                                            hideTab(inputId = "tabs", target = "Spreading Activation Analyses")
+                                            hideTab(inputId = "tabs", target = "Save and Reset All Results")
+                                            
+                                            # Hide save buttons
+                                            shinyjs::hide("save_nets")
+                                            shinyjs::hide("save_rand")
+                                            shinyjs::hide("save_boot")
+                                            shinyjs::hide("save_walk")
+                                            shinyjs::hide("save_act")
+                                            
+                                            # Random Network Analyses tab
+                                            updateNumericInput(session = session,
+                                                               inputId = "iters_rand",
+                                                               label = "Number of Iterations",
+                                                               value = 1000, min = 0, step = 100)
+                                            
+                                            
+                                            if(exists("core_rand", envir = globalenv()))
+                                            {
+                                              updateSelectInput(session = session,
+                                                                inputId = "cores_rand",
+                                                                label = "Number of Processing Cores",
+                                                                choices = core_rand,
+                                                                selected = ceiling(length(core_rand) / 2)
+                                              )
+                                            }
+                                            
+                                            # Bootstrap Analyses tab
+                                            updateNumericInput(session = session,
+                                                               inputId = "iters_boot",
+                                                               label = "Number of Iterations",
+                                                               value = 1000, min = 0, step = 100)
+                                            
+                                            if(exists("core_boot", envir = globalenv()))
+                                            {
+                                              updateSelectInput(session = session,
+                                                                inputId = "cores_boot",
+                                                                label = "Number of Processing Cores",
+                                                                choices = core_boot,
+                                                                selected = ceiling(length(core_boot) / 2)
+                                              )
+                                            }
+                                            
+                                            if(network == "TMFG")
+                                            {
+                                              updateCheckboxGroupInput(session = session,
+                                                                       "percent", label = "Proportion of Nodes Remaining",
+                                                                       choiceNames = sprintf("%1.2f",seq(.50,.90,.10)),
+                                                                       choiceValues = seq(.50,.90,.10), inline = TRUE,
+                                                                       selected = seq(.50,.90,.10)
+                                              )
+                                            }
+                                            
+                                            ## Hide plot button
+                                            shinyjs::hide("run_plot")
+                                            
+                                            # Permutation Analyses tab
+                                            
+                                            #updateSelectInput(session = session,
+                                            #                  inputId = "meas_perm",
+                                            #                  label = "Network Measure",
+                                            #                  choices = c("Average Shortest Path Length (ASPL)",
+                                            #                              "Clustering Coefficient (CC)",
+                                            #                              "Modularity (Q)"
+                                            #                  )
+                                            #)
+                                            
+                                            #updateNumericInput(session = session,
+                                            #                   inputId = "iters_perm",
+                                            #                   label = "Number of Iterations",
+                                            #                   value = 1000, min = 0, step = 100)
+                                            
+                                            #if(exists("core_perm", envir = globalenv()))
+                                            #{
+                                            #  updateSelectInput(session = session,
+                                            #                    inputId = "cores_perm",
+                                            #                    label = "Number of Processing Cores",
+                                            #                    choices = core_perm,
+                                            #                    selected = ceiling(length(core_boot) / 2)
+                                            #  )
+                                            #}
+                                            
+                                            # Random Network Analyses tab
+                                            updateNumericInput(session = session,
+                                                               inputId = "reps",
+                                                               label = "Number of Repetitions",
+                                                               value = 20, min = 0, max = Inf, step = 5)
+                                            
+                                            updateNumericInput(session = session,
+                                                               inputId = "steps",
+                                                               label = "Number of Steps",
+                                                               value = 10, min = 0, max = Inf, step = 1)
+                                            
+                                            updateNumericInput(session = session,
+                                                               inputId = "iters_walk",
+                                                               label = "Number of Iterations",
+                                                               value = 10000, min = 0, max = Inf, step = 1000)
+                                            
+                                            if(exists("core_walk", envir = globalenv()))
+                                            {
+                                              updateSelectInput(session = session,
+                                                                inputId = "cores_walk",
+                                                                label = "Number of Processing Cores",
+                                                                choices = core_walk,
+                                                                selected = ceiling(length(core_walk) / 2)
+                                              )
+                                            }
+                                            
+                                            # Spreading Activation Analyses tab
+                                            updateNumericInput(session = session,
+                                                               inputId = "retention",
+                                                               label = "Retention (proportion of activation that remains in spreading node)",
+                                                               value = 0.5, min = 0, max = 1, step = .05)
+                                            
+                                            updateNumericInput(session = session,
+                                                               inputId = "time",
+                                                               label = "Number of Time Steps",
+                                                               value = 10, min = 0, max = Inf, step = 1)
+                                            
+                                            updateNumericInput(session = session,
+                                                               inputId = "decay",
+                                                               label = "Decay (activation lost at each time step)",
+                                                               value = 0, min = 0, max = 1, step = .05)
+                                            
+                                            updateNumericInput(session = session,
+                                                               inputId = "suppress",
+                                                               label = "Suppress (activation less than value is set to zero)",
+                                                               value = 0, min = 0, max = 1, step = .001)
+                                            
+                                            updateSelectInput(session = session,
+                                                              inputId = "animate_size",
+                                                              label = "Plot Size",
+                                                              choices = c("Small (500 x 500)", "Medium (900 x 900)", "Large (1400 x 1400)"),
+                                                              selected = "Medium (900 x 900)"
+                                            )
+                                            
+                                            ## Show inputs
+                                            shinyjs::show("network_select")
+                                            shinyjs::show("retention")
+                                            shinyjs::show("time")
+                                            shinyjs::show("decay")
+                                            shinyjs::show("suppress")
+                                            shinyjs::show("set_act")
+                                            
+                                            ## Hide inputs
+                                            shinyjs::hide("animate")
+                                            shinyjs::hide("animate_size")
+                                            shinyjs::hide("animate_slider")
+                                            shinyjs::hide("reset_act")
+                                            shinyjs::hide("reset")
+                                            shinyjs::hide("node_select")
+                                            shinyjs::hide("run_spr_act")
+                                            
+                                            if(exists("clean", envir = globalenv()))
+                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "clean", "dat", "group", prev.env), ls(globalenv()))))], envir = globalenv())
+                                            }else if(exists("group", envir = globalenv()) && exists("dat", envir = globalenv()))
+                                            {rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), prev.env, ls(globalenv()))))], envir = globalenv())
+                                            }else{rm(list = ls(envir = globalenv())[-suppressWarnings(na.omit(match(c("prev.env", "dat", "group"), ls(globalenv()))))], envir = globalenv())}
+                                            
+                                          }
+                                        })
+               })
   
   
   
