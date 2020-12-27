@@ -532,8 +532,7 @@ server <- function(input, output, session)
                    )
                    
                    ## Compute associations
-                   assoc <<- lapply(SemNeT:::equateShiny(mget(paste(uniq), envir = globalenv())),
-                                    SemNeT::similarity, method = sim)
+                   assoc <<- lapply(eq, SemNeT::similarity, method = sim)
                    
                    ## Estimate networks
                    nets <<- lapply(assoc, function(x){SemNeT::TMFG(x)})
@@ -1819,6 +1818,10 @@ server <- function(input, output, session)
                      if(exists("group", envir = globalenv()))
                      {saveList$group <<- group}
                      
+                     if(exists("eq", envir = globalenv())){
+                       resultShiny$equated <<- eq
+                     }
+                     
                      if(exists("nets", envir = globalenv()))
                      {saveList$network <<- nets}
                      
@@ -2106,6 +2109,10 @@ server <- function(input, output, session)
     
     if(exists("group", envir = globalenv()))
     {resultShiny$group <<- group}
+    
+    if(exists("eq", envir = globalenv())){
+      resultShiny$equated <<- eq
+    }
     
     if(exists("nets", envir = globalenv()))
     {resultShiny$network <<- nets}
