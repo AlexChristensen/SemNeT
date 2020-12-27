@@ -683,7 +683,7 @@ server <- function(input, output, session)
                      
                      HTML(
                        
-                       paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.09), and large (.25)</b>
                        <br>
                        Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
                        <br><br>
