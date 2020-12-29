@@ -2,6 +2,8 @@ Changes in version 1.4.2
 
 o FIX: bug in reset of Shiny application
 
+o FIX: name ordering of `bootSemNeT` plots
+
 
 Changes in version 1.4.1
 
