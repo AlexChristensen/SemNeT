@@ -568,7 +568,8 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
       
       scale_fill_brewer(name = "Groups", labels = groups, palette = "Dark2") +
       
-      scale_x_discrete(label = name) +
+      scale_x_discrete(label = rev(name),
+                       limits = rev(levels(plot.mat.select$group))) +
       
       labs(title = paste("Bootstrap Case-wise Results:",netmeas,sep=" "),
            subtitle = paste(iter,"Samples",sep = " "),
