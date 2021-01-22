@@ -164,11 +164,11 @@ server <- function(input, output, session)
                  
                  # Load preprocessed data
                  if(!is.null(input$data))
-                 {dat <<- SemNeT:::read.data(input$data$datapath)}
+                 {dat <<- suppressWarnings(SemNeT:::read.data(input$data$datapath))}
                  
                  # Load group data
                  if(!is.null(input$group))
-                 {group <<- SemNeT:::read.data(input$group$datapath)}
+                 {group <<- suppressWarnings(SemNeT:::read.data(input$group$datapath))}
                  
                  # Load data from SemNeT package
                  if(!exists("dat"))
@@ -179,7 +179,7 @@ server <- function(input, output, session)
                  
                  # Load group data from SemNeT package
                  if(!exists("group"))
-                 {group <<- rep(1, nrow(data))}
+                 {group <<- rep(1, nrow(dat))}
                  
                  # Organize group data
                  group <<- unlist(group)
@@ -195,6 +195,14 @@ server <- function(input, output, session)
                  shinyalert::shinyalert(title = "Data Loaded Successfully",
                                         type = "info",
                                         showConfirmButton = TRUE)
+                 
+                 # Print waiting message
+                 # FOR R PACKAGE AND WEB
+                 if(nrow(dat) > 1000){
+                   shinyalert::shinyalert(title = "There are over 1000 cases in the data. Analyses may take considerable time.",
+                                          type = "warning",
+                                          showConfirmButton = TRUE)
+                 }
                  
                  # Move on to network estimation tab
                  updateTabsetPanel(session, "tabs",
