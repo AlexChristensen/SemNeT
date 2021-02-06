@@ -153,7 +153,11 @@ server <- function(input, output, session)
                  {
                    # Load data from R environment
                    if(!is.null(input$clean_envir)){
-                     dat <<- get(input$clean_envir, envir = globalenv())$responses$clean
+                     
+                     if(input$clean_envir != ""){
+                       dat <<- get(input$clean_envir, envir = globalenv())$responses$clean
+                     }
+      
                    }
                    
                    # Load group from R environment
