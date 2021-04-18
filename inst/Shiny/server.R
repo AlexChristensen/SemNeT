@@ -959,34 +959,6 @@ server <- function(input, output, session)
                      full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
                                                                 test = input$test)
                      
-                     if(input$test == "ANCOVA"){
-                       
-                       ## Average Shortest Path Length
-                       output$aspl <- renderTable({
-                         bootTest$ASPL <<- full_res$ANCOVA$ASPL; bootTest$ASPL
-                       }, rownames = TRUE,
-                       caption = "Average Shortest Path Length (ASPL)",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       ## Clustering Coefficient
-                       output$cc <- renderTable({
-                         bootTest$CC <<- full_res$ANCOVA$CC; bootTest$CC
-                       }, rownames = TRUE,
-                       caption = "Clustering Coefficient (CC)",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       ## Modularity
-                       output$q <- renderTable({
-                         bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
-                       }, rownames = TRUE,
-                       caption = "Modularity",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                     }else{
-                       
                        ## Average Shortest Path Length
                        output$aspl <- renderTable({
                          bootTest$ASPL <<- full_res$ttest$ASPL; bootTest$ASPL

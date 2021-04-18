@@ -1239,10 +1239,11 @@ boot.one.test <- function (bootSemNeT.obj,
       group.comb <- combn(groups, m = 2)
       
       #Result matrix
-      res.mat <- matrix(NA, nrow = ncol(group.comb), ncol = 10)
+      res.mat <- matrix(NA, nrow = ncol(group.comb), ncol = 11)
       colnames(res.mat) <- c("df", "t-statistic", "p-value",
                              "lower.ci", "upper.ci", "d",
-                             "Mean1", "SD1", "Mean2", "SD2")
+                             "Mean1", "SD1", "Mean2", "SD2",
+                             "Direction")
       row.names(res.mat) <- 1:ncol(group.comb)
       res.mat <- as.data.frame(res.mat)
       
@@ -1278,6 +1279,16 @@ boot.one.test <- function (bootSemNeT.obj,
         res.mat[j,8] <- round(sd(group1[measures[i],], na.rm = TRUE), 3)
         res.mat[j,9] <- round(mean(group2[measures[i],], na.rm = TRUE), 3)
         res.mat[j,10] <- round(sd(group2[measures[i],], na.rm = TRUE), 3)
+        res.mat[j,11] <- ifelse(
+          summ$p.value > .05,
+          paste(one, "(1) = (2)", two, sep = ""),
+          ifelse(
+            mean(group1[measures[i],], na.rm = TRUE) >
+            mean(group2[measures[i],], na.rm = TRUE),
+            paste(one, "(1) > (2)", two, sep = ""),
+            paste(one, "(1) < (2)", two, sep = "")
+          )
+        )
         
       }
       
@@ -1288,6 +1299,112 @@ boot.one.test <- function (bootSemNeT.obj,
   }
   
   return(tests)
+}
+
+#' @noRd
+# Function to organize t-test output
+# Updated 18.04.2021
+boot.t.org <- function(temp.res, groups, measures)
+{
+  if(ncol(groups) == 1){# Groups with no interactions
+    
+    if(nrow(groups) == 2){# Two groups
+      
+      # Initialize temporary table
+      temp.tab <- list()
+      
+      for(i in 1:length(temp.res)){
+        temp.tab[[i]] <- as.data.frame(
+          t(simplify2array(temp.res[[i]], higher = FALSE))
+        )
+      }
+      
+      # Name lists
+      names(temp.tab) <- names(temp.res)
+      
+      # Check table setup
+      if(length(temp.res) == 1){
+        return(temp.tab)
+      }else{
+        
+        # Make measure lists
+        res <- list()
+        
+        for(i in 1:length(measures)){
+          
+          # Get target measure
+          target <- lapply(temp.tab, function(x, measures){
+            x[measures,]
+          }, measures = measures[i])
+          
+          # Target table
+          target.table <- matrix(NA, nrow = 0, ncol = 11)
+          
+          for(j in 1:length(target)){
+            target.table <- rbind(target.table, target[[j]])
+          }
+          
+          # Change row names
+          row.names(target.table) <- names(temp.res)
+          
+          # Insert into results
+          res[[measures[[i]]]] <- target.table
+          
+        }
+        
+        return(res)
+        
+      }
+      
+    }else{# Many groups
+      
+      # Make measure lists
+      res <- list()
+      
+      for(i in 1:length(measures)){
+        
+        # Initialize temporary table
+        tab.temp <- matrix(NA, nrow = 0, ncol = 11)
+        
+        # Target measure
+        target <- lapply(temp.res, function(x, measures){
+          x[[measures]]
+        }, measures = measures[i])
+        
+        # Expand tables
+        for(j in 1:length(target)){
+          
+          # Target table
+          target.table <- target[[j]]
+          
+          # Change row names
+          row.names(target.table) <- paste(
+            row.names(target.table),
+            " [",
+            names(target)[j],
+            "] ",
+            sep = ""
+          )
+          
+          # Insert into table
+          tab.temp <- rbind(tab.temp, target.table)
+          
+        }
+        
+        # Insert temporary table into results
+        res[[measures[i]]] <- tab.temp
+        
+      }
+      
+      return(res)
+      
+    }
+    
+    
+  }#else{# Groups with interactions
+      # This doesn't make sense
+  #}
+  
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%#

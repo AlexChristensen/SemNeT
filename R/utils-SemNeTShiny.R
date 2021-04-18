@@ -1144,6 +1144,13 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
     if(!is.matrix(groups))
     {groups <- as.matrix(groups)}
     
+    #Check for wrong test
+    if(ncol(groups) > 1){
+        if(test == "t-test"){
+            stop("Groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANCOVA\"'")
+        }
+    }
+    
     #Length of groups
     len <- length(name)
     
@@ -1162,7 +1169,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
     temp.res <- list()
     
     for(i in 1:length(input))
-    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.testShiny(input[[i]],
+    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]],
                                                                           test = test,
                                                                           measures = measures,
                                                                           formula = formula,
@@ -1308,6 +1315,8 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
             }
         }
         
+    }else if(test == "t-test"){##t-test
+        res <- boot.t.org(temp.res, groups, measures)
     }
     
     return(res)

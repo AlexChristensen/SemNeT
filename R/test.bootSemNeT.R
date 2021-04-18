@@ -133,6 +133,10 @@ test.bootSemNeT <- function (...,
     {measures <- c("ASPL", "CC", "Q")
     }else{measures <- match.arg(measures)}
     
+    if(missing(test)){
+        test <- "t-test"
+    }else{test <- match.arg(test.bootSemNeT())}
+    
     #Obtain ... in a list
     input <- list(...)
     
@@ -149,6 +153,13 @@ test.bootSemNeT <- function (...,
     
     if(!is.matrix(groups))
     {groups <- as.matrix(groups)}
+    
+    #Check for wrong test
+    if(ncol(groups) > 1){
+        if(test == "t-test"){
+            stop("Groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANCOVA\"'")
+        }
+    }
     
     #Length of groups
     len <- length(name)
@@ -314,6 +325,8 @@ test.bootSemNeT <- function (...,
             }
         }
         
+    }else if(test == "t-test"){##t-test
+        res <- boot.t.org(temp.res, groups, measures)
     }
     
     return(res)
