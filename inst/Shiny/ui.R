@@ -99,7 +99,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("net_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 500px; z-index: 1000;")
+                 tags$footer(htmlOutput("net_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 700px; z-index: 1000;")
                  
                )
                
@@ -177,7 +177,7 @@ ui <- (
                    plotOutput("qPlot")
                  ),
                  
-                 tags$footer(htmlOutput("partial_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 600px; z-index: 1000;")
+                 tags$footer(htmlOutput("partial_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 700px; z-index: 1000;")
                  
                )
                
@@ -252,7 +252,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("randwalk_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 650px; z-index: 1000;")
+                 tags$footer(htmlOutput("randwalk_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 800px; z-index: 1000;")
                  
                )
                
@@ -306,7 +306,7 @@ ui <- (
                    
                  ),
                  
-                 tags$footer(htmlOutput("spreadr_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 525px; z-index: 1000;")
+                 tags$footer(htmlOutput("spreadr_cite"), align = "left", style = "position:absolute; top:0; width:30%; height:50px; color: black; margin-left: 20px; margin-top: 700px; z-index: 1000;")
                  
                )
                
