@@ -1383,7 +1383,10 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
 #' @noRd
 # Test: Bootstrapped Network Statistics----
 # Updated 18.04.2021
-boot.one.testShiny <- function (bootSemNeT.obj, measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
+boot.one.testShiny <- function (bootSemNeT.obj, 
+                                test = c("ANCOVA", "t-test"),
+                                measures = c("ASPL", "CC", "Q"),
+                                formula = NULL, groups = NULL)
 {
     #Check for data if formula is not NULL
     if(!is.null(formula))
