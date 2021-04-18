@@ -146,7 +146,7 @@ test.bootSemNeT <- function (...,
     
     if(missing(test)){
         test <- "t-test"
-    }else{test <- match.arg(test.bootSemNeT())}
+    }else{test <- match.arg(test)}
     
     #Obtain ... in a list
     input <- list(...)

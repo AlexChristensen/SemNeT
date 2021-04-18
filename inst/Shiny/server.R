@@ -693,9 +693,13 @@ server <- function(input, output, session)
                  if(network == "TMFG"){
                    output$partial_cite <- renderUI({
                      
-                     HTML(
+                     if(!is.null(input$test)){
                        
-                       paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       if(input$test == "t-test"){
+                         
+                         HTML(
+                           
+                           paste('<b>Effect sizes (<em>d</em>): small (.20), medium (.50), and large (.80)</b>
                        <br>
                        Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
                        <br><br>
@@ -704,19 +708,56 @@ server <- function(input, output, session)
                        <br><br>
                        Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
                              ')
-                     )
+                         )
+                         
+                       }else if(input$test == "ANCOVA"){
+                         
+                         HTML(
+                           
+                           paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       <br>
+                       Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
+                       <br><br>
+                       <b>Please cite:</b><br>
+                       Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018). Remotely close associations: Openness to experience and semantic memory structure. <em>European Journal of Personality</em>, <em>32</em>, 480&ndash;492. <a href="https://doi.org/10.1002/per.2157">https://doi.org/10.1002/per.2157</a>
+                       <br><br>
+                       Kenett, Y. N., Wechsler-Kashi, D., Kenett, D. Y., Schwartz, R. G., Ben Jacob, E., & Faust, M. (2013). Semantic organization in children with cochlear implants: Computational analysis of verbal fluency. <em>Frontiers in Psychology</em>, <em>4</em>, 543. <a href="https://doi.org/10.3389/fpsyg.2013.00543">https://doi.org/10.3389/fpsyg.2013.00543</a>
+                             ')
+                         )
+                         
+                       }
+                       
+                     }
                      
                    })
                  }else{
                    output$partial_cite <- renderUI({
                      
-                     HTML(
+                     if(!is.null(input$test)){
                        
-                       paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       if(input$test == "t-test"){
+                         
+                         HTML(
+                           
+                           paste('<b>Effect sizes (<em>d</em>): small (.20), medium (.50), and large (.80)</b>
                        <br>
                        Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
                        ')
-                     )
+                         )
+                         
+                       }else if(input$test == "ANCOVA"){
+                         
+                         HTML(
+                           
+                           paste('<b>Effect sizes (<em>&eta;<sub>p</sub><sup>2</sup></em>): small (.01), medium (.06), and large (.14)</b>
+                       <br>
+                       Cohen, J. (1988). <em>Statistical power analysis for the behavioural sciences</em> (2nd ed.). New York, NY: Routledge. <a href="https://doi.org/10.4324/9780203771587">https://doi.org/10.4324/9780203771587</a> 
+                       ')
+                         )
+                         
+                       }
+                       
+                     }
                      
                    })
                  }
@@ -935,62 +976,115 @@ server <- function(input, output, session)
                  # Render Tables
                  res_boot <<- boot()
                  
-                 if(length(percents) == 1)
+                 # Reset Table
+                 output$tab <- renderTable({})
+                 
+                 observeEvent(input$test,
                  {
                    
-                   if(input$test == "ANCOVA"){## ANCOVA
+                   if(input$test == "ANCOVA"){
                      
-                     output$tab <- renderTable({
-                       bootTest <<- list()
+                     ## ANCOVA
+                     if(length(percents) == 1)
+                     {
                        
-                       bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
-                                                                  test = input$test)$ANCOVA; bootTest
-                     }, rownames = TRUE,
-                     caption = "Bootstrap Network Results",
-                     caption.placement = getOption("xtable.caption.placement", "top")
-                     )
+                       output$tab <- renderTable({
+                         bootTest <<- list()
+                         
+                         bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                    test = input$test); bootTest$ANCOVA
+                       }, rownames = TRUE,
+                       caption = "Bootstrap Network Results",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }else{
+                       
+                       ## Reset original table
+                       output$tab <- renderTable({})
+                       
+                       bootTest <<- list()
+                       full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                  test = input$test)
+                       
+                       ## Average Shortest Path Length
+                       output$aspl <- renderTable({
+                         bootTest$ASPL <<- full_res$ANCOVA$ASPL; bootTest$ASPL
+                       }, rownames = TRUE,
+                       caption = "Average Shortest Path Length (ASPL)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Clustering Coefficient
+                       output$cc <- renderTable({
+                         bootTest$CC <<- full_res$ANCOVA$CC; bootTest$CC
+                       }, rownames = TRUE,
+                       caption = "Clustering Coefficient (CC)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Modularity
+                       output$q <- renderTable({
+                         bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
+                       }, rownames = TRUE,
+                       caption = "Modularity",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }
                      
-                   }else if(input$test == "t-test"){## t-test
+                   }else if(input$test == "t-test"){
                      
-                     
-                     
+                     if(length(percents) == 1){
+                       
+                       output$tab <- renderTable({
+                         bootTest <<- list()
+                         
+                         bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                    test = input$test); bootTest[[1]]
+                       }, rownames = TRUE,
+                       caption = "Bootstrap Network Results",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }else{
+                       
+                       ## Reset original table
+                       output$tab <- renderTable({})
+                       
+                       bootTest <<- list()
+                       full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                  test = input$test)
+                       
+                       ## Average Shortest Path Length
+                       output$aspl <- renderTable({
+                         bootTest$ASPL <<- full_res$ASPL; bootTest$ASPL
+                       }, rownames = TRUE,
+                       caption = "Average Shortest Path Length (ASPL)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Clustering Coefficient
+                       output$cc <- renderTable({
+                         bootTest$CC <<- full_res$CC; bootTest$CC
+                       }, rownames = TRUE,
+                       caption = "Clustering Coefficient (CC)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Modularity
+                       output$q <- renderTable({
+                         bootTest$Q <<- full_res$Q; bootTest$Q
+                       }, rownames = TRUE,
+                       caption = "Modularity",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
                      }
                      
                    }
                    
-                 }else{
-                   
-                   ## Reset original table
-                   output$tab <- renderTable({})
-                   
-                   bootTest <<- list()
-                   full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))
-                   
-                   ## Average Shortest Path Length
-                   output$aspl <- renderTable({
-                     bootTest$ASPL <<- full_res$ANCOVA$ASPL; bootTest$ASPL
-                   }, rownames = TRUE,
-                   caption = "Average Shortest Path Length (ASPL)",
-                   caption.placement = getOption("xtable.caption.placement", "top")
-                   )
-                   
-                   ## Clustering Coefficient
-                   output$cc <- renderTable({
-                     bootTest$CC <<- full_res$ANCOVA$CC; bootTest$CC
-                   }, rownames = TRUE,
-                   caption = "Clustering Coefficient (CC)",
-                   caption.placement = getOption("xtable.caption.placement", "top")
-                   )
-                   
-                   ## Modularity
-                   output$q <- renderTable({
-                     bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
-                   }, rownames = TRUE,
-                   caption = "Modularity",
-                   caption.placement = getOption("xtable.caption.placement", "top")
-                   )
-                   
-                 }
+                 })
                  
                  ## Show plot button
                  shinyjs::show("run_plot")

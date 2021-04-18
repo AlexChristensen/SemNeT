@@ -4,6 +4,8 @@ o FIX: bug in reset of Shiny application
 
 o FIX: name ordering of `bootSemNeT` plots
 
+o ADD: t-tests to `test.bootSemNeT` and Shiny app
+
 
 Changes in version 1.4.1
 
