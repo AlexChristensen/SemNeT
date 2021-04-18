@@ -122,8 +122,11 @@
 #' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 01.12.2020
-test.bootSemNeT <- function (..., measures = c("ASPL", "CC", "Q"), formula = NULL, groups = NULL)
+# Updated 18.04.2021
+test.bootSemNeT <- function (...,
+                             test = c("ANCOVA", "t-test"),
+                             measures = c("ASPL", "CC", "Q"),
+                             formula = NULL, groups = NULL)
 {
     #Missing arguments
     if(missing(measures))
@@ -165,107 +168,70 @@ test.bootSemNeT <- function (..., measures = c("ASPL", "CC", "Q"), formula = NUL
     temp.res <- list()
     
     for(i in 1:length(input))
-    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]], measures = measures, formula = formula, groups = groups))}
+    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]],
+                                                                          test = test,
+                                                                          measures = measures,
+                                                                          formula = formula,
+                                                                          groups = groups))}
     
     # Insert full results
     res$fullResults <- temp.res
     
-    #Create tables of results
-    ##Get ANCOVA values
-    
-    if(ncol(groups) == 1)
-    {
-        acov.vals <- lapply(temp.res, function(x, extra){
-            lapply(x, function(x, extra){
-                x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
+    #Type of test
+    if(test == "ANCOVA"){##ANCOVA
+        
+        #Create tables of results
+        ##Get ANCOVA values
+        
+        if(ncol(groups) == 1)
+        {
+            acov.vals <- lapply(temp.res, function(x, extra){
+                lapply(x, function(x, extra){
+                    x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
+                })
+            })
+        }
+        
+        ##Get Residual degress of freedom
+        res.df <- lapply(temp.res, function(x){
+            lapply(x, function(x){
+                x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
             })
         })
-    }
-    
-    ##Get Residual degress of freedom
-    res.df <- lapply(temp.res, function(x){
-        lapply(x, function(x){
-            x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
-        })
-    })
-    
-    ##Get adjusted mean values
-    adj.vals <- unlist(lapply(temp.res, function(x){
-        lapply(x, function(x){
-            means <- as.vector(x$adjustedMeans$fit)
-            names(means) <- x$adjustedMeans$variables$Group$levels
-            means
-        })
-    }), recursive = FALSE)
-    
-    adj.vals <- t(simplify2array(adj.vals))
-    
-    if(length(row.names(adj.vals)) > length(measures))
-    {
-        row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
-        colnames(adj.vals) <- paste("Group", 1:nrow(groups))
-    }else{row.names(adj.vals) <- measures}
-    
-    #Insert adjusted means
-    res$adjustedMeans <- adj.vals
-    
-    if(ncol(groups) == 1)
-    {
-        ##Loop through to get tables
-        if(length(acov.vals) == 1)
+        
+        ##Get adjusted mean values
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$adjustedMeans$fit)
+                names(means) <- x$adjustedMeans$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
+        
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
         {
-            #Get measures
-            meas.val <- unlist(acov.vals, recursive = FALSE)
-            #Table measures
-            tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
-            #Adjusted means
-            tab.acov <- cbind(round(adj.vals, 3), tab.acov)
-            #Add residual degrees of freedom
-            tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
-            #Recheck names
-            name <- colnames(tab.acov)[1:length(name)]
-            
-            # Provided direction if two groups
-            if(length(name) == 2)
-            {
-                #Add direction
-                Direction <- apply(tab.acov, 1, function(x, name){
-                    p.num <- as.numeric(gsub("< ", "", x["p-value"]))
-                    
-                    if(p.num <= .05)
-                    {
-                        if(as.numeric(x[1]) > as.numeric(x[2]))
-                        {paste(name[1], ">", name[2], sep = " ")
-                        }else{paste(name[1], "<", name[2], sep = " ")}
-                    }else{"n.s."}
-                }, name = name)
-                
-                tab.acov <- cbind(tab.acov, Direction)
-            }
-            
-            #Change column name
-            colnames(tab.acov)[length(name)+2] <- "Residual df"
-            colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
-            #Change row names
-            row.names(tab.acov) <- measures
-            
-            # Insert table results
-            res$ANCOVA <- tab.acov
-            
-        }else{
-            
-            for(j in 1:length(measures))
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
+        
+        #Insert adjusted means
+        res$adjustedMeans <- adj.vals
+        
+        if(ncol(groups) == 1)
+        {
+            ##Loop through to get tables
+            if(length(acov.vals) == 1)
             {
                 #Get measures
-                meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
-                #Get residual degrees of freedom
-                res.val <- lapply(res.df, function(x){x[[measures[j]]]})
+                meas.val <- unlist(acov.vals, recursive = FALSE)
                 #Table measures
                 tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
                 #Adjusted means
-                tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
+                tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
@@ -291,17 +257,63 @@ test.bootSemNeT <- function (..., measures = c("ASPL", "CC", "Q"), formula = NUL
                 colnames(tab.acov)[length(name)+2] <- "Residual df"
                 colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                 #Change row names
-                row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
+                row.names(tab.acov) <- measures
                 
                 # Insert table results
-                res$ANCOVA[[measures[j]]] <- tab.acov
+                res$ANCOVA <- tab.acov
                 
-                # Return groups
-                row.names(groups) <- paste("Group", 1:nrow(groups))
-                res$groups <- groups
+            }else{
+                
+                for(j in 1:length(measures))
+                {
+                    #Get measures
+                    meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
+                    #Get residual degrees of freedom
+                    res.val <- lapply(res.df, function(x){x[[measures[j]]]})
+                    #Table measures
+                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+                    #Adjusted means
+                    tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
+                    #Add residual degrees of freedom
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    #Recheck names
+                    name <- colnames(tab.acov)[1:length(name)]
+                    
+                    # Provided direction if two groups
+                    if(length(name) == 2)
+                    {
+                        #Add direction
+                        Direction <- apply(tab.acov, 1, function(x, name){
+                            p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                            
+                            if(p.num <= .05)
+                            {
+                                if(as.numeric(x[1]) > as.numeric(x[2]))
+                                {paste(name[1], ">", name[2], sep = " ")
+                                }else{paste(name[1], "<", name[2], sep = " ")}
+                            }else{"n.s."}
+                        }, name = name)
+                        
+                        tab.acov <- cbind(tab.acov, Direction)
+                    }
+                    
+                    #Change column name
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
+                    colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+                    #Change row names
+                    row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
+                    
+                    # Insert table results
+                    res$ANCOVA[[measures[j]]] <- tab.acov
+                    
+                    # Return groups
+                    row.names(groups) <- paste("Group", 1:nrow(groups))
+                    res$groups <- groups
+                }
+                
             }
-            
         }
+        
     }
     
     return(res)
