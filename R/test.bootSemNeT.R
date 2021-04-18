@@ -1,11 +1,22 @@
 #' Statistical tests for \code{\link[SemNeT]{bootSemNeT}}
 #' 
 #' @description Computes statistical tests for bootstrapped
-#' networks from \code{\link[SemNeT]{bootSemNeT}}. Computes ANCOVAs that
-#' control for the number of nodes and edges in the networks and includes
-#' adjusted means and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})
+#' networks from \code{\link[SemNeT]{bootSemNeT}}
 #' 
 #' @param ... Object(s) from \code{\link[SemNeT]{bootSemNeT}}
+#' 
+#' @param test Character.
+#' Type of statistical test to be used.
+#' 
+#' \itemize{
+#' 
+#' \item{\code{"t-test"}}
+#' {Computes t-tests for all measures}
+#' 
+#' \item{\code{"ANCOVA"}}
+#' {Computes ANCOVAs that control for the number of nodes
+#' and edges in the networks and includes adjusted means
+#' and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}}
 #' 
 #' @param measures Character.
 #' Network measures to be tested.
