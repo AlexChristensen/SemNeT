@@ -150,6 +150,8 @@ ui <- (
                  
                  uiOutput("type"),
                  
+                 uiOutput("test"),
+                 
                  numericInput("iters_boot", label = "Number of Iterations", value = 1000, min = 0, step = 100),
                  
                  uiOutput("cores_boot"),

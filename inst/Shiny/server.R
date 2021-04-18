@@ -273,7 +273,7 @@ server <- function(input, output, session)
                                                                           "Euclidean Distance",
                                                                           "Faith", "Jaccard Index",
                                                                           "Pearson's Correlation",
-                                                                          "RR"), selected = "Cosine"
+                                                                          "RR"), selected = "Pearson's Correlation"
           ),
           "Association measure that is used to compute an association matrix (e.g., correlation matrix). There are many options but cosine similarity and Pearson's correlation are the most commonly used. Cosine produces values between 0 and 1; Pearson's correlation produces values between -1 and 1",
           placement = "right"
@@ -811,6 +811,16 @@ server <- function(input, output, session)
     
   })
   
+  
+  output$test <- renderUI({
+    
+    selectInput("test", label = "Statistical Test",
+                choices = c("t-test", "ANCOVA"),
+                selected = "t-test"
+    )
+    
+  })
+  
   ## Hide plot button
   shinyjs::hide("run_plot")
   
@@ -928,14 +938,82 @@ server <- function(input, output, session)
                  if(length(percents) == 1)
                  {
                    
-                   output$tab <- renderTable({
-                     bootTest <<- list()
+                   if(input$test == "ANCOVA"){## ANCOVA
                      
-                     bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE))$ANCOVA; bootTest
-                   }, rownames = TRUE,
-                   caption = "Bootstrap Network Results",
-                   caption.placement = getOption("xtable.caption.placement", "top")
-                   )
+                     output$tab <- renderTable({
+                       bootTest <<- list()
+                       
+                       bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                  test = input$test)$ANCOVA; bootTest
+                     }, rownames = TRUE,
+                     caption = "Bootstrap Network Results",
+                     caption.placement = getOption("xtable.caption.placement", "top")
+                     )
+                     
+                   }else if(input$test == "t-test"){## t-test
+                     
+                     ## Reset original table
+                     output$tab <- renderTable({})
+                     
+                     bootTest <<- list()
+                     full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                test = input$test)
+                     
+                     if(input$test == "ANCOVA"){
+                       
+                       ## Average Shortest Path Length
+                       output$aspl <- renderTable({
+                         bootTest$ASPL <<- full_res$ANCOVA$ASPL; bootTest$ASPL
+                       }, rownames = TRUE,
+                       caption = "Average Shortest Path Length (ASPL)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Clustering Coefficient
+                       output$cc <- renderTable({
+                         bootTest$CC <<- full_res$ANCOVA$CC; bootTest$CC
+                       }, rownames = TRUE,
+                       caption = "Clustering Coefficient (CC)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Modularity
+                       output$q <- renderTable({
+                         bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
+                       }, rownames = TRUE,
+                       caption = "Modularity",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }else{
+                       
+                       ## Average Shortest Path Length
+                       output$aspl <- renderTable({
+                         bootTest$ASPL <<- full_res$ttest$ASPL; bootTest$ASPL
+                       }, rownames = TRUE,
+                       caption = "Average Shortest Path Length (ASPL)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Clustering Coefficient
+                       output$cc <- renderTable({
+                         bootTest$CC <<- full_res$ttest$CC; bootTest$CC
+                       }, rownames = TRUE,
+                       caption = "Clustering Coefficient (CC)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Modularity
+                       output$q <- renderTable({
+                         bootTest$Q <<- full_res$ttest$Q; bootTest$Q
+                       }, rownames = TRUE,
+                       caption = "Modularity",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }
+                     
+                   }
                    
                  }else{
                    
