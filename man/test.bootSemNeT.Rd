@@ -6,6 +6,7 @@
 \usage{
 test.bootSemNeT(
   ...,
+  test = c("ANCOVA", "t-test"),
   measures = c("ASPL", "CC", "Q"),
   formula = NULL,
   groups = NULL
@@ -13,6 +14,19 @@ test.bootSemNeT(
 }
 \arguments{
 \item{...}{Object(s) from \code{\link[SemNeT]{bootSemNeT}}}
+
+\item{test}{Character.
+Type of statistical test to be used.
+
+\itemize{
+
+\item{\code{"t-test"}}
+{Computes t-tests for all measures}
+
+\item{\code{"ANCOVA"}}
+{Computes ANCOVAs that control for the number of nodes
+and edges in the networks and includes adjusted means
+and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}}}
 
 \item{measures}{Character.
 Network measures to be tested.
@@ -87,9 +101,7 @@ and the adjusted \emph{p}-value (\code{p.adj})}
 }
 \description{
 Computes statistical tests for bootstrapped
-networks from \code{\link[SemNeT]{bootSemNeT}}. Computes ANCOVAs that
-control for the number of nodes and edges in the networks and includes
-adjusted means and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})
+networks from \code{\link[SemNeT]{bootSemNeT}}
 }
 \examples{
 # Simulate Dataset

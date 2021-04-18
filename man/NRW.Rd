@@ -23,7 +23,7 @@ Type of \code{threshold} to apply.
 {Minimum proportion of co-occurrences}
 
 }
-Defaults to \code{"nodes"}}
+Defaults to \code{"num"}}
 
 \item{threshold}{Numeric.
 Value of the minimum number or proportion of co-occurrences.

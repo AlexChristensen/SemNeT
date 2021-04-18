@@ -952,37 +952,8 @@ server <- function(input, output, session)
                      
                    }else if(input$test == "t-test"){## t-test
                      
-                     ## Reset original table
-                     output$tab <- renderTable({})
                      
-                     bootTest <<- list()
-                     full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
-                                                                test = input$test)
                      
-                       ## Average Shortest Path Length
-                       output$aspl <- renderTable({
-                         bootTest$ASPL <<- full_res$ttest$ASPL; bootTest$ASPL
-                       }, rownames = TRUE,
-                       caption = "Average Shortest Path Length (ASPL)",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       ## Clustering Coefficient
-                       output$cc <- renderTable({
-                         bootTest$CC <<- full_res$ttest$CC; bootTest$CC
-                       }, rownames = TRUE,
-                       caption = "Clustering Coefficient (CC)",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       ## Modularity
-                       output$q <- renderTable({
-                         bootTest$Q <<- full_res$ttest$Q; bootTest$Q
-                       }, rownames = TRUE,
-                       caption = "Modularity",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
                      }
                      
                    }
