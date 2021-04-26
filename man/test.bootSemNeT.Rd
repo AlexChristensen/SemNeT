@@ -6,7 +6,7 @@
 \usage{
 test.bootSemNeT(
   ...,
-  test = c("ANCOVA", "t-test"),
+  test = c("ANCOVA", "ANOVA", "t-test"),
   measures = c("ASPL", "CC", "Q"),
   formula = NULL,
   groups = NULL
@@ -22,6 +22,10 @@ Type of statistical test to be used.
 
 \item{\code{"t-test"}}
 {Computes t-tests for all measures}
+
+\item{\code{"ANOVA"}}
+{Computes ANOVAs and includes
+Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}
 
 \item{\code{"ANCOVA"}}
 {Computes ANCOVAs that control for the number of nodes

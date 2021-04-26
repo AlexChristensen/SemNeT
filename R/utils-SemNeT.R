@@ -1039,9 +1039,9 @@ rep.rows <- function (mat, times)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics
-# Updated 18.04.2021
+# Updated 26.04.2021
 boot.one.test <- function (bootSemNeT.obj,
-                           test = c("ANCOVA", "t-test"),
+                           test = c("ANCOVA", "ANOVA", "t-test"),
                            measures = c("ASPL", "CC", "Q"),
                            formula = NULL,
                            groups = NULL)
@@ -1093,7 +1093,7 @@ boot.one.test <- function (bootSemNeT.obj,
   tests <- list()
   
   #Check for test
-  if(test == "ANCOVA"){##ANCOVA
+  if(test == "ANCOVA" | test == "ANOVA"){##ANCOVA or ANOVA
     
     #Loop through measures
     for(i in 1:length(measures))
@@ -1173,6 +1173,17 @@ boot.one.test <- function (bootSemNeT.obj,
         }
       }
       
+      #ANOVA
+      if(test == "ANOVA"){
+        
+        if("Edges" %in% names(aov.obj)){
+          
+          aov.obj$Edges <- NULL
+          
+        }
+        
+      }
+      
       #Formula
       if(is.null(formula))
       {formula <- paste("y ~", paste(colnames(groups), collapse = " + "))}
@@ -1188,8 +1199,13 @@ boot.one.test <- function (bootSemNeT.obj,
       #if(all(aov.obj$Nodes - aov.obj$Edges == 1))
       #{aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[4][keep.vars[4]], collapse = " + "), " +", split.formula[2], sep = "")
       #}else{
-      aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
       #}
+      
+      if(test == "ANCOVA"){
+        aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
+      }else if(test == "ANOVA"){
+        aov.formula <- paste(split.formula[1], "~ ", split.formula[2], sep = "")
+      }
       
       #ANOVA
       aov.test <- aov(as.formula(aov.formula), data = aov.obj)
@@ -1226,8 +1242,15 @@ boot.one.test <- function (bootSemNeT.obj,
       tests[[paste(measures[i])]]$adjustedMeans <- adj.means[[which(names(adj.means) != "Nodes" & names(adj.means) != "Edges")]]
       
       #Get pairwise comparisons
-      if(length(unique(groups[,1])) > 2)
-      {tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)}
+      if(nrow(groups) > 2){
+        
+        if(ncol(groups) > 1){
+          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
+        }else{
+          tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)
+        }
+        
+      }
     }
     
   }else if(test == "t-test"){##t-test

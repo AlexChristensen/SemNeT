@@ -745,7 +745,7 @@ server <- function(input, output, session)
                        ')
                          )
                          
-                       }else if(input$test == "ANCOVA"){
+                       }else if(input$test == "ANOVA" | input$test == "ANCOVA"){
                          
                          HTML(
                            
@@ -855,10 +855,21 @@ server <- function(input, output, session)
   
   output$test <- renderUI({
     
-    selectInput("test", label = "Statistical Test",
-                choices = c("t-test", "ANCOVA"),
-                selected = "t-test"
-    )
+    if(length(uniq) == 2){
+      
+      selectInput("test", label = "Statistical Test",
+                  choices = c("t-test", "ANCOVA"),
+                  selected = "t-test"
+      )
+      
+    }else{
+      
+      selectInput("test", label = "Statistical Test",
+                  choices = c("t-test", "ANOVA", "ANCOVA"),
+                  selected = "ANOVA"
+      )
+      
+    }
     
   })
   
@@ -1026,6 +1037,57 @@ server <- function(input, output, session)
                        ## Modularity
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
+                       }, rownames = TRUE,
+                       caption = "Modularity",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }
+                     
+                   }else if(input$test == "ANOVA"){
+                     
+                     ## ANCOVA
+                     if(length(percents) == 1)
+                     {
+                       
+                       output$tab <- renderTable({
+                         bootTest <<- list()
+                         
+                         bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                    test = input$test); bootTest$ANOVA
+                       }, rownames = TRUE,
+                       caption = "Bootstrap Network Results",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                     }else{
+                       
+                       ## Reset original table
+                       output$tab <- renderTable({})
+                       
+                       bootTest <<- list()
+                       full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
+                                                                  test = input$test)
+                       
+                       ## Average Shortest Path Length
+                       output$aspl <- renderTable({
+                         bootTest$ASPL <<- full_res$ANOVA$ASPL; bootTest$ASPL
+                       }, rownames = TRUE,
+                       caption = "Average Shortest Path Length (ASPL)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Clustering Coefficient
+                       output$cc <- renderTable({
+                         bootTest$CC <<- full_res$ANOVA$CC; bootTest$CC
+                       }, rownames = TRUE,
+                       caption = "Clustering Coefficient (CC)",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Modularity
+                       output$q <- renderTable({
+                         bootTest$Q <<- full_res$ANOVA$Q; bootTest$Q
                        }, rownames = TRUE,
                        caption = "Modularity",
                        caption.placement = getOption("xtable.caption.placement", "top")

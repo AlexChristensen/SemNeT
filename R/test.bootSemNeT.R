@@ -13,6 +13,10 @@
 #' \item{\code{"t-test"}}
 #' {Computes t-tests for all measures}
 #' 
+#' \item{\code{"ANOVA"}}
+#' {Computes ANOVAs and includes
+#' Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}
+#' 
 #' \item{\code{"ANCOVA"}}
 #' {Computes ANCOVAs that control for the number of nodes
 #' and edges in the networks and includes adjusted means
@@ -135,7 +139,7 @@
 #Test: Bootstrapped Network Statistics----
 # Updated 18.04.2021
 test.bootSemNeT <- function (...,
-                             test = c("ANCOVA", "t-test"),
+                             test = c("ANCOVA", "ANOVA", "t-test"),
                              measures = c("ASPL", "CC", "Q"),
                              formula = NULL, groups = NULL)
 {
@@ -168,7 +172,11 @@ test.bootSemNeT <- function (...,
     #Check for wrong test
     if(ncol(groups) > 1){
         if(test == "t-test"){
-            stop("Groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANCOVA\"'")
+            stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
+        }
+    }else if(nrow(groups) < 3){
+        if(test == "ANOVA"){
+            stop("Groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
         }
     }
     
@@ -195,6 +203,19 @@ test.bootSemNeT <- function (...,
                                                                           measures = measures,
                                                                           formula = formula,
                                                                           groups = groups))}
+    
+    
+    #Check for ANOVA
+    if(test == "ANOVA"){
+        
+        temp.res <- lapply(temp.res, function(x){
+            lapply(x, function(x){
+                names(x) <- c("ANOVA", "Means", "HSD")
+                return(x)
+            })
+        })
+        
+    }
     
     # Insert full results
     res$fullResults <- temp.res
@@ -327,6 +348,142 @@ test.bootSemNeT <- function (...,
                     
                     # Insert table results
                     res$ANCOVA[[measures[j]]] <- tab.acov
+                    
+                    # Return groups
+                    row.names(groups) <- paste("Group", 1:nrow(groups))
+                    res$groups <- groups
+                }
+                
+            }
+        }
+        
+    }else if(test == "ANOVA"){
+        
+        #Create tables of results
+        ##Get ANOVA values
+        
+        if(ncol(groups) == 1)
+        {
+            acov.vals <- lapply(temp.res, function(x, extra){
+                lapply(x, function(x, extra){
+                    x$ANOVA[which(x$ANOVA$Term == "Group"),]
+                })
+            })
+        }
+        
+        ##Get Residual degress of freedom
+        res.df <- lapply(temp.res, function(x){
+            lapply(x, function(x){
+                x$ANOVA[which(x$ANOVA$Term == "Residuals"),"df"]
+            })
+        })
+        
+        ##Get adjusted mean values
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$Means$fit)
+                names(means) <- x$Means$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
+        
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
+        {
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
+        
+        #Insert adjusted means
+        res$Means <- adj.vals
+        
+        if(ncol(groups) == 1)
+        {
+            ##Loop through to get tables
+            if(length(acov.vals) == 1)
+            {
+                #Get measures
+                meas.val <- unlist(acov.vals, recursive = FALSE)
+                #Table measures
+                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
+                #Adjusted means
+                tab.acov <- cbind(round(adj.vals, 3), tab.acov)
+                #Add residual degrees of freedom
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.df), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                #Recheck names
+                name <- colnames(tab.acov)[1:length(name)]
+                
+                # Provided direction if two groups
+                if(length(name) == 2)
+                {
+                    #Add direction
+                    Direction <- apply(tab.acov, 1, function(x, name){
+                        p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                        
+                        if(p.num <= .05)
+                        {
+                            if(as.numeric(x[1]) > as.numeric(x[2]))
+                            {paste(name[1], ">", name[2], sep = " ")
+                            }else{paste(name[1], "<", name[2], sep = " ")}
+                        }else{"n.s."}
+                    }, name = name)
+                    
+                    tab.acov <- cbind(tab.acov, Direction)
+                }
+                
+                #Change column name
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
+                #Change row names
+                row.names(tab.acov) <- measures
+                
+                # Insert table results
+                res$ANOVA <- tab.acov
+                
+            }else{
+                
+                for(j in 1:length(measures))
+                {
+                    #Get measures
+                    meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
+                    #Get residual degrees of freedom
+                    res.val <- lapply(res.df, function(x){x[[measures[j]]]})
+                    #Table measures
+                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
+                    #Adjusted means
+                    tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
+                    #Add residual degrees of freedom
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.val), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    #Recheck names
+                    name <- colnames(tab.acov)[1:length(name)]
+                    
+                    # Provided direction if two groups
+                    if(length(name) == 2)
+                    {
+                        #Add direction
+                        Direction <- apply(tab.acov, 1, function(x, name){
+                            p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                            
+                            if(p.num <= .05)
+                            {
+                                if(as.numeric(x[1]) > as.numeric(x[2]))
+                                {paste(name[1], ">", name[2], sep = " ")
+                                }else{paste(name[1], "<", name[2], sep = " ")}
+                            }else{"n.s."}
+                        }, name = name)
+                        
+                        tab.acov <- cbind(tab.acov, Direction)
+                    }
+                    
+                    #Change column name
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
+                    colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
+                    #Change row names
+                    row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
+                    
+                    # Insert table results
+                    res$ANOVA[[measures[j]]] <- tab.acov
                     
                     # Return groups
                     row.names(groups) <- paste("Group", 1:nrow(groups))

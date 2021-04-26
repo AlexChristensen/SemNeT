@@ -1120,8 +1120,8 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
 #' 
 #' @noRd
 #Test: Bootstrapped Network Statistics----
-# Updated 18.04.2021
-test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
+# Updated 26.04.2021
+test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                                   measures = c("ASPL", "CC", "Q"),
                                   formula = NULL, groups = NULL)
 {
@@ -1147,7 +1147,11 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
     #Check for wrong test
     if(ncol(groups) > 1){
         if(test == "t-test"){
-            stop("Groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANCOVA\"'")
+            stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
+        }
+    }else if(nrow(groups) < 3){
+        if(test == "ANOVA"){
+            stop("Groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
         }
     }
     
@@ -1174,6 +1178,17 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
                                                                           measures = measures,
                                                                           formula = formula,
                                                                           groups = groups))}
+    
+    
+    #Check for ANOVA
+    if(test == "ANOVA"){
+        temp.res <- lapply(temp.res, function(x){
+            lapply(x, function(x){
+                names(x) <- c("ANOVA", "Means", "HSD")
+                return(x)
+            })
+        })
+    }
     
     # Insert full results
     res$fullResults <- temp.res
@@ -1315,6 +1330,142 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
             }
         }
         
+    }else if(test == "ANOVA"){
+        
+        #Create tables of results
+        ##Get ANOVA values
+        
+        if(ncol(groups) == 1)
+        {
+            acov.vals <- lapply(temp.res, function(x, extra){
+                lapply(x, function(x, extra){
+                    x$ANOVA[which(x$ANOVA$Term == "Group"),]
+                })
+            })
+        }
+        
+        ##Get Residual degress of freedom
+        res.df <- lapply(temp.res, function(x){
+            lapply(x, function(x){
+                x$ANOVA[which(x$ANOVA$Term == "Residuals"),"df"]
+            })
+        })
+        
+        ##Get adjusted mean values
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$Means$fit)
+                names(means) <- x$Means$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
+        
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
+        {
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
+        
+        #Insert adjusted means
+        res$Means <- adj.vals
+        
+        if(ncol(groups) == 1)
+        {
+            ##Loop through to get tables
+            if(length(acov.vals) == 1)
+            {
+                #Get measures
+                meas.val <- unlist(acov.vals, recursive = FALSE)
+                #Table measures
+                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
+                #Adjusted means
+                tab.acov <- cbind(round(adj.vals, 3), tab.acov)
+                #Add residual degrees of freedom
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.df), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                #Recheck names
+                name <- colnames(tab.acov)[1:length(name)]
+                
+                # Provided direction if two groups
+                if(length(name) == 2)
+                {
+                    #Add direction
+                    Direction <- apply(tab.acov, 1, function(x, name){
+                        p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                        
+                        if(p.num <= .05)
+                        {
+                            if(as.numeric(x[1]) > as.numeric(x[2]))
+                            {paste(name[1], ">", name[2], sep = " ")
+                            }else{paste(name[1], "<", name[2], sep = " ")}
+                        }else{"n.s."}
+                    }, name = name)
+                    
+                    tab.acov <- cbind(tab.acov, Direction)
+                }
+                
+                #Change column name
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
+                #Change row names
+                row.names(tab.acov) <- measures
+                
+                # Insert table results
+                res$ANOVA <- tab.acov
+                
+            }else{
+                
+                for(j in 1:length(measures))
+                {
+                    #Get measures
+                    meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
+                    #Get residual degrees of freedom
+                    res.val <- lapply(res.df, function(x){x[[measures[j]]]})
+                    #Table measures
+                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
+                    #Adjusted means
+                    tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
+                    #Add residual degrees of freedom
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.val), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    #Recheck names
+                    name <- colnames(tab.acov)[1:length(name)]
+                    
+                    # Provided direction if two groups
+                    if(length(name) == 2)
+                    {
+                        #Add direction
+                        Direction <- apply(tab.acov, 1, function(x, name){
+                            p.num <- as.numeric(gsub("< ", "", x["p-value"]))
+                            
+                            if(p.num <= .05)
+                            {
+                                if(as.numeric(x[1]) > as.numeric(x[2]))
+                                {paste(name[1], ">", name[2], sep = " ")
+                                }else{paste(name[1], "<", name[2], sep = " ")}
+                            }else{"n.s."}
+                        }, name = name)
+                        
+                        tab.acov <- cbind(tab.acov, Direction)
+                    }
+                    
+                    #Change column name
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
+                    colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
+                    #Change row names
+                    row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
+                    
+                    # Insert table results
+                    res$ANOVA[[measures[j]]] <- tab.acov
+                    
+                    # Return groups
+                    row.names(groups) <- paste("Group", 1:nrow(groups))
+                    res$groups <- groups
+                }
+                
+            }
+        }
+        
     }else if(test == "t-test"){##t-test
         res <- boot.t.org(temp.res, groups, measures)
     }
@@ -1393,7 +1544,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "t-test"),
 # Test: Bootstrapped Network Statistics----
 # Updated 18.04.2021
 boot.one.testShiny <- function (bootSemNeT.obj, 
-                                test = c("ANCOVA", "t-test"),
+                                test = c("ANCOVA", "ANOVA", "t-test"),
                                 measures = c("ASPL", "CC", "Q"),
                                 formula = NULL, groups = NULL)
 {
@@ -1440,7 +1591,7 @@ boot.one.testShiny <- function (bootSemNeT.obj,
     tests <- list()
     
     #Check for test
-    if(test == "ANCOVA"){##ANCOVA
+    if(test == "ANCOVA" | test == "ANOVA"){##ANCOVA or ANOVA
         
         #Loop through measures
         for(i in 1:length(measures))
@@ -1520,6 +1671,17 @@ boot.one.testShiny <- function (bootSemNeT.obj,
                 }
             }
             
+            #ANOVA
+            if(test == "ANOVA"){
+                
+                if("Edges" %in% names(aov.obj)){
+                    
+                    aov.obj$Edges <- NULL
+                    
+                }
+                
+            }
+            
             #Formula
             if(is.null(formula))
             {formula <- paste("y ~", paste(colnames(groups), collapse = " + "))}
@@ -1535,8 +1697,13 @@ boot.one.testShiny <- function (bootSemNeT.obj,
             #if(all(aov.obj$Nodes - aov.obj$Edges == 1))
             #{aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[4][keep.vars[4]], collapse = " + "), " +", split.formula[2], sep = "")
             #}else{
-            aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
             #}
+            
+            if(test == "ANCOVA"){
+                aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
+            }else if(test == "ANOVA"){
+                aov.formula <- paste(split.formula[1], "~ ", split.formula[2], sep = "")
+            }
             
             #ANOVA
             aov.test <- aov(as.formula(aov.formula), data = aov.obj)
@@ -1573,8 +1740,15 @@ boot.one.testShiny <- function (bootSemNeT.obj,
             tests[[paste(measures[i])]]$adjustedMeans <- adj.means[[which(names(adj.means) != "Nodes" & names(adj.means) != "Edges")]]
             
             #Get pairwise comparisons
-            if(length(unique(groups[,1])) > 2)
-            {tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)}
+            if(nrow(groups) > 2){
+                
+                if(ncol(groups) > 1){
+                    tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
+                }else{
+                    tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)
+                }
+                
+            }
         }
         
     }else if(test == "t-test"){##t-test
@@ -1586,10 +1760,11 @@ boot.one.testShiny <- function (bootSemNeT.obj,
             group.comb <- combn(groups, m = 2)
             
             #Result matrix
-            res.mat <- matrix(NA, nrow = ncol(group.comb), ncol = 10)
+            res.mat <- matrix(NA, nrow = ncol(group.comb), ncol = 11)
             colnames(res.mat) <- c("df", "t-statistic", "p-value",
                                    "lower.ci", "upper.ci", "d",
-                                   "Mean1", "SD1", "Mean2", "SD2")
+                                   "Mean1", "SD1", "Mean2", "SD2",
+                                   "Direction")
             row.names(res.mat) <- 1:ncol(group.comb)
             res.mat <- as.data.frame(res.mat)
             
@@ -1625,6 +1800,16 @@ boot.one.testShiny <- function (bootSemNeT.obj,
                 res.mat[j,8] <- round(sd(group1[measures[i],], na.rm = TRUE), 3)
                 res.mat[j,9] <- round(mean(group2[measures[i],], na.rm = TRUE), 3)
                 res.mat[j,10] <- round(sd(group2[measures[i],], na.rm = TRUE), 3)
+                res.mat[j,11] <- ifelse(
+                    summ$p.value > .05,
+                    paste(one, "(1) = (2)", two, sep = ""),
+                    ifelse(
+                        mean(group1[measures[i],], na.rm = TRUE) >
+                            mean(group2[measures[i],], na.rm = TRUE),
+                        paste(one, "(1) > (2)", two, sep = ""),
+                        paste(one, "(1) < (2)", two, sep = "")
+                    )
+                )
                 
             }
             
