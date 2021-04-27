@@ -1244,8 +1244,8 @@ boot.one.test <- function (bootSemNeT.obj,
       #Get pairwise comparisons
       if(nrow(groups) > 2){
         
-        if(ncol(groups) > 1){
-          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
+        if(ncol(groups) == 1){
+          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
         }else{
           tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)
         }
