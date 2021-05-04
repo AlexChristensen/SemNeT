@@ -151,6 +151,7 @@ server <- function(input, output, session)
                  
                  if(!is.null(input$clean_envir) || !is.null(input$group_envir))
                  {
+                   
                    # Load data from R environment
                    if(!is.null(input$clean_envir)){
                      
@@ -161,9 +162,14 @@ server <- function(input, output, session)
                    }
                    
                    # Load group from R environment
-                   if(input$group_envir == "Yes"){
-                     group <<- group
+                   if(!is.null(input$group_envir)){
+                     
+                     if(input$group_envir == "Yes"){
+                       group <<- group
+                     }
+                     
                    }
+                   
                  }
                  
                  # Load preprocessed data
@@ -530,7 +536,11 @@ server <- function(input, output, session)
                            envir = globalenv())}
                    
                    ## Equate groups
-                   eq <<- SemNeT:::equateShiny(mget(paste(uniq), envir = globalenv()))
+                   if(length(uniq) > 1){
+                     eq <<- SemNeT:::equateShiny(mget(paste(uniq), envir = globalenv()))
+                   }else{
+                     eq <- mget(paste(uniq), envir = globalenv())
+                   }
                    
                    ## Grab proper association label
                    sim <<- switch(input$assoc,
