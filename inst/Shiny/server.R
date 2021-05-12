@@ -78,9 +78,9 @@ server <- function(input, output, session)
     
   })
   
-  ###################
+  #%%%%%%%%%%%%%%%%%#
   #### HIDE TABS ####
-  ###################
+  #%%%%%%%%%%%%%%%%%#
   
   hideTab(inputId = "tabs", target = "Network Estimation")
   hideTab(inputId = "tabs", target = "Random Network Analyses")
@@ -90,9 +90,9 @@ server <- function(input, output, session)
   hideTab(inputId = "tabs", target = "Spreading Activation Analyses")
   hideTab(inputId = "tabs", target = "Save and Reset All Results")
   
-  ###########################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### HIDE SAVE BUTTONS ####
-  ###########################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   shinyjs::hide("save_data")
   shinyjs::hide("save_nets")
@@ -101,9 +101,9 @@ server <- function(input, output, session)
   shinyjs::hide("save_walk")
   shinyjs::hide("save_act")
   
-  #######################
+  #%%%%%%%%%%%%%%%%%%%%%#
   #### DATA EXAMPLES ####
-  #######################
+  #%%%%%%%%%%%%%%%%%%%%%#
   
   # Data
   observeEvent(input$data_example,
@@ -139,9 +139,9 @@ server <- function(input, output, session)
                }
   )
   
-  #############################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### NETWORK ESTIMATION ####
-  ############################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   # Load Data panel
   observeEvent(input$load_data,
@@ -679,9 +679,9 @@ server <- function(input, output, session)
                  ## Hide clear results button
                  shinyjs::show("reset")
                  
-                 ###################
+                 #%%%%%%%%%%%%%%%%%#
                  #### CITATIONS ####
-                 ###################
+                 #%%%%%%%%%%%%%%%%%#
                  
                  
                  # random network citation
@@ -775,9 +775,9 @@ server <- function(input, output, session)
                }
   )
   
-  #############################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### RANDOM NETWORK TEST ####
-  #############################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   # Determine the number of cores
   ## Random Networks
@@ -833,9 +833,9 @@ server <- function(input, output, session)
                }
   )
   
-  ################################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### BOOTSTRAP NETWORK TEST ####
-  ################################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   ## Bootstrap Networks
   output$cores_boot <- renderUI({
@@ -1189,9 +1189,9 @@ server <- function(input, output, session)
                
   )
   
-  ##################################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### PERMUTATION NETWORK TEST ####
-  ##################################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   # Permutation
   #output$cores_perm <- renderUI({
@@ -1331,9 +1331,9 @@ server <- function(input, output, session)
   #             }
   #)
   
-  ##############################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### RANDOM WALK ANALYSIS ####
-  ##############################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   # random walk citation
   output$randwalk_cite <- renderUI({
@@ -1408,9 +1408,9 @@ server <- function(input, output, session)
                }
   )
   
-  #######################################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   #### SPREADING ACTIVATION ANALYSIS ####
-  #######################################
+  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
   
   # spreadr citation
   output$spreadr_cite <- renderUI({
@@ -1988,9 +1988,9 @@ server <- function(input, output, session)
                }
   )
   
-  #####################
+  #%%%%%%%%%%%%%%%%%%%#
   #### MASTER SAVE ####
-  #####################
+  #%%%%%%%%%%%%%%%%%%%#
 
   observeEvent(input$save_master,
                {
@@ -2076,9 +2076,9 @@ server <- function(input, output, session)
                }
   )
   
-  ###############
+  #%%%%%%%%%%%%%#
   #### RESET ####
-  ###############
+  #%%%%%%%%%%%%%#
   
   observeEvent(input$reset,
                {
