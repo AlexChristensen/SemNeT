@@ -41,7 +41,7 @@
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
-#' @importFrom stats dnorm
+#' @importFrom stats pnorm
 #' 
 #' @export
 # Random network test----
