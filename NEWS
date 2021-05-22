@@ -6,6 +6,8 @@ o FIX: name ordering of `bootSemNeT` plots
 
 o ADD: t-tests to `test.bootSemNeT` and Shiny app
 
+o FIX: p-value bug in random networks tests
+
 
 Changes in version 1.4.1
 

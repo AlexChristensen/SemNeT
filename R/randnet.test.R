@@ -133,13 +133,13 @@ randnet.test <- function (..., iter, cores)
         
         ##ASPL
         z.aspl <- (meas["ASPL"] - sig.mat["ASPL","M.rand"]) / sig.mat["ASPL","SD.rand"]
-        sig.mat["ASPL",paste(name[i], "(p-value)")] <- round(2 * pnorm(abs(z.aspl)), 4)
+        sig.mat["ASPL",paste(name[i], "(p-value)")] <- round(2 * pnorm(-abs(z.aspl)), 4)
         ##CC
         z.cc <- (meas["CC"] - sig.mat["CC","M.rand"]) / sig.mat["CC","SD.rand"]
-        sig.mat["CC",paste(name[i], "(p-value)")] <- round(2 * pnorm(abs(z.cc)), 4)
+        sig.mat["CC",paste(name[i], "(p-value)")] <- round(2 * pnorm(-abs(z.cc)), 4)
         ##Q
         z.q <- (meas["Q"] - sig.mat["Q","M.rand"]) / sig.mat["Q","SD.rand"]
-        sig.mat["Q",paste(name[i], "(p-value)")] <- round(2 * pnorm(abs(z.q)), 4)
+        sig.mat["Q",paste(name[i], "(p-value)")] <- round(2 * pnorm(-abs(z.q)), 4)
     
         #Insert results
         res[[i]] <- sig.mat
