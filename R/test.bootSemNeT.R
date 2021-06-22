@@ -130,14 +130,17 @@
 #' type = "node", method = "TMFG", cores = 2, iter = 100)
 #' 
 #' ## Compute tests
-#' test.bootSemNeT(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
+#' test.bootSemNeT(boot.fifty, boot.sixty,
+#' test = "ANOVA", formula = "y ~ gf*caq", groups = groups)
 #' }
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
+#' @importFrom utils combn
+#' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 18.04.2021
+# Updated 22.06.2021
 test.bootSemNeT <- function (...,
                              test = c("ANCOVA", "ANOVA", "t-test"),
                              measures = c("ASPL", "CC", "Q"),

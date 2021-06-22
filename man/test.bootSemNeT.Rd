@@ -145,7 +145,8 @@ boot.sixty <- bootSemNeT(hihi, hilo, lohi, lolo, prop = .60,
 type = "node", method = "TMFG", cores = 2, iter = 100)
 
 ## Compute tests
-test.bootSemNeT(boot.fifty, boot.sixty, formula = "y ~ gf*caq", groups = groups)
+test.bootSemNeT(boot.fifty, boot.sixty,
+test = "ANOVA", formula = "y ~ gf*caq", groups = groups)
 }
 
 }
