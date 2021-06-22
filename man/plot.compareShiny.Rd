@@ -56,17 +56,14 @@ config = "spring", qgraph.args = list(edge.color = "blue"))
 Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
 qgraph: Network visualizations of relationships in psychometric data.
 \emph{Journal of Statistical Software}, \emph{48}, 1-18.
-Retrieved from: http://www.jstatsoft.org/v48/i04/
 
 Jones, P. J. (2019).
 networktools: Tools for Identifying Important Nodes in Networks.
 R package version 1.2.1.
-\href{https://CRAN.R-project.org/package=networktools}{https://CRAN.R-project.org/package=networktools}
 
 Jones, P. J., Mair, P., & McNally, R. (2018).
 Visualizing psychological networks: A tutorial in R.
 \emph{Frontiers in Psychology}, \emph{9}, 1742.
-\href{https://doi.org/10.3389/fpsyg.2018.01742}{10.3389/fpsyg.2018.01742}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
