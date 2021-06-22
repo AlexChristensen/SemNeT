@@ -61,7 +61,6 @@ rw.results <- randwalk(net1, net2, iter = 100, cores = 2)
 Kenett, Y. N., & Austerweil, J. L. (2016).
 Examining search processes in low and high creative individuals with random walks.
 In \emph{Paper presented at the proceedings of the 38th annual meeting of the cognitive science society}. Austin, TX.
-Retrieved from: \href{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}{http://alab.psych.wisc.edu/papers/files/Kenett16CreativityRW.pdf}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com> and Yoed Kenett <yoedkenett@gmail.com>

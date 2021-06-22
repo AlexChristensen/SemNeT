@@ -55,7 +55,6 @@ high.net <- CN(high)
 Goni, J., Arrondo, G., Sepulcre, J., Martincorena, I., de Mendizabal, N. V., Corominas-Murtra, B., ... & Villoslada, P. (2011).
 The semantic organization of the animal category: Evidence from semantic verbal fluency and network theory.
 \emph{Cognitive Processing}, \emph{12}, 183-196.
-\href{https://doi.org/10.1007/s10339-010-0372-x}{https://doi.org/10.1007/s10339-010-0372-x}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

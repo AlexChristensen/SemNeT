@@ -42,7 +42,6 @@ write.csv(cyto2, file.path(tempdir(), "cyto2.csv"), row.names = FALSE)
 Shannon, P., Markiel, A., Ozier, O., Baliga, N. S., Wang, J. T., Ramage, D., ... & Ideker, T. (2003).
 Cytoscape: A software environment for integrated models of biomolecular interaction networks.
 \emph{Genome Research}, \emph{13}, 2498-2504.
-doi:\href{https://genome.cshlp.org/content/13/11/2498}{10.1101/gr.1239303}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>
