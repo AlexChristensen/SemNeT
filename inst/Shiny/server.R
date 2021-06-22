@@ -225,7 +225,7 @@ server <- function(input, output, session)
   ## Option 1
   output$network_options_1 <- renderUI({
     
-    network <- input$estimation
+    network <<- input$estimation
     
     if(network == "Community Network (CN)"){
     
@@ -294,7 +294,7 @@ server <- function(input, output, session)
   ## Option 2
   output$network_options_2 <- renderUI({
     
-    network <- input$estimation
+    network <<- input$estimation
     
     if(network == "Community Network (CN)"){
       
@@ -388,7 +388,7 @@ server <- function(input, output, session)
   ## Option 3
   output$network_options_3 <- renderUI({
     
-    network <- input$estimation
+    network <<- input$estimation
     
     if(network == "Community Network (CN)"){
       
@@ -539,7 +539,7 @@ server <- function(input, output, session)
                    if(length(uniq) > 1){
                      eq <<- SemNeT:::equateShiny(mget(paste(uniq), envir = globalenv()))
                    }else{
-                     eq <- mget(paste(uniq), envir = globalenv())
+                     eq <<- mget(paste(uniq), envir = globalenv())
                    }
                    
                    ## Grab proper association label
@@ -590,10 +590,10 @@ server <- function(input, output, session)
                    }else if(length(plots$datalist) > 2)
                    {
                      #Find square root
-                     len <- floor(sqrt(length(plots$datalist)))
+                     len <<- floor(sqrt(length(plots$datalist)))
                      
                      #Remainder
-                     remain <- length(plots$datalist)%%len
+                     remain <<- length(plots$datalist)%%len
                      
                      #Change layout accordingly
                      layout(t(matrix(1:(length(plots$datalist)+remain),ncol=len)))
