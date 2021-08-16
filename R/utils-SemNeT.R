@@ -1039,7 +1039,7 @@ rep.rows <- function (mat, times)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics
-# Updated 26.04.2021
+# Updated 16.08.2021
 boot.one.test <- function (bootSemNeT.obj,
                            test = c("ANCOVA", "ANOVA", "t-test"),
                            measures = c("ASPL", "CC", "Q"),
@@ -1247,7 +1247,7 @@ boot.one.test <- function (bootSemNeT.obj,
         if(ncol(groups) == 1){
           tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
         }else{
-          tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)
+          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
         }
         
       }
