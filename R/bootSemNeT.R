@@ -125,7 +125,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 02.12.2020
+# Updated 16.08.2021
 bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                         methodArgs = list(),
                         type = c("case", "node"),
@@ -230,10 +230,26 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                 new[[count]] <- get(name[i], envir = environment())[rand,]
             }
             
+            # Check for TMFG
+            if(method == "TMFG"){
+                
+                # Check for binary matrix
+                if(all(apply(new[[count]], 2, is.numeric))){
+                    
+                    # Check for no variance
+                    variance <- apply(new[[count]], 2, function(x){all(x == 1)})
+                    
+                    # Reduce count if no variance in response
+                    if(any(variance)){count <- count - 1}
+                    
+                }
+                
+            }
+            
             if(count == iter)
             {break}
         }
-        
+    
         #Insert data list
         assign(paste("dl.",name[i],sep=""),new, envir = environment())
     }

@@ -686,7 +686,7 @@ randnet.testShiny <- function (dat, iter, cores)
 #' 
 #' @noRd
 #Bootstrapped Semantic Network Analysis----
-#Updated 03.09.2020
+#Updated 16.08.2021
 bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
                              methodArgs = NULL,
                              type = c("case", "node"),
@@ -800,6 +800,22 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
                 
                 #Input into data list
                 new[[count]] <- get(name[i], envir = environment())[rand,]
+            }
+            
+            # Check for TMFG
+            if(method == "TMFG"){
+                
+                # Check for binary matrix
+                if(all(apply(new[[count]], 2, is.numeric))){
+                    
+                    # Check for no variance
+                    variance <- apply(new[[count]], 2, function(x){all(x == 1)})
+                    
+                    # Reduce count if no variance in response
+                    if(any(variance)){count <- count - 1}
+                    
+                }
+                
             }
             
             if(count == iter)
