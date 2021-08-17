@@ -1211,7 +1211,11 @@ boot.one.test <- function (bootSemNeT.obj,
       aov.test <- aov(as.formula(aov.formula), data = aov.obj)
       
       #ANCOVA
-      acov.test <- car::Anova(aov.test, type = "III")
+      if(ncol(groups) > 1){
+        acov.test <- car::Anova(aov.test, type = "III")
+      }else{
+        acov.test <- car::Anova(aov.test, type = "II")
+      }
       
       #Tidy ANCOVA
       tidy.acov <- as.data.frame(broom::tidy(acov.test), stringsAsFactors = FALSE)
