@@ -4,6 +4,8 @@
 #' @param A Adjacency matrix (network matrix) or brain connectivity array
 #' (from \code{\link[NetworkToolbox]{convertConnBrainMat}})
 #' 
+#' @param neural Defunct.
+#' 
 #' @return Returns a network matrix in \code{\link{igraph}}'s format
 #' 
 #' @examples
@@ -17,7 +19,7 @@
 #' @export
 #Convert matrices to igraph format----
 # Updated 09.08.2021
-convert2igraph <- function (A)
+convert2igraph <- function (A, neural = FALSE)
 {
     net <- igraph::as.igraph(qgraph::qgraph(A,DoNotPlot=TRUE))
     igraph::vertex_attr(net, "name") <- V(net)$label
