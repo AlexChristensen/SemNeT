@@ -12,12 +12,6 @@
 #' 
 #' igraphNetwork <- convert2igraph(A)
 #' 
-#' \dontrun{ 
-#' neuralarray <- convertConnBrainMat()
-#' 
-#' igraphNeuralList <- convert2igraph(neuralarray, neural = TRUE)
-#' }
-#' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
 #' @export
