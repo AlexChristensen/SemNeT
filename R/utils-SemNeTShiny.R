@@ -1221,7 +1221,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
             })
         }
         
-        ##Get Residual degress of freedom
+        ##Get Residual degrees of freedom
         res.df <- lapply(temp.res, function(x){
             lapply(x, function(x){
                 x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
@@ -1260,7 +1260,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 #Adjusted means
                 tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.df), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
@@ -1283,7 +1283,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 }
                 
                 #Change column name
-                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[length(name)+1] <- "Residual df"
                 colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                 #Change row names
                 row.names(tab.acov) <- measures
@@ -1304,7 +1304,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                     #Adjusted means
                     tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
                     #Add residual degrees of freedom
-                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.val), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
                     #Recheck names
                     name <- colnames(tab.acov)[1:length(name)]
                     
@@ -1327,7 +1327,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                     }
                     
                     #Change column name
-                    colnames(tab.acov)[length(name)+2] <- "Residual df"
+                    colnames(tab.acov)[length(name)+1] <- "Residual df"
                     colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                     #Change row names
                     row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
@@ -1396,7 +1396,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 #Adjusted means
                 tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.df), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,1:(length(name)+2)], unlist(res.df), tab.acov[,(length(name)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
@@ -1419,7 +1419,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 }
                 
                 #Change column name
-                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[length(name)+3] <- "Residual df"
                 colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
                 #Change row names
                 row.names(tab.acov) <- measures
@@ -1440,7 +1440,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                     #Adjusted means
                     tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
                     #Add residual degrees of freedom
-                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.val), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    tab.acov <- as.data.frame(cbind(tab.acov[,1:(length(name)+2)], unlist(res.val), tab.acov[,(length(name)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                     #Recheck names
                     name <- colnames(tab.acov)[1:length(name)]
                     
