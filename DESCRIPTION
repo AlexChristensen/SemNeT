@@ -14,4 +14,4 @@ URL: https://github.com/AlexChristensen/SemNeT
 BugReports: https://github.com/AlexChristensen/SemNeT/issues
 NeedsCompilation: no
 Suggests: shiny, shinyjs, shinyalert, shinyMatrix, shinyBS, spreadr, animation, R.matlab, foreign, readxl, data.table
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
