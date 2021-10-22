@@ -12,7 +12,7 @@ server <- function(input, output, session)
     
     # Check for textcleaner objects
     for(i in 1:length(prev.env))
-    {tc.object[i] <- class(get(prev.env[i], envir = globalenv())) == "textcleaner"}
+    {tc.object[i] <- "textcleaner" %in% class(get(prev.env[i], envir = globalenv()))}
     
     # Set up environment objects
     if(sum(tc.object) != 0)
@@ -72,7 +72,7 @@ server <- function(input, output, session)
     HTML(
       
       paste('<b>Please cite:</b><br>
-      Christensen, A. P., & Kenett, Y. N. (2019). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. <em>PsyArXiv</em>. <a href="https://doi.org/10.31234/osf.io/eht87">https://doi.org/10.31234/osf.io/eht87</a>
+      Christensen, A. P., & Kenett, Y. N. (2021). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. <em>Psychological Methods</em>. <a href="https://doi.org/10.31234/osf.io/eht87">https://doi.org/10.31234/osf.io/eht87</a>
       ')
     )
     

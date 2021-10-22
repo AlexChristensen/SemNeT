@@ -1,3 +1,10 @@
+Changes in version 1.4.4
+
+o UPDATE: citation for SemNA pipeline (in Shiny app)
+
+o UPDATE: functionality for free association tasks from *SemNetCleaner*'s `textcleaner` 
+
+
 Changes in version 1.4.3
 
 o FIX: switching to different network estimations in Shiny app

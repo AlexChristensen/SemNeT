@@ -1,17 +1,17 @@
-citHeader("To cite SemNetCleaner in publications use:")
+citHeader("To cite SemNeT in publications use:")
 
 bibentry(
   bibtype      = "article",
-  key          = "christensen2019semna",
+  key          = "christensen2021semna",
   title        = "Semantic network analysis {(SemNA)}: A tutorial on preprocessing, estimating, and analyzing semantic networks",
   author       = c(person("Christensen,", "P", "Alexander"),
 		   person("Kenett,", "N", "Yoed")),
-  journal      = "PsyArXiv",
-  year         = "2019",
+  journal      = "Psychological Methods",
+  year         = "2021",
   doi          = "10.31234/osf.io/eht87",
 
   textVersion  =
-  paste0("Christensen, A. P., & Kenett, Y. N. (2019). ",
+  paste0("Christensen, A. P., & Kenett, Y. N. (2021). ",
         "Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. ",
-        "PsyArXiv. https//doi.org/10.31234/osf.io/eht87")
+        "Psychological Methods. https//doi.org/10.31234/osf.io/eht87")
 )
