@@ -821,6 +821,132 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
   return(pl)
 }
 
+#%%%%%%%%%%%%%%%%%%%%#
+#### FORWARD FLOW ####
+#%%%%%%%%%%%%%%%%%%%%#
+
+ff_function <- function(
+  response_matrix,
+  semantic_space, min_response,
+  task, prompt_word,
+  cores
+)
+{
+  # Covert space to lowercase
+  semantic_space <- tolower(semantic_space)
+  
+  # Identify OSF link
+  osf_link <- switch(
+    semantic_space,
+    "baroni" = "ztxjc",
+    "cbow" = "3nfha",
+    "cbow_ukwac" = "zxkjb",
+    "en100" = "f2jv5",
+    "glove" = "e3js4",
+    "tasa" = "3kvmq"
+  )
+  
+  # Let user know semantic space is downloading
+  message("Downloading semantic space...", appendLF = FALSE)
+  
+  # Download semantic space
+  space_file <- suppressMessages(
+    osfr::osf_download(
+      osfr::osf_retrieve_file(
+        osf_link
+      ),
+      path = tempdir()
+    )
+  )
+  
+  # Let user know downloading is finished
+  message("done")
+  
+  # Let user know semantic space is loading
+  message("Loading semantic space...", appendLF = FALSE)
+  
+  # Load semantic space
+  load(space_file$local_path)
+  
+  # Let user know loading is finished
+  message("done")
+  
+  # Set semantic space to generic name
+  space <- get(semantic_space)
+  
+  # Check for task type
+  if(task == "fluency"){
+    
+    # Create list to parallelize
+    response_list <- lapply(seq_len(nrow(response_matrix)), function(i) na.omit(response_matrix[i,]))
+    
+    # Shrink semantic space to only unique words
+    unique_words <- unique(unlist(response_list))
+    shrink_space <- space[unique_words,]
+    
+    # Let user know forward flow is being computed
+    message("Computing forward flow...", appendLF = FALSE)
+    
+    # Parallel processing
+    cl <- parallel::makeCluster(cores)
+    
+    # Function for forward flow
+    ff <- function(responses, space){
+      
+      # Initialize current fragment
+      currFrag <- NULL
+      
+      # Initialize forward flow values
+      instant_FF <- numeric(length(responses) - 1)
+      
+      # Loop through responses
+      for(i in 2:(length(responses) - 1)){
+        
+        # Combining consecutive words in flow starting with the first two
+        currFrag <- paste(currFrag, responses[i])
+        
+        # Calculate forward flow by calculating semantic distance to all preceding words
+        cur_val <- mean(
+          1 - LSAfun::multicostring(
+            x = responses[i + 1], # Current word
+            y = currFrag, # Preceding responses
+            tvectors = space # Semantic space
+          )
+        )
+        
+        # Insert into forward flow vector
+        instant_FF[i - 1] <- cur_val
+        
+      }
+      
+      # Return dynamic forward flow
+      return(mean(instant_FF, na.rm = TRUE))
+      
+    }
+    
+    # Export forward flow to cluster
+    parallel::clusterExport(
+      cl = cl, varlist = c("ff"), envir = environment()
+    )
+    
+    # Run parallelized forward flow
+    ff_values <- pbapply::pblapply(
+      X = response_list,
+      cl = cl,
+      FUN = ff,
+      space = shrink_space
+    )
+    
+    # Stop cluster
+    parallel::stopCluster(cl)
+    
+    # Create vector of forward flow
+    ff_vector <- unlist(ff_values)
+  }
+    
+    return(ff_vector)
+}
+
 #%%%%%%%%%%%%%%%%%%%%%%#
 #### RANDOM NETWORK ####
 #%%%%%%%%%%%%%%%%%%%%%%#
