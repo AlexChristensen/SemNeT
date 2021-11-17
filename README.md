@@ -14,7 +14,7 @@ Christensen, A. P., & Kenett, Y. N. (in press). Semantic network analysis (SemNA
 SemNeT offers researchers several tools for the analysis of their semantic network data. As a part of a module of semantic network packages, SemNeT is the most general, providing statistical analyses for all types of semantic networks.
 
 ## Forward Flow
-Implements the forward flow measure introduced by 
+Implements the forward flow measure introduced by Gray et al. (2019) and semantic spaces from Beaty et al. (2021).
 
 ## SemNeT Shiny
 From raw data to semantic network analysis in three lines of code: The Shiny app allows for integration with [*SemNetCleaner*](https://github.com/AlexChristensen/SemNetCleaner), streamlining the SemNA pipeline:
