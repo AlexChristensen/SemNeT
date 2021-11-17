@@ -77,7 +77,7 @@ forward_flow <- function(
       )
       
       # Compute forward flow
-      ff_values[i,] <- ff_function(
+      ff_values[,i] <- ff_function(
         response_matrix = response_matrix,
         semantic_space = semantic_space[i],
         min_response = min_response,
