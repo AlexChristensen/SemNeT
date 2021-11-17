@@ -71,6 +71,11 @@ forward_flow <- function(
     
     for(i in 1:length(semantic_space)){
       
+      # Let user know which semantic space
+      message(
+        paste("Computing forward flow with ", semantic_space[i], "...", sep = "")
+      )
+      
       # Compute forward flow
       ff_values[i,] <- ff_function(
         response_matrix = response_matrix,
