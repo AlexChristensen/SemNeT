@@ -846,21 +846,39 @@ ff_function <- function(
     "tasa" = "3kvmq"
   )
   
-  # Let user know semantic space is downloading
-  message("Downloading semantic space...", appendLF = FALSE)
-  
-  # Download semantic space
-  space_file <- suppressMessages(
-    osfr::osf_download(
-      osfr::osf_retrieve_file(
-        osf_link
-      ),
-      path = tempdir()
+  # Check if semantic space exists
+  if(
+    !paste(semantic_space, "rdata", sep = ".") %in%
+    tolower(list.files(tempdir()))
+  ){
+    
+    # Let user know semantic space is downloading
+    message("Downloading semantic space...", appendLF = FALSE)
+    
+    # Download semantic space
+    space_file <- suppressMessages(
+      osfr::osf_download(
+        osfr::osf_retrieve_file(
+          osf_link
+        ),
+        path = tempdir()
+      )
     )
-  )
+    
+    # Let user know downloading is finished
+    message("done")
   
-  # Let user know downloading is finished
-  message("done")
+  }else{
+    
+    # Create dummy space file list
+    space_file <- list()
+    space_file$local_path <- paste(
+      tempdir(), "\\",
+      semantic_space, ".RData",
+      sep = ""
+    )
+    
+  }
   
   # Let user know semantic space is loading
   message("Loading semantic space...", appendLF = FALSE)
@@ -874,6 +892,11 @@ ff_function <- function(
   # Set semantic space to generic name
   space <- get(semantic_space)
   
+  # Remove semantic space from environment
+  rm(
+    list = ls()[which(ls() == semantic_space)]
+  )
+  
   # Check for task type
   if(task == "fluency"){
     
@@ -881,8 +904,17 @@ ff_function <- function(
     response_list <- lapply(seq_len(nrow(response_matrix)), function(i) na.omit(response_matrix[i,]))
     
     # Shrink semantic space to only unique words
+    ## Obtain unique words
     unique_words <- unique(unlist(response_list))
-    shrink_space <- space[unique_words,]
+    ## Obtain words that exist in space
+    space_index <- na.omit(match(
+      row.names(space), unique_words
+    ))
+    ## Shrink space
+    shrink_space <- space[space_index,]
+    
+    # Remove space
+    rm(space)
     
     # Let user know forward flow is being computed
     message("Computing forward flow...", appendLF = FALSE)
@@ -943,8 +975,8 @@ ff_function <- function(
     # Create vector of forward flow
     ff_vector <- unlist(ff_values)
   }
-    
-    return(ff_vector)
+  
+  return(ff_vector)
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%#
