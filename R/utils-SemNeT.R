@@ -908,7 +908,7 @@ ff_function <- function(
     unique_words <- unique(unlist(response_list))
     ## Obtain words that exist in space
     space_index <- na.omit(match(
-      row.names(space), unique_words
+      unique_words, row.names(space)
     ))
     ## Shrink space
     shrink_space <- space[space_index,]

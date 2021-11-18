@@ -88,7 +88,6 @@ forward_flow <- function(
       
     }
     
-    
   }else{
     
     # Initialize results matrix
