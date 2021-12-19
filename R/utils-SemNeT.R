@@ -928,6 +928,11 @@ ff_function <- function(
       # Initialize current fragment
       currFrag <- NULL
       
+      # Check for responses
+      if(length(responses) <= 1){
+        return(NA)
+      }
+      
       # Initialize forward flow values
       instant_FF <- numeric(length(responses) - 1)
       
