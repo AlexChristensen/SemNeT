@@ -852,21 +852,16 @@ ff_function <- function(
     tolower(list.files(tempdir()))
   ){
     
-    # Let user know semantic space is downloading
-    message("Downloading semantic space...", appendLF = FALSE)
-    
     # Download semantic space
     space_file <- suppressMessages(
       osfr::osf_download(
         osfr::osf_retrieve_file(
           osf_link
         ),
-        path = tempdir()
+        path = tempdir(),
+        progress = TRUE
       )
     )
-    
-    # Let user know downloading is finished
-    message("done")
   
   }else{
     
@@ -934,7 +929,7 @@ ff_function <- function(
       }
       
       # Initialize forward flow values
-      instant_FF <- numeric(length(responses) - 1)
+      instant_FF <- numeric(length(responses) - 2)
       
       # Loop through responses
       for(i in 2:(length(responses) - 1)){
@@ -955,6 +950,23 @@ ff_function <- function(
         instant_FF[i - 1] <- cur_val
         
       }
+      
+      # Get derivative
+      # derivative <- EGAnet::glla(
+      #   x = instant_FF, n.embed = 3, tau = 1,
+      #   delta = 1, order = 1
+      # )[,"DerivOrd1"]
+      
+      # Get results list
+      # ff_res <- list()
+      # ff_res$values <- instant_FF
+      # ff_res$derivatives <- derivative
+      # ff_res$descriptives <- data.frame(
+      #   mean = mean(instant_FF, na.rm = TRUE),
+      #   mean_change = mean(derivative, na.rm = TRUE),
+      #   sd_change = sd(derivative, na.rm = TRUE)
+      # )
+      
       
       # Return dynamic forward flow
       return(mean(instant_FF, na.rm = TRUE))
@@ -979,6 +991,16 @@ ff_function <- function(
     
     # Create vector of forward flow
     ff_vector <- unlist(ff_values)
+    
+    # Create data frame of forward flow
+    # ff_mat <- t(simplify2array(ff_values, higher = FALSE))
+    # ff_df <- data.frame(
+    #   mean = as.numeric(ff_mat[,"mean"]),
+    #   mean_change = as.numeric(ff_mat[,"mean_change"]),
+    #   sd_change = as.numeric(ff_mat[,"sd_change"])
+    # )
+    
+    
   }
   
   return(ff_vector)
