@@ -832,8 +832,6 @@ ff_function <- function(
   cores
 )
 {
-  # Covert space to lowercase
-  semantic_space <- tolower(semantic_space)
   
   # Identify OSF link
   osf_link <- switch(
@@ -920,28 +918,28 @@ ff_function <- function(
     # Function for forward flow
     ff <- function(responses, space){
       
-      # Initialize current fragment
-      currFrag <- NULL
-      
       # Check for responses
       if(length(responses) <= 1){
         return(NA)
       }
       
+      # Make responses lowercase
+      responses <- tolower(responses)
+      
+      # Initialize response vectors
+      response_vectors <- lapply(1:(length(responses) - 1), seq_len)
+      
       # Initialize forward flow values
-      instant_FF <- numeric(length(responses) - 2)
+      instant_FF <- numeric(length(responses) - 1)
       
       # Loop through responses
-      for(i in 2:(length(responses) - 1)){
-        
-        # Combining consecutive words in flow starting with the first two
-        currFrag <- paste(currFrag, responses[i])
+      for(i in 2:length(responses)){
         
         # Calculate forward flow by calculating semantic distance to all preceding words
         cur_val <- mean(
           1 - LSAfun::multicostring(
-            x = responses[i + 1], # Current word
-            y = currFrag, # Preceding responses
+            x = responses[i], # Current word
+            y = responses[response_vectors[[i - 1]]], # Preceding responses
             tvectors = space # Semantic space
           )
         )
@@ -952,34 +950,40 @@ ff_function <- function(
       }
       
       # Get derivative
-      # derivative <- EGAnet::glla(
-      #   x = instant_FF, n.embed = 3, tau = 1,
-      #   delta = 1, order = 1
-      # )[,"DerivOrd1"]
+      if(length(responses) >= 3){
+        derivative <- EGAnet::glla(
+          x = instant_FF, n.embed = 3, tau = 1,
+          delta = 1, order = 1
+        )[,"DerivOrd1"]
+      }else{
+        derivative <- rep(NA, length(responses))
+      }
       
       # Get results list
-      # ff_res <- list()
-      # ff_res$values <- instant_FF
-      # ff_res$derivatives <- derivative
-      # ff_res$descriptives <- data.frame(
-      #   mean = mean(instant_FF, na.rm = TRUE),
-      #   mean_change = mean(derivative, na.rm = TRUE),
-      #   sd_change = sd(derivative, na.rm = TRUE)
-      # )
+      ff_res <- list()
+      ff_res$values <- instant_FF
+      ff_res$derivatives <- derivative
+      ff_res$descriptives <- data.frame(
+        mean = mean(instant_FF, na.rm = TRUE),
+        mean_change = mean(derivative, na.rm = TRUE),
+        sd_change = sd(derivative, na.rm = TRUE)
+      )
       
       
       # Return dynamic forward flow
-      return(mean(instant_FF, na.rm = TRUE))
+      return(ff_res)
       
     }
     
     # Export forward flow to cluster
     parallel::clusterExport(
-      cl = cl, varlist = c("ff"), envir = environment()
+      cl = cl, varlist = c(
+        "ff"
+      ), envir = environment()
     )
     
     # Run parallelized forward flow
-    ff_values <- pbapply::pblapply(
+    ff_result <- pbapply::pblapply(
       X = response_list,
       cl = cl,
       FUN = ff,
@@ -990,20 +994,41 @@ ff_function <- function(
     parallel::stopCluster(cl)
     
     # Create vector of forward flow
-    ff_vector <- unlist(ff_values)
+    #ff_vector <- unlist(ff_values)
     
     # Create data frame of forward flow
-    # ff_mat <- t(simplify2array(ff_values, higher = FALSE))
-    # ff_df <- data.frame(
-    #   mean = as.numeric(ff_mat[,"mean"]),
-    #   mean_change = as.numeric(ff_mat[,"mean_change"]),
-    #   sd_change = as.numeric(ff_mat[,"sd_change"])
-    # )
+    ff_mat <- t(simplify2array(lapply(
+      ff_result, function(x){
+        x$descriptives
+      }
+    ), higher = FALSE))
+    ff_df <- data.frame(
+      mean = as.numeric(ff_mat[,"mean"]),
+      mean_change = as.numeric(ff_mat[,"mean_change"]),
+      sd_change = as.numeric(ff_mat[,"sd_change"])
+    )
     
+    # Create list for values
+    ff_values <- lapply(ff_result, function(x){
+      x$values
+    })
+    names(ff_values) <- row.names(response_matrix)
+    
+    # Create list for derivatives
+    ff_derivatives <- lapply(ff_result, function(x){
+      x$derivatives
+    })
+    names(ff_derivatives) <- row.names(response_matrix)
+    
+    # Populate results list
+    results <- list()
+    results$metrics <- ff_df
+    results$values <- ff_values
+    results$derivatives <- ff_derivatives
     
   }
   
-  return(ff_vector)
+  return(results)
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%#

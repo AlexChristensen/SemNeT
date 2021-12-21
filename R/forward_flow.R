@@ -25,7 +25,7 @@
 #' @export
 #' 
 # Forward Flow
-# Updated 11/17/2021
+# Updated 20.12.2021
 forward_flow <- function(
   response_matrix,
   semantic_space = c(
@@ -47,6 +47,9 @@ forward_flow <- function(
     semantic_space <- match.arg(semantic_space, several.ok = TRUE)
   }
   
+  ## Convert semantic space to lower
+  semantic_space <- tolower(semantic_space)
+  
   # Check for all semantic spaces
   if("all" %in% semantic_space){
     semantic_space <- c("baroni", "cbow", "cbow_ukwac", "en100", "glove", "tasa")
@@ -56,53 +59,23 @@ forward_flow <- function(
   if(missing(cores)){
     cores <- round(parallel::detectCores() / 2, 0)
   }else{cores <- cores}
+  
+  # Initialize results list
+  results <- vector("list", length(semantic_space))
+  names(results) <- semantic_space
     
-  # Check for all semantic spaces
-  if(length(semantic_space) > 1){
+  # Loop through semantic spaces
+  for(i in 1:length(semantic_space)){
     
-    # Initialize results matrix
-    ff_values <- matrix(
-      nrow = nrow(response_matrix),
-      ncol = length(semantic_space)
+    # Let user know which semantic space
+    message(
+      paste("Computing forward flow with ", semantic_space[i], "...", sep = "")
     )
-    
-    # Change column names
-    colnames(ff_values) <- semantic_space
-    
-    for(i in 1:length(semantic_space)){
-      
-      # Let user know which semantic space
-      message(
-        paste("Computing forward flow with ", semantic_space[i], "...", sep = "")
-      )
-      
-      # Compute forward flow
-      ff_values[,i] <- ff_function(
-        response_matrix = response_matrix,
-        semantic_space = semantic_space[i],
-        min_response = min_response,
-        task = task,
-        prompt_word = prompt_word,
-        cores = cores
-      )
-      
-    }
-    
-  }else{
-    
-    # Initialize results matrix
-    ff_values <- matrix(
-      nrow = nrow(response_matrix),
-      ncol = length(semantic_space)
-    )
-    
-    # Change column names
-    colnames(ff_values) <- semantic_space
     
     # Compute forward flow
-    ff_values[,1] <- ff_function(
+    results[[i]] <- ff_function(
       response_matrix = response_matrix,
-      semantic_space = semantic_space,
+      semantic_space = semantic_space[i],
       min_response = min_response,
       task = task,
       prompt_word = prompt_word,
@@ -111,6 +84,6 @@ forward_flow <- function(
     
   }
   
-  return(as.data.frame(ff_values))
+  return(results)
   
 }
