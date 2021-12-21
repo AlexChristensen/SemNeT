@@ -915,72 +915,8 @@ ff_function <- function(
     # Parallel processing
     cl <- parallel::makeCluster(cores)
     
-    # Function for forward flow
-    ff <- function(responses, space){
-      
-      # Check for responses
-      if(length(responses) <= 1){
-        return(NA)
-      }
-      
-      # Make responses lowercase
-      responses <- tolower(responses)
-      
-      # Initialize response vectors
-      response_vectors <- lapply(1:(length(responses) - 1), seq_len)
-      
-      # Initialize forward flow values
-      instant_FF <- numeric(length(responses) - 1)
-      
-      # Loop through responses
-      for(i in 2:length(responses)){
-        
-        # Calculate forward flow by calculating semantic distance to all preceding words
-        cur_val <- mean(
-          1 - LSAfun::multicostring(
-            x = responses[i], # Current word
-            y = responses[response_vectors[[i - 1]]], # Preceding responses
-            tvectors = space # Semantic space
-          )
-        )
-        
-        # Insert into forward flow vector
-        instant_FF[i - 1] <- cur_val
-        
-      }
-      
-      # Get derivative
-      if(length(responses) >= 3){
-        derivative <- EGAnet::glla(
-          x = instant_FF, n.embed = 3, tau = 1,
-          delta = 1, order = 1
-        )[,"DerivOrd1"]
-      }else{
-        derivative <- rep(NA, length(responses))
-      }
-      
-      # Get results list
-      ff_res <- list()
-      ff_res$values <- instant_FF
-      ff_res$derivatives <- derivative
-      ff_res$descriptives <- data.frame(
-        mean = mean(instant_FF, na.rm = TRUE),
-        mean_change = mean(derivative, na.rm = TRUE),
-        sd_change = sd(derivative, na.rm = TRUE)
-      )
-      
-      
-      # Return dynamic forward flow
-      return(ff_res)
-      
-    }
-    
     # Export forward flow to cluster
-    parallel::clusterExport(
-      cl = cl, varlist = c(
-        "ff"
-      ), envir = environment()
-    )
+    parallel::clusterExport(cl = cl)
     
     # Run parallelized forward flow
     ff_result <- pbapply::pblapply(
@@ -1029,6 +965,68 @@ ff_function <- function(
   }
   
   return(results)
+}
+
+
+#' @noRd
+# Function for forward flow
+ff <- function(responses, space){
+  
+  # Check for responses
+  if(length(responses) <= 1){
+    return(NA)
+  }
+  
+  # Make responses lowercase
+  responses <- tolower(responses)
+  
+  # Initialize response vectors
+  response_vectors <- lapply(1:(length(responses) - 1), seq_len)
+  
+  # Initialize forward flow values
+  instant_FF <- numeric(length(responses) - 1)
+  
+  # Loop through responses
+  for(i in 2:length(responses)){
+    
+    # Calculate forward flow by calculating semantic distance to all preceding words
+    cur_val <- mean(
+      1 - LSAfun::multicostring(
+        x = responses[i], # Current word
+        y = responses[response_vectors[[i - 1]]], # Preceding responses
+        tvectors = space # Semantic space
+      )
+    )
+    
+    # Insert into forward flow vector
+    instant_FF[i - 1] <- cur_val
+    
+  }
+  
+  # Get derivative
+  if(length(responses) >= 3){
+    derivative <- EGAnet::glla(
+      x = instant_FF, n.embed = 3, tau = 1,
+      delta = 1, order = 1
+    )[,"DerivOrd1"]
+  }else{
+    derivative <- rep(NA, length(responses))
+  }
+  
+  # Get results list
+  ff_res <- list()
+  ff_res$values <- instant_FF
+  ff_res$derivatives <- derivative
+  ff_res$descriptives <- data.frame(
+    mean = mean(instant_FF, na.rm = TRUE),
+    mean_change = mean(derivative, na.rm = TRUE),
+    sd_change = sd(derivative, na.rm = TRUE)
+  )
+  
+  
+  # Return dynamic forward flow
+  return(ff_res)
+  
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%#
