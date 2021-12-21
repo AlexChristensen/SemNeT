@@ -915,9 +915,6 @@ ff_function <- function(
     # Parallel processing
     cl <- parallel::makeCluster(cores)
     
-    # Export forward flow to cluster
-    parallel::clusterExport(cl = cl)
-    
     # Run parallelized forward flow
     ff_result <- pbapply::pblapply(
       X = response_list,
