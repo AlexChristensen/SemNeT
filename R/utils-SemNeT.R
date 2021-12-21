@@ -971,7 +971,19 @@ ff <- function(responses, space){
   
   # Check for responses
   if(length(responses) <= 1){
-    return(NA)
+    
+    # Populate results list
+    ff_res <- list()
+    ff_res$values <- NA
+    ff_res$derivatives <- NA
+    ff_res$descriptives <- data.frame(
+      mean = NA,
+      mean_change = NA,
+      sd_change = NA
+    )
+    
+    return(ff_res)
+    
   }
   
   # Make responses lowercase
