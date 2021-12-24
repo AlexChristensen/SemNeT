@@ -1,16 +1,145 @@
 #' Forward Flow
 #'
-#' @description This function calculates the forward flow of a list of words per Gray et. al, 2019. Forward flow is a way to quantify the forward motion of naturalistic thought. Research suggests that it is correlated with creativity.  See forwardflow.org for more information.
+#' @description This function calculates the
+#' forward flow of a list of words (Gray et. al, 2019).
+#' Forward flow is a way to quantify the forward motion of
+#' naturalistic thought. See \href{https://forwardflow.org}{forwardflow.org} for more information.
 #' 
-#' @param response_matrix A data frame containing the set of responses to calculate forward flow on.  Must have id column, followed by all responses for that observation in wide format.
+#' @usage 
+#' forward_flow <- function(
+#'  response_matrix,
+#'  semantic_space = c(
+#'    "baroni", "cbow", "cbow_ukwac",
+#'    "en100", "glove", "tasa", "all"
+#'  ),
+#'  min_cue = NULL,
+#'  min_response = 3,
+#'  max_response = NULL,
+#'  task = c("free", "fluency"),
+#'  cores
+#')
+#'
+#' @param response_matrix Matrix, data frame, or
+#' \code{\link[SemNetCleaner]{textcleaner}} object.
+#' For \code{task = "fluency"}, data are expected to
+#' follow wide formatting (IDs are the row names
+#' and are \strong{not} a column in the matrix
+#' or data frame):
 #' 
-#' @param semantic_space The semantic space used to compute the distances between words. 
+#' \tabular{cccc}{
 #' 
-#' @param min_response A numeric indicating the minimum number of valid responses needed to calculate forward flow on.
+#' \code{row.names} \tab Response 1 \tab Response 2 \tab Response n \cr
+#' ID_1 \tab 1 \tab 2 \tab n \cr
+#' ID_2 \tab 1 \tab 2 \tab n \cr
+#' ID_n \tab 1 \tab 2 \tab n 
+#' }
 #' 
-#' @param task Type of semantic task
+#' For \code{task = "free"}, data are expected to
+#' follow long formatting:
 #' 
-#' @param prompt_word If prompt_included = FALSE, the prompt word given to participants.  Will be used as the first word in the forward flow string. 
+#' \tabular{ccc}{
+#' 
+#' ID \tab Cue \tab Response \cr
+#' 1 \tab 1 \tab 1 \cr
+#' 1 \tab 1 \tab 2 \cr
+#' 1 \tab 1 \tab n \cr
+#' 1 \tab 2 \tab 1 \cr
+#' 1 \tab 2 \tab 2 \cr
+#' 1 \tab 2 \tab n \cr
+#' 1 \tab n \tab 1 \cr
+#' 1 \tab n \tab 2 \cr
+#' 1 \tab n \tab n \cr
+#' 2 \tab 1 \tab 1 \cr
+#' 2 \tab 1 \tab 2 \cr
+#' 2 \tab 1 \tab n \cr
+#' 2 \tab 2 \tab 1 \cr
+#' 2 \tab 2 \tab 2 \cr
+#' 2 \tab 2 \tab n \cr
+#' 2 \tab n \tab 1 \cr
+#' 2 \tab n \tab 2 \cr
+#' 2 \tab n \tab n \cr
+#' n \tab 1 \tab 1 \cr
+#' n \tab 1 \tab 2 \cr
+#' n \tab 1 \tab n \cr
+#' n \tab 2 \tab 1 \cr
+#' n \tab 2 \tab 2 \cr
+#' n \tab 2 \tab n \cr
+#' n \tab n \tab 1 \cr
+#' n \tab n \tab 2 \cr
+#' n \tab n \tab n
+#' 
+#' }
+#' 
+#' @param semantic_space Character vector.
+#' The semantic space used to compute the distances between words
+#' (more than one allowed). Here's a list of the semantic spaces:
+#' 
+#' \itemize{
+#' 
+#' \item{\code{"baroni"}}
+#' {Combination of British National Corpus, ukWaC corpus, and a 2009
+#' Wikipedia dump. Space created using continuous bag of words algorithm
+#' using a context window size of 11 words (5 left and right)
+#' and 400 dimensions. Best word2vec model according to
+#' Baroni, Dinu, & Kruszewski (2014)}
+#' 
+#' \item{\code{"cbow"}}
+#' {Combination of British National Corpus, ukWaC corpus, and a 2009
+#' Wikipedia dump. Space created using continuous bag of words algorithm with
+#' a context window size of 5 (2 left and right) and 300 dimensions}
+#' 
+#' \item{\code{"cbow_ukwac"}}
+#' {ukWaC corpus with the continuous bag of words algorithm with
+#' a context window size of 5 (2 left and right) and 400 dimensions}
+#' 
+#' \item{\code{"en100"}}
+#' {Combination of British National Corpus, ukWaC corpus, and a 2009
+#' Wikipedia dump. 100,000 most frequent words. Uses moving window model
+#' with a size of 5 (2 to the left and right). Positive pointwise mutual
+#' information and singular value decomposition was used to reduce the
+#' space to 300 dimensions}
+#' 
+#' \item{\code{"glove"}}
+#' {\href{https://dumps.wikimedia.org/}{Wikipedia 2014 dump} and \href{https://catalog.ldc.upenn.edu/LDC2011T07}{Gigaword 5} with 400,000
+#' words (300 dimensions). Uses co-occurrence of words in text
+#' documents (uses cosine similarity)}
+#' 
+#' \item{\code{"tasa"}}
+#' {Latent Semantic Analysis space from TASA corpus all (300 dimensions).
+#' Uses co-occurrence of words in text documents (uses cosine similarity)}
+#' 
+#' \item{\code{"all"}}
+#' {Computes semantic distance using all semantic spaces}
+#' 
+#' }
+#' 
+#' All semantic spaces are available for download on our
+#' \href{https://osf.io/4fmnd/}{OSF}. Semantic spaces are downloaded
+#' into R using the \code{\link[osfr]{osfr-package}}. For more information
+#' on these spaces, see 
+#' \href{https://sites.google.com/site/fritzgntr/software-resources/semantic_spaces}{Gunther, Dudschig, & Kaup (2015)}
+#' and \href{https://nlp.stanford.edu/projects/glove/}{Pennington, Socher, & Manning (2014).}
+#' 
+#' @param min_cue Numeric.
+#' Minimum number of cues participant must have provided responses
+#' to compute forward flow (given \code{NA} if criterion not met)
+#' 
+#' @param min_response Numeric.
+#' Minimum number of responses to compute forward flow.
+#' Defaults to \code{3}, which ensures flow and derivatives can be computed
+#' 
+#' @param max_response Numeric.
+#' Maximum number of responses to compute forward flow.
+#' Useful for avoid confounding fluency (number of responses generated
+#' by a participant) when computing forward flow.
+#' Defaults to \code{NULL}, which uses all possible responses.
+#' When set, only the first \code{n} responses will be used
+#' 
+#' @param task Character.
+#' Type of semantic task.
+#' Automatically determined when a
+#' \code{\link[SemNetCleaner]{textcleaner}} object is
+#' input as the \code{response_matrix}
 #' 
 #' @param cores Numeric.
 #' Number of computer processing cores to use for bootstrapping samples.
@@ -18,25 +147,64 @@
 #' Set to any number between 1 and maximum amount of cores on your computer
 #' (see \code{parellel::detectCores()})
 #' 
-#' @return A tibble with row ID, original ID, prompt word, and dynamic forward flow values.
+#' @return A list labeled with each semantic space used. Values in 
+#' each list correspond to dynamic forward flow values (Gray et al., 2019).
+#' Free association will return a data frame that includes columns for
+#' \code{ID} and \code{Cue}. \code{NA} values suggest that forward flow
+#' could not be computed for that participant or cue
+#' 
+#' @references 
+#' Baroni, M., Dinu, G., & Kruszewski, G. (2014).
+#' Don't count, predict! a systematic comparison of context-counting vs. context-predicting semantic vectors.
+#' In \emph{Proceedings of the 52nd annual meting of the association for computational linguistics} (pp. 238-247).
+#' 
+#' Beaty, R. E., Zeitlen, D. C., Baker, B. S., & Kenett, Y. N. (2021).
+#' Forward flow and creative thought: Assessing associative cognition and its role in divergent thinking.
+#' \emph{Thinking Skills and Creativity}, 100859.
+#' 
+#' Gray, K., Anderson, S., Chen, E. E., Kelly, J. M., Christian, M. S., Patrick, J., ... & Lewis, K. (2019).
+#' "Forward flow": A new measure to quantify free thought and predict creativity.
+#' \emph{American Psychologist}, \emph{74}(5), 539-554.
+#' 
+#' Pennington, J., Socher, R., & Manning, C. D. (2014).
+#' GloVe: Global vectors for word representation.
+#' In \emph{Proceedings of the 2014 conference on empirical methods in natural language processing} (pp. 1532-1543).
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com> & Brendan Baker <bsb5477@psu.edu>
 #' 
 #' @export
 #' 
 # Forward Flow
-# Updated 20.12.2021
+# Updated 23.12.2021
 forward_flow <- function(
   response_matrix,
   semantic_space = c(
     "baroni", "cbow", "cbow_ukwac",
     "en100", "glove", "tasa", "all"
-  ), min_response = 10,
+  ),
+  min_cue = NULL,
+  min_response = 3,
+  max_response = NULL,
   task = c("free", "fluency"),
-  prompt_word = NULL,
   cores
 )
 {
+  # Check response matrix for textcleaner
+  if("textcleaner" %in% class(response_matrix)){
+    
+    if("free" %in% class(response_matrix)){
+      
+      task <- "free"
+      response_matrix <- response_matrix$data$clean
+      
+    }else if("fluency" %in% class(response_matrix)){
+      
+      task <- "fluency"
+      response_matrix <- response_matrix$responses$clean
+      
+    }
+    
+  }
   
   # Check for missing arguments
   ## Semantic Space
@@ -47,7 +215,12 @@ forward_flow <- function(
     semantic_space <- match.arg(semantic_space, several.ok = TRUE)
   }
   
-  ## Convert semantic space to lower
+  ## Parallel processing cores
+  if(missing(cores)){
+    cores <- round(parallel::detectCores() / 2, 0)
+  }else{cores <- cores}
+  
+  # Convert semantic space to lower
   semantic_space <- tolower(semantic_space)
   
   # Check for all semantic spaces
@@ -55,17 +228,12 @@ forward_flow <- function(
     semantic_space <- c("baroni", "cbow", "cbow_ukwac", "en100", "glove", "tasa")
   }
   
-  ## Parallel processing cores
-  if(missing(cores)){
-    cores <- round(parallel::detectCores() / 2, 0)
-  }else{cores <- cores}
-  
   # Initialize results list
   results <- vector("list", length(semantic_space))
   names(results) <- semantic_space
     
   # Loop through semantic spaces
-  for(i in 1:length(semantic_space)){
+  for(i in seq_along(semantic_space)){
     
     # Let user know which semantic space
     message(
@@ -76,9 +244,10 @@ forward_flow <- function(
     results[[i]] <- ff_function(
       response_matrix = response_matrix,
       semantic_space = semantic_space[i],
+      min_cue = min_cue,
       min_response = min_response,
+      max_response = max_response,
       task = task,
-      prompt_word = prompt_word,
       cores = cores
     )
     

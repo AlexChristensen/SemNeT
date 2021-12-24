@@ -825,10 +825,16 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 #### FORWARD FLOW ####
 #%%%%%%%%%%%%%%%%%%%%#
 
+#' @noRd
+# Function for foward flow
+# Updated 23.12.2021
 ff_function <- function(
   response_matrix,
-  semantic_space, min_response,
-  task, prompt_word,
+  semantic_space,
+  min_cue,
+  min_response,
+  max_response,
+  task,
   cores
 )
 {
@@ -910,7 +916,7 @@ ff_function <- function(
     rm(space)
     
     # Let user know forward flow is being computed
-    message("Computing forward flow...", appendLF = FALSE)
+    message("Computing forward flow...")
     
     # Parallel processing
     cl <- parallel::makeCluster(cores)
@@ -927,37 +933,155 @@ ff_function <- function(
     parallel::stopCluster(cl)
     
     # Create vector of forward flow
+    results <- unlist(ff_result)
+    
+    # Create data frame of forward flow
+    # ff_mat <- t(simplify2array(lapply(
+    #   ff_result, function(x){
+    #     x$descriptives
+    #   }
+    # ), higher = FALSE))
+    # ff_df <- data.frame(
+    #   mean = as.numeric(ff_mat[,"mean"]),
+    #   mean_change = as.numeric(ff_mat[,"mean_change"]),
+    #   sd_change = as.numeric(ff_mat[,"sd_change"])
+    # )
+    # 
+    # # Create list for values
+    # ff_values <- lapply(ff_result, function(x){
+    #   x$values
+    # })
+    # names(ff_values) <- row.names(response_matrix)
+    # 
+    # # Create list for derivatives
+    # ff_derivatives <- lapply(ff_result, function(x){
+    #   x$derivatives
+    # })
+    # names(ff_derivatives) <- row.names(response_matrix)
+    # 
+    # # Populate results list
+    # results <- list()
+    # results$metrics <- ff_df
+    # results$values <- ff_values
+    # results$derivatives <- ff_derivatives
+    
+  }else if(task == "free"){
+    
+    # Obtain response list
+    response_list <- free_response_list(response_matrix)
+    
+    # Shrink semantic space to only unique words
+    ## Obtain unique words
+    unique_words <- unique(unlist(response_list))
+    ## Obtain words that exist in space
+    space_index <- na.omit(match(
+      unique_words, row.names(space)
+    ))
+    ## Shrink space
+    shrink_space <- space[space_index,]
+    
+    # Remove space
+    rm(space)
+    
+    # Initialize results list
+    results_list <- vector("list", length(response_list))
+    names(results_list) <- names(response_list)
+    
+    # Parallel processing
+    cl <- parallel::makeCluster(cores)
+    
+    # Loop through participants
+    for(i in seq_along(response_list)){
+      
+      message(
+        paste(
+          "Computing forward flow for ID = ",
+          names(response_list)[i],
+          "...", sep = ""
+        )
+      )
+      
+      # Run parallelized forward flow
+      ff_result <- pbapply::pblapply(
+        X = response_list[[i]],
+        cl = cl,
+        FUN = ff,
+        space = shrink_space
+      )
+      
+      # Organize result
+      result <- unlist(ff_result)
+      
+      if(is.null(result)){
+        
+        # Create dummy data frame of result
+        df <- as.matrix(data.frame(
+          ID = names(response_list)[i],
+          Cue = NA,
+          FF = NA
+        ))
+        row.names(df) <- NULL
+        
+      }else{
+        
+        # Create data frame of result
+        df <- as.matrix(data.frame(
+          ID = names(response_list)[i],
+          Cue = names(result),
+          FF = result
+        ))
+        row.names(df) <- NULL
+      }
+      
+      # Populate results list
+      results_list[[i]] <- df
+      
+    }
+    
+    # Stop cluster
+    parallel::stopCluster(cl)
+    
+    # Create long results
+    res_long <- long_results(results_list)
+    
+    # Convert to data frame
+    results <- as.data.frame(res_long)
+    results$ID <- as.character(results$ID)
+    results$Cue <- as.character(results$Cue)
+    results$FF <- as.numeric(results$FF)
+    
+    # Create vector of forward flow
     #ff_vector <- unlist(ff_values)
     
     # Create data frame of forward flow
-    ff_mat <- t(simplify2array(lapply(
-      ff_result, function(x){
-        x$descriptives
-      }
-    ), higher = FALSE))
-    ff_df <- data.frame(
-      mean = as.numeric(ff_mat[,"mean"]),
-      mean_change = as.numeric(ff_mat[,"mean_change"]),
-      sd_change = as.numeric(ff_mat[,"sd_change"])
-    )
-    
-    # Create list for values
-    ff_values <- lapply(ff_result, function(x){
-      x$values
-    })
-    names(ff_values) <- row.names(response_matrix)
-    
-    # Create list for derivatives
-    ff_derivatives <- lapply(ff_result, function(x){
-      x$derivatives
-    })
-    names(ff_derivatives) <- row.names(response_matrix)
-    
-    # Populate results list
-    results <- list()
-    results$metrics <- ff_df
-    results$values <- ff_values
-    results$derivatives <- ff_derivatives
+    # ff_mat <- t(simplify2array(lapply(
+    #   ff_result, function(x){
+    #     x$descriptives
+    #   }
+    # ), higher = FALSE))
+    # ff_df <- data.frame(
+    #   mean = as.numeric(ff_mat[,"mean"]),
+    #   mean_change = as.numeric(ff_mat[,"mean_change"]),
+    #   sd_change = as.numeric(ff_mat[,"sd_change"])
+    # )
+    # 
+    # # Create list for values
+    # ff_values <- lapply(ff_result, function(x){
+    #   x$values
+    # })
+    # names(ff_values) <- row.names(response_matrix)
+    # 
+    # # Create list for derivatives
+    # ff_derivatives <- lapply(ff_result, function(x){
+    #   x$derivatives
+    # })
+    # names(ff_derivatives) <- row.names(response_matrix)
+    # 
+    # # Populate results list
+    # results <- list()
+    # results$metrics <- ff_df
+    # results$values <- ff_values
+    # results$derivatives <- ff_derivatives
     
   }
   
@@ -967,22 +1091,25 @@ ff_function <- function(
 
 #' @noRd
 # Function for forward flow
+# Updated 23.12.2021
 ff <- function(responses, space){
   
   # Check for responses
   if(length(responses) <= 1){
     
-    # Populate results list
-    ff_res <- list()
-    ff_res$values <- NA
-    ff_res$derivatives <- NA
-    ff_res$descriptives <- data.frame(
-      mean = NA,
-      mean_change = NA,
-      sd_change = NA
-    )
+    # # Populate results list
+    # ff_res <- list()
+    # ff_res$values <- NA
+    # ff_res$derivatives <- NA
+    # ff_res$descriptives <- data.frame(
+    #   mean = NA,
+    #   mean_change = NA,
+    #   sd_change = NA
+    # )
+    # 
+    # return(ff_res)
     
-    return(ff_res)
+    return(NA)
     
   }
   
@@ -1011,30 +1138,141 @@ ff <- function(responses, space){
     instant_FF[i - 1] <- cur_val
     
   }
+  return(mean(instant_FF, na.rm = TRUE))
   
-  # Get derivative
-  if(length(responses) >= 3){
-    derivative <- EGAnet::glla(
-      x = instant_FF, n.embed = 3, tau = 1,
-      delta = 1, order = 1
-    )[,"DerivOrd1"]
-  }else{
-    derivative <- rep(NA, length(responses))
+  # # Get derivative
+  # if(length(responses) >= 3){
+  #   derivative <- EGAnet::glla(
+  #     x = instant_FF, n.embed = 3, tau = 1,
+  #     delta = 1, order = 1
+  #   )[,"DerivOrd1"]
+  # }else{
+  #   derivative <- rep(NA, length(responses))
+  # }
+  
+  # # Get results list
+  # ff_res <- list()
+  # ff_res$values <- instant_FF
+  # ff_res$derivatives <- derivative
+  # ff_res$descriptives <- data.frame(
+  #   mean = mean(instant_FF, na.rm = TRUE),
+  #   mean_change = mean(derivative, na.rm = TRUE),
+  #   sd_change = sd(derivative, na.rm = TRUE)
+  # )
+  # 
+  # 
+  # # Return dynamic forward flow
+  # return(ff_res)
+  
+}
+
+#' @noRd
+# Function to organize free association response list
+# Updated 23.12.2021
+free_response_list <- function(response_matrix){
+  
+  # Obtain IDs
+  IDs <- unique(response_matrix[,"ID"])
+  
+  # Initialize response list
+  response_list <- vector("list", length(IDs))
+  names(response_list) <- IDs
+  
+  # Create list to parallelize
+  for(i in seq_along(IDs)){
+    
+    # Target responses
+    target_responses <- response_matrix[response_matrix[,"ID"]== IDs[i],]
+    
+    # Obtain cues
+    cues <- unique(target_responses[,"Cue"])
+    
+    # Loop through cues
+    cue_list <- lapply(seq_along(cues), function(j){
+      
+      # Target responses for cue
+      cue_resposnes <- target_responses[
+        target_responses[,"Cue"] == cues[j], "Response"
+      ]
+      
+    })
+    
+    names(cue_list) <- cues
+    
+    # Obtain lengths
+    response_lengths <- unlist(lapply(cue_list, length))
+    
+    # Check for minimum responses
+    if(!is.null(min_response)){
+      
+      # Meets minimum criterion
+      meets_min <- which(response_lengths >= min_response)
+      
+      # Refresh cue list
+      cue_list <- cue_list[meets_min]
+      
+    }
+    
+    # Update lengths
+    response_lengths <- unlist(lapply(cue_list, length))
+    
+    # Check for maximum responses
+    if(!is.null(max_response)){
+      
+      # Exceeds maximum criterion
+      exceeds_max <- which(response_lengths > max_response)
+      
+      # Obtain constrained responses
+      constrained_list <- lapply(exceeds_max, function(j){
+        
+        # Target cue
+        target_cue <- cue_list[[j]]
+        
+        # Up to maximum responses only
+        target_cue <- target_cue[1:max_response]
+        
+        return(target_cue)
+        
+      })
+      
+      # Refresh cue list
+      cue_list[exceeds_max] <- constrained_list
+      
+    }
+    
+    
+    # Insert cue list into response list
+    response_list[[i]] <- cue_list
+    
   }
   
-  # Get results list
-  ff_res <- list()
-  ff_res$values <- instant_FF
-  ff_res$derivatives <- derivative
-  ff_res$descriptives <- data.frame(
-    mean = mean(instant_FF, na.rm = TRUE),
-    mean_change = mean(derivative, na.rm = TRUE),
-    sd_change = sd(derivative, na.rm = TRUE)
+  return(response_list)
+  
+}
+
+#' @noRd
+# Function to create long results from list
+# Updated 23.12.2021
+long_results <- function(results_list){
+  
+  # Create long results
+  rows <- unlist(lapply(results_list, nrow))
+  end <- cumsum(rows)
+  start <- (end + 1) - rows
+  
+  # Initialize matrix
+  res_long <- matrix(
+    ncol = ncol(results_list[[1]]),
+    nrow = max(end)
   )
+  colnames(res_long) <- colnames(results_list[[1]])
   
+  # Loop through to populate
+  for(i in seq_along(results_list)){
+    res_long[start[i]:end[i],] <- results_list[[i]]
+  }
   
-  # Return dynamic forward flow
-  return(ff_res)
+  return(res_long)
   
 }
 

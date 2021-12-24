@@ -2,7 +2,9 @@ Changes in version 1.4.4
 
 o UPDATE: citation for SemNA pipeline (in Shiny app)
 
-o UPDATE: functionality for free association tasks from *SemNetCleaner*'s `textcleaner` 
+o UPDATE: functionality for free association tasks from *SemNetCleaner*'s `textcleaner`
+
+o ADD: Forward Flow for free association and verbal fluency data can be computed (see `?forward_flow`)
 
 
 Changes in version 1.4.3
