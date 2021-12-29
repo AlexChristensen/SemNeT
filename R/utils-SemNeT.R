@@ -1677,7 +1677,16 @@ boot.one.test <- function (bootSemNeT.obj,
       tidy.acov[,-1] <- round(apply(tidy.acov[,-1], 2, as.numeric), 3)
       
       #Get partial etas
-      etas <- round(unlist(lapply(acov.test$`Sum Sq`, partial.eta.sq, sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)])))[-c(1,length(acov.test$`Sum Sq`))], 3)
+      etas <- round(
+        unlist(
+          lapply(
+            acov.test$`Sum Sq`, # Sum of squares
+            partial.eta.sq, # Partial eta squared function
+            sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
+          )
+        )[-c(1,length(acov.test$`Sum Sq`))], # Removes intercept and RSS
+        3
+      )
       
       #Attach etas to tidy ANCOVA
       tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
