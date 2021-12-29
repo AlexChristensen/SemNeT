@@ -109,14 +109,14 @@ server <- function(input, output, session)
   observeEvent(input$data_example,
                {
                  output$example_data_response <- renderTable({head(SemNeT::open.clean)},
-                                                             rownames = TRUE,
+                                                             rownames = FALSE,
                                                              caption = "Response Matrix (participants by typed responses)",
                                                              caption.placement = getOption("xtable.caption.placement", "top")
                  )
                  
                  output$example_data_binary <- renderTable({head(SemNeT::open.binary)},
                                                            digits = 0,
-                                                           rownames = TRUE,
+                                                           rownames = FALSE,
                                                            caption = "Binary Matrix (participants by alphabetical responses)",
                                                            caption.placement = getOption("xtable.caption.placement", "top")
                  )
@@ -432,8 +432,11 @@ server <- function(input, output, session)
                  ## Change responses to binary matrix
                  if(network == "TMFG")
                  {
-                   if(is.character(unlist(dat)))
-                   {bin_dat <<- SemNeT:::resp2bin(dat)$binary}
+                   if(is.character(unlist(dat))){
+                     bin_dat <<- SemNeT:::resp2bin(dat)$binary
+                   }else{
+                      bin_dat <<- dat
+                   }
                    
                    ## Create new data
                    for(i in 1:length(uniq))
