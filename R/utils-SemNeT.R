@@ -1269,7 +1269,7 @@ long_results <- function(results_list){
   
   # Loop through to populate
   for(i in seq_along(results_list)){
-    res_long[start[i]:end[i],] <- results_list[[i]]
+    res_long[start[i]:end[i],] <- as.matrix(results_list[[i]])
   }
   
   return(res_long)
