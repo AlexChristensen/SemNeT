@@ -131,7 +131,7 @@ server <- function(input, output, session)
                    colnames(group_example) <- "Group"
                    return(group_example)
                  },
-                 rownames = TRUE,
+                 rownames = FALSE,
                  caption = "Group Vector (ordered by participant)",
                  caption.placement = getOption("xtable.caption.placement", "top"),
                  width = 250
