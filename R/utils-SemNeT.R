@@ -1501,10 +1501,7 @@ boot.one.test <- function (bootSemNeT.obj,
                            formula = NULL,
                            groups = NULL)
 {
-  #Check for 'bootSemNeT' object
-  if(class(bootSemNeT.obj) != "bootSemNeT")
-  {stop("Object input into 'bootSemNeT.obj' is not a 'bootSemNeT' object")}
-  
+
   #Check for data if formula is not NULL
   if(!is.null(formula))
   {

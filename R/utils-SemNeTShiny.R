@@ -1186,7 +1186,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
     temp.res <- list()
     
     for(i in 1:length(input))
-    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]],
+    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.testShiny(input[[i]],
                                                                           test = test,
                                                                           measures = measures,
                                                                           formula = formula,

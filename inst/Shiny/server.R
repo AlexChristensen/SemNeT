@@ -1108,7 +1108,7 @@ server <- function(input, output, session)
                        
                      }
                      
-                   }else if(input$test == "t-test"){
+                   }else if(input$test == "t-test" & input$type_select == "Node"){
                      
                      if(length(percents) == 1){
                        
