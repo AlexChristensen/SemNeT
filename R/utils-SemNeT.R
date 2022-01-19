@@ -1503,8 +1503,7 @@ boot.one.test <- function (bootSemNeT.obj,
 {
 
   #Check for data if formula is not NULL
-  if(!is.null(formula))
-  {
+  if(!is.null(formula)){
     if(!exists("groups"))
     {stop("'groups' argument is NULL when 'formula' argument is not. Please input groups.")}
   }
@@ -1520,19 +1519,22 @@ boot.one.test <- function (bootSemNeT.obj,
   len <- length(name)
   
   #Error there are no paired samples
-  if(len < 2)
-  {stop("Single samples cannot be tested. Use 'randnet.test' for single samples")}
+  if(len < 2){
+    stop("Single samples cannot be tested. Use 'randnet.test' for single samples")
+  }
   
   #Handle groups
-  if(is.null(groups))
-  {groups <- name}
+  if(is.null(groups)){
+    groups <- name
+  }
   
   #Enforce matrix
   groups <- as.matrix(groups)
   
   #Check for groups names
-  if(is.null(colnames(groups)))
-  {colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))}
+  if(is.null(colnames(groups))){
+    colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))
+  }
   
   #Identify iterations
   iter <- bootSemNeT.obj$iter
@@ -1731,10 +1733,32 @@ boot.one.test <- function (bootSemNeT.obj,
       if(nrow(groups) > 2){
         
         if(ncol(groups) == 1){
-          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
+          HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
         }else{
-          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
+          HSD <- suppressWarnings(TukeyHSD(aov.test))
         }
+        
+        #Split row names
+        group_split <- strsplit(row.names(HSD), split = "-")
+        
+        # Obtain Cohen's d
+        ds <- unlist(
+          lapply(group_split, function(x){
+            
+            d(
+              aov.obj$Measure[aov.obj$Name == x[1]],
+              aov.obj$Measure[aov.obj$Name == x[2]]
+            )
+            
+          })
+        )
+        
+        # Insert Cohen's d
+        HSD <- cbind(HSD, ds)
+        colnames(HSD)[ncol(HSD)] <- "d"
+        
+        #Insert HSD
+        tests[[paste(measures[i])]]$HSD <- HSD
         
       }
         

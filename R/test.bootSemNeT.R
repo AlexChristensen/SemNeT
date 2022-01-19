@@ -140,7 +140,7 @@
 #' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 22.06.2021
+# Updated 19.01.2022
 test.bootSemNeT <- function (...,
                              test = c("ANCOVA", "ANOVA", "t-test"),
                              measures = c("ASPL", "CC", "Q"),
