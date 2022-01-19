@@ -723,7 +723,7 @@ server <- function(input, output, session)
                              ')
                          )
                          
-                       }else if(input$test == "ANCOVA"){
+                       }else if(input$test == "ANCOVA" | input$test == "ANOVA"){
                          
                          HTML(
                            
@@ -1005,6 +1005,9 @@ server <- function(input, output, session)
                    
                    # Reset Table
                    output$tab <- renderTable({})
+                   output$aspl <- renderTable({})
+                   output$cc <- renderTable({})
+                   output$q <- renderTable({})
                    
                    if(input$test == "ANCOVA"){
                      
