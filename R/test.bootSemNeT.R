@@ -200,12 +200,17 @@ test.bootSemNeT <- function (...,
     #Initialize temporary results list
     temp.res <- list()
     
-    for(i in 1:length(input))
-    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]],
-                                                                          test = test,
-                                                                          measures = measures,
-                                                                          formula = formula,
-                                                                          groups = groups))}
+    for(i in 1:length(input)){
+        temp.res[[props[i]]] <- suppressPackageStartupMessages(
+            boot.one.test(
+                input[[i]],
+                test = test,
+                measures = measures,
+                formula = formula,
+                groups = groups
+            )
+        )
+    }
     
     
     #Check for ANOVA

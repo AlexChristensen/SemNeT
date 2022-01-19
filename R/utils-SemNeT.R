@@ -1551,11 +1551,11 @@ boot.one.test <- function (bootSemNeT.obj,
   if(test == "ANCOVA" | test == "ANOVA"){##ANCOVA or ANOVA
     
     #Loop through measures
-    for(i in 1:length(measures))
-    {
+    for(i in 1:length(measures)){
+      
       #Create ANCOVA data frame
-      for(j in 1:len)
-      {
+      for(j in 1:len){
+        
         #Insert measure values
         meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
         
@@ -1616,8 +1616,8 @@ boot.one.test <- function (bootSemNeT.obj,
       #  }
       #}
       
-      if("Edges" %in% names(aov.obj))
-      {
+      if("Edges" %in% names(aov.obj)){
+        
         for(g in 1:nrow(groups))
         {
           if(length(unique((aov.obj$Edges[which(aov.obj$Group == groups[g,])]))) == 1){
@@ -1626,6 +1626,7 @@ boot.one.test <- function (bootSemNeT.obj,
             aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])
           }
         }
+        
       }
       
       #ANOVA
@@ -1675,21 +1676,41 @@ boot.one.test <- function (bootSemNeT.obj,
       #Tidy ANCOVA
       tidy.acov <- as.data.frame(broom::tidy(acov.test), stringsAsFactors = FALSE)
       tidy.acov[,-1] <- round(apply(tidy.acov[,-1], 2, as.numeric), 3)
-      
+    
       #Get partial etas
-      etas <- round(
-        unlist(
-          lapply(
-            acov.test$`Sum Sq`, # Sum of squares
-            partial.eta.sq, # Partial eta squared function
-            sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-          )
-        )[-c(1,length(acov.test$`Sum Sq`))], # Removes intercept and RSS
-        3
-      )
-      
-      #Attach etas to tidy ANCOVA
-      tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
+      if(test == "ANCOVA"){
+        
+        etas <- round(
+          unlist(
+            lapply(
+              acov.test$`Sum Sq`, # Sum of squares
+              partial.eta.sq, # Partial eta squared function
+              sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
+            )
+          )[-c(1,length(acov.test$`Sum Sq`))], # Removes intercept and RSS
+          3
+        )
+        
+        #Attach etas to tidy ANCOVA
+        tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
+        
+      }else if(test == "ANOVA"){
+        
+        etas <- round(
+          unlist(
+            lapply(
+              acov.test$`Sum Sq`, # Sum of squares
+              partial.eta.sq, # Partial eta squared function
+              sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
+            )
+          )[-length(acov.test$`Sum Sq`)], # Removes intercept and RSS
+          3
+        )
+        
+        #Attach etas to tidy ANCOVA
+        tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
+        
+      }
       
       #Change column names
       colnames(tidy.acov) <- c("Term", "Sum of Squares", "df", "F-statistic", "p-value", "Partial Eta Squared")
@@ -1719,8 +1740,10 @@ boot.one.test <- function (bootSemNeT.obj,
         }
         
       }
+        
     }
-    
+        
+  
   }else if(test == "t-test"){##t-test
     
     #Loop through measures
