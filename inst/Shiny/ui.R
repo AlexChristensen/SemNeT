@@ -329,7 +329,7 @@ ui <- (
             ),
              
              # Use shinyalert
-             shinyalert::useShinyalert(),
+             # shinyalert::useShinyalert(),
              
              # Use shinyjs
              shinyjs::useShinyjs()

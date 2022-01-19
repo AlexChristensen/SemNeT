@@ -1000,11 +1000,11 @@ server <- function(input, output, session)
                  # Render Tables
                  res_boot <<- boot()
                  
-                 # Reset Table
-                 output$tab <- renderTable({})
-                 
                  observeEvent(input$test,
                  {
+                   
+                   # Reset Table
+                   output$tab <- renderTable({})
                    
                    if(input$test == "ANCOVA"){
                      
@@ -1023,9 +1023,6 @@ server <- function(input, output, session)
                        )
                        
                      }else{
-                       
-                       ## Reset original table
-                       output$tab <- renderTable({})
                        
                        bootTest <<- list()
                        full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
@@ -1063,7 +1060,7 @@ server <- function(input, output, session)
                      if(length(percents) == 1)
                      {
                        
-                       output$tab <- renderTable({
+                         output$tab <- renderTable({
                          bootTest <<- list()
                          
                          bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
@@ -1074,9 +1071,6 @@ server <- function(input, output, session)
                        )
                        
                      }else{
-                       
-                       ## Reset original table
-                       output$tab <- renderTable({})
                        
                        bootTest <<- list()
                        full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
@@ -1123,10 +1117,7 @@ server <- function(input, output, session)
                        )
                        
                      }else{
-                       
-                       ## Reset original table
-                       output$tab <- renderTable({})
-                       
+                      
                        bootTest <<- list()
                        full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
                                                                   test = input$test)
