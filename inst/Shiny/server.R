@@ -2294,7 +2294,7 @@ server <- function(input, output, session)
                })
   
   
-  
+  # ON STOP ----
   onStop(function(x)
   {
     # Save results into condensed list
