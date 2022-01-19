@@ -1025,6 +1025,32 @@ server <- function(input, output, session)
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
+                       # HSD
+                       ## ASPL
+                       output$aspl <- renderTable({
+                         bootTest$fullResults[[1]]$ASPL$HSD
+                       }, rownames = TRUE,
+                       caption = "Average Shortest Path Length (ASPL) HSD",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## CC
+                       output$cc <- renderTable({
+                         bootTest$fullResults[[1]]$CC$HSD
+                       }, rownames = TRUE,
+                       caption = "Clustering Coefficient (CC) HSD",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       ## Q
+                       output$q <- renderTable({
+                         bootTest$fullResults[[1]]$Q$HSD
+                       }, rownames = TRUE,
+                       caption = "Modularity (Q) HSD",
+                       caption.placement = getOption("xtable.caption.placement", "top")
+                       )
+                       
+                       
                      }else{
                        
                        bootTest <<- list()
@@ -1072,6 +1098,31 @@ server <- function(input, output, session)
                        caption = "Bootstrap Network Results",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
+                         
+                         # HSD
+                         ## ASPL
+                         output$aspl <- renderTable({
+                           bootTest$fullResults[[1]]$ASPL$HSD
+                         }, rownames = TRUE,
+                         caption = "Average Shortest Path Length (ASPL) HSD",
+                         caption.placement = getOption("xtable.caption.placement", "top")
+                         )
+                         
+                         ## CC
+                         output$cc <- renderTable({
+                           bootTest$fullResults[[1]]$CC$HSD
+                         }, rownames = TRUE,
+                         caption = "Clustering Coefficient (CC) HSD",
+                         caption.placement = getOption("xtable.caption.placement", "top")
+                         )
+                         
+                         ## Q
+                         output$q <- renderTable({
+                           bootTest$fullResults[[1]]$Q$HSD
+                         }, rownames = TRUE,
+                         caption = "Modularity (Q) HSD",
+                         caption.placement = getOption("xtable.caption.placement", "top")
+                         )
                        
                      }else{
                        

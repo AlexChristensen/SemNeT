@@ -168,10 +168,10 @@ ui <- (
                tagList(
                  
                  mainPanel(
+                   tableOutput("tab"),
                    tableOutput("aspl"),
                    tableOutput("cc"),
                    tableOutput("q"),
-                   tableOutput("tab"),
                    plotOutput("asplPlot"),
                    plotOutput("ccPlot"),
                    plotOutput("qPlot")
