@@ -1051,7 +1051,7 @@ server <- function(input, output, session)
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
                        }, rownames = TRUE,
-                       caption = "Modularity",
+                       caption = "Modularity (Q)",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
@@ -1102,7 +1102,7 @@ server <- function(input, output, session)
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$ANOVA$Q; bootTest$Q
                        }, rownames = TRUE,
-                       caption = "Modularity",
+                       caption = "Modularity (Q)",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
@@ -1151,7 +1151,7 @@ server <- function(input, output, session)
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$Q; bootTest$Q
                        }, rownames = TRUE,
-                       caption = "Modularity",
+                       caption = "Modularity (Q)",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
