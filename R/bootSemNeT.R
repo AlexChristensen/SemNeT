@@ -8,6 +8,10 @@
 #' \code{\link[SemNetCleaner]{textcleaner}}) or  binary response matrices
 #' (e.g., \code{binary} output from \code{\link[SemNetCleaner]{textcleaner}})
 #' 
+#' @param input_list List.
+#' Bypasses \code{...} argument in favor of using a list
+#' as an input
+#' 
 #' @param method Character.
 #' Network estimation method to use.
 #' Current options include:
@@ -125,8 +129,9 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 16.08.2021
-bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
+# Updated 21.01.2022
+bootSemNeT <- function (..., input_list = NULL,
+                        method = c("CN", "NRW", "PF", "TMFG"),
                         methodArgs = list(),
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,
@@ -142,12 +147,19 @@ bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
     }else{cores <- cores}
     ####Missing arguments####
     
-    #Get names of networks
-    name <- as.character(substitute(list(...)))
-    name <- name[-which(name=="list")]
-    
-    #Create list of input
-    datalist <- list(...)
+    # Check for input list
+    if(is.null(input_list)){
+        
+        #Get names of networks
+        name <- as.character(substitute(list(...)))
+        name <- name[-which(name=="list")]
+        
+        #Create list of input
+        datalist <- list(...)
+        
+    }else{
+        
+    }
     
     #Assign network function
     NET.FUNC <- switch(method,

@@ -6,6 +6,10 @@
 #' @param ... Matrices, data frames or a list of matrices and data frames.
 #' Binary response matrices to be equated
 #' 
+#' @param input_list List.
+#' Bypasses \code{...} argument in favor of using a list
+#' as an input
+#' 
 #' @return This function returns a list containing the
 #' equated binary response matrices in the order they were input.
 #' The response matrices are labeled as the object name they were

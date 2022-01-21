@@ -17,6 +17,10 @@
 #' 
 #' @param ... Matrices or data frames of network adjacency matrices
 #' 
+#' @param input_list List.
+#' Bypasses \code{...} argument in favor of using a list
+#' as an input
+#' 
 #' @param title List.
 #' Characters denoting titles of plots
 #' 
@@ -88,15 +92,37 @@
 #' @importFrom graphics layout
 #' 
 #' @export
-#Compare Graphs----
-compare_nets <- function (..., title, config,
+# Compare Graphs----
+# Updated 21.01.2022
+compare_nets <- function (..., input_list = NULL, title, config,
                           placement = c("match", "default"),
                           weighted = FALSE,
                           qgraph.args = list())
 {
-    #Get names of networks
-    name <- as.character(substitute(list(...)))
-    name <- name[-which(name=="list")]
+    
+    # Check for input list
+    if(is.null(input_list)){
+        
+        #Get names of networks
+        name <- as.character(substitute(list(...)))
+        name <- name[-which(name=="list")]
+        
+        #Create list of input
+        datalist <- list(...)
+        
+    }else{
+        
+        # Get names of networks
+        name <- names(input_list)
+        
+        if(is.null(name)){
+            name <- 1:length(input_list)
+        }
+        
+        # Create list of input
+        datalist <- input_list
+        
+    }
     
     # MISSING ARGUMENTS
     if(missing(title))
@@ -117,9 +143,6 @@ compare_nets <- function (..., title, config,
     {placement <- "default"
     }else{placement <- match.arg(placement)}
     # MISSING ARGUMENTS
-    
-    #Create list of input
-    datalist <- list(...)
     
     #Initialize layout and labels list
     layouts <- list()

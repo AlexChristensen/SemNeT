@@ -6,6 +6,7 @@
 \usage{
 bootSemNeT(
   ...,
+  input_list = NULL,
   method = c("CN", "NRW", "PF", "TMFG"),
   methodArgs = list(),
   type = c("case", "node"),
@@ -21,6 +22,10 @@ bootSemNeT(
 Cleaned response matrices (e.g., \code{responses$clean} from
 \code{\link[SemNetCleaner]{textcleaner}}) or  binary response matrices
 (e.g., \code{binary} output from \code{\link[SemNetCleaner]{textcleaner}})}
+
+\item{input_list}{List.
+Bypasses \code{...} argument in favor of using a list
+as an input}
 
 \item{method}{Character.
 Network estimation method to use.

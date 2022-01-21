@@ -4,11 +4,15 @@
 \alias{equate}
 \title{Equate Groups}
 \usage{
-equate(...)
+equate(..., input_list = NULL)
 }
 \arguments{
 \item{...}{Matrices, data frames or a list of matrices and data frames.
 Binary response matrices to be equated}
+
+\item{input_list}{List.
+Bypasses \code{...} argument in favor of using a list
+as an input}
 }
 \value{
 This function returns a list containing the

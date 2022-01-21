@@ -6,6 +6,7 @@
 \usage{
 compare_nets(
   ...,
+  input_list = NULL,
   title,
   config,
   placement = c("match", "default"),
@@ -15,6 +16,10 @@ compare_nets(
 }
 \arguments{
 \item{...}{Matrices or data frames of network adjacency matrices}
+
+\item{input_list}{List.
+Bypasses \code{...} argument in favor of using a list
+as an input}
 
 \item{title}{List.
 Characters denoting titles of plots}
