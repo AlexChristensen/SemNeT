@@ -50,7 +50,7 @@
 #' @export
 # Random network test----
 # Updated 05.12.2020
-randnet.test <- function (..., iter, cores)
+randnet.test <- function (..., input_list = NULL, iter, cores)
 {
     #Missing arguments
     if(missing(cores))
