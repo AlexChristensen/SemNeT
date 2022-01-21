@@ -222,8 +222,8 @@ bootSemNeT <- function (..., input_list = NULL,
     #Let user know data is being generated
     message("Generating data...", appendLF = FALSE)
     
-    for(i in 1:length(name))
-    {
+    for(i in 1:length(name)){
+        
         #Initialize count
         count <- 0
         
@@ -235,8 +235,8 @@ bootSemNeT <- function (..., input_list = NULL,
             #Increase count
             count <- count + 1
             
-            if(type == "node")
-            {
+            if(type == "node"){
+                
                 #Check that all data have same number of nodes
                 if(length(unique(unlist(lapply(datalist,ncol))))!=1)
                 {stop("bootSemNeT(): All datasets must have the same number of columns")}
@@ -247,8 +247,8 @@ bootSemNeT <- function (..., input_list = NULL,
                 #Input into data list
                 new[[count]] <- get(name[i], envir = environment())[,rand]
                 
-            }else if(type == "case")
-            {
+            }else if(type == "case"){
+                
                 #Randomly sample nodes
                 rand <- sample(1:nrow(get(name[i], envir = environment())),
                                nrow(get(name[i], envir = environment())),
@@ -279,7 +279,7 @@ bootSemNeT <- function (..., input_list = NULL,
         }
     
         #Insert data list
-        assign(paste("dl.",name[i],sep=""),new, envir = environment())
+        assign(paste("dl.", name[i] ,sep=""), new, envir = environment())
     }
     
     #Let user know data generation is finished
@@ -290,8 +290,8 @@ bootSemNeT <- function (..., input_list = NULL,
     ##################
     
     #Check for appropriate conditions
-    if(method == "TMFG" && type == "case")
-    {
+    if(method == "TMFG" && type == "case"){
+        
         #Let user know the samples are being equated
         message("Equating samples...", appendLF = FALSE)
         
@@ -314,8 +314,8 @@ bootSemNeT <- function (..., input_list = NULL,
             )
         }
         
-        if(length(name) > 1)
-        {
+        if(length(name) > 1){
+            
             #Get data to equate into a single list
             eq.dat <- mget(paste("dl.",name,sep=""), envir = environment())
             
@@ -343,8 +343,8 @@ bootSemNeT <- function (..., input_list = NULL,
     #### COMPUTE SIMILARITY ####
     ############################
     
-    if(method == "TMFG")
-    {
+    if(method == "TMFG"){
+        
         #Let user know simliarity is being computed
         message("Computing similarity measures...\n", appendLF = FALSE)
         
@@ -355,8 +355,8 @@ bootSemNeT <- function (..., input_list = NULL,
         parallel::clusterExport(cl = cl, varlist = c(),#paste("dl.",name,sep=""),
                                 envir = environment())
         
-        for(i in 1:length(name))
-        {
+        for(i in 1:length(name)){
+            
             #Compute similarity
             newSim <- pbapply::pblapply(X = get(paste("dl.",name[i],sep=""), envir = environment()),
                                         cl = cl,
@@ -370,8 +370,9 @@ bootSemNeT <- function (..., input_list = NULL,
         #Stop Cluster
         parallel::stopCluster(cl)
     }else{
-        for(i in 1:length(name))
-        {
+        
+        for(i in 1:length(name)){
+            
             #Insert similarity list
             assign(paste("sim.",name[i],sep=""),
                    get(paste("dl.",name[i],sep=""), envir = environment()))
