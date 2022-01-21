@@ -4,11 +4,15 @@
 \alias{randnet.test}
 \title{Test Against Random Networks}
 \usage{
-randnet.test(..., iter, cores)
+randnet.test(..., input_list = NULL, iter, cores)
 }
 \arguments{
 \item{...}{Matrices or data frames.
 Semantic networks to be compared against random networks}
+
+\item{input_list}{List.
+Bypasses \code{...} argument in favor of using a list
+as an input}
 
 \item{iter}{Numeric.
 Number of iterations in bootstrap.
@@ -17,10 +21,6 @@ Defaults to \code{1000}}
 \item{cores}{Number of computer processing cores to use for bootstrapping samples.
 Defaults to \emph{n} - 1 total number of cores.
 Set to any number between 1 and maximum amount of cores on your computer}
-
-\item{input_list}{List.
-Bypasses \code{...} argument in favor of using a list
-as an input}
 }
 \value{
 Returns a matrix containing p-values
