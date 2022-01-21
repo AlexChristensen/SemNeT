@@ -170,6 +170,11 @@ bootSemNeT <- function (..., input_list = NULL,
         # Assign input list to data list
         datalist <- input_list
         
+        # Assign objects
+        for(i in seq_along(name)){
+            assign(name[i], value = input_list[[i]], envir = environment())
+        }
+        
     }
     
     #Assign network function
