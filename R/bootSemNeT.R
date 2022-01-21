@@ -159,6 +159,17 @@ bootSemNeT <- function (..., input_list = NULL,
         
     }else{
         
+        # Obtain list names
+        name <- names(input_list)
+        
+        # Check if list names are NULL
+        if(is.null(name)){
+            name <- 1:length(input_list)
+        }
+        
+        # Assign input list to data list
+        datalist <- input_list
+        
     }
     
     #Assign network function

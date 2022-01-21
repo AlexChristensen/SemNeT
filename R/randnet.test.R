@@ -6,6 +6,10 @@
 #' @param ... Matrices or data frames.
 #' Semantic networks to be compared against random networks
 #' 
+#' @param input_list List.
+#' Bypasses \code{...} argument in favor of using a list
+#' as an input
+#' 
 #' @param iter Numeric.
 #' Number of iterations in bootstrap.
 #' Defaults to \code{1000}
@@ -57,12 +61,30 @@ randnet.test <- function (..., iter, cores)
     {iter <- 1000
     }else{iter <- iter}
     
-    #Get names of networks
-    name <- as.character(substitute(list(...)))
-    name <- name[-which(name=="list")]
-    
-    #Create list of input
-    listdata <- list(...)
+    # Check for input list
+    if(is.null(input_list)){
+        
+        #Get names of networks
+        name <- as.character(substitute(list(...)))
+        name <- name[-which(name=="list")]
+        
+        #Create list of input
+        datalist <- list(...)
+        
+    }else{
+        
+        # Obtain list names
+        name <- names(input_list)
+        
+        # Check if list names are NULL
+        if(is.null(name)){
+            name <- 1:length(input_list)
+        }
+        
+        # Assign input list to data list
+        listdata <- input_list
+        
+    }
     
     #Initialize data list
     data.list <- vector("list", length = length(name))
