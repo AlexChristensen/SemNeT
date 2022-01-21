@@ -32,8 +32,8 @@
 #' 
 #' @export
 # Equate matrices function
-# Updated 03.09.2020
-equate <- function(...)
+# Updated 21.01.2022
+equate <- function(..., input_list = NULL)
 {
     # Equate function
     equat <- function (rmatA, rmatB)
@@ -51,31 +51,48 @@ equate <- function(...)
         return(list(rmatA=rmatA,rmatB=rmatB))
     }
     
-    name <- as.character(substitute(list(...)))
-    name <- name[-which(name=="list")]
-    
-    datalist <- list(...)
+    if(is.null(input_list)){
+        
+        name <- as.character(substitute(list(...)))
+        name <- name[-which(name=="list")]
+        
+        datalist <- list(...)
+        
+    }else{
+        
+        name <- names(input_list)
+        
+        if(is.null(name)){
+            name <- 1:length(input_list)
+        }
+        
+        datalist <- input_list
+        
+    }
     
     len <- length(datalist)
     
-    if(len>2)
-    {
+    if(len > 2){
+        
         first <- datalist[[1]]
         eq <- equat(first,datalist[[2]])$rmatA
         
-        for(i in 2:(len-1))
-        {eq <- equat(eq,datalist[[(i+1)]])$rmatA}
+        for(i in 2:(len-1)){
+            eq <- equat(eq,datalist[[(i+1)]])$rmatA
+        }
         
         finlist <- list()
         
-        for(j in 1:len)
-        {finlist[[name[j]]] <- equat(eq,datalist[[j]])$rmatB}
+        for(j in 1:len){
+            finlist[[name[j]]] <- equat(eq,datalist[[j]])$rmatB
+        }
+
         
-    }else if(len==2)
-    {
-        finlist <- equat(datalist[[1]],datalist[[2]])
+    }else if(len == 2){
+        
+        finlist <- equat(datalist[[1]], datalist[[2]])
         names(finlist) <- name
-    }else{stop("Must be at least two datasets as input")}
+    }
     
     return(finlist)
 }

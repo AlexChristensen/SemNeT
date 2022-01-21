@@ -968,7 +968,11 @@ ff_function <- function(
   }else if(task == "free"){
     
     # Obtain response list
-    response_list <- free_response_list(response_matrix)
+    response_list <- free_response_list(
+      response_matrix,
+      min_response,
+      max_response
+    )
     
     # Shrink semantic space to only unique words
     ## Obtain unique words
@@ -1169,7 +1173,7 @@ ff <- function(responses, space){
 #' @noRd
 # Function to organize free association response list
 # Updated 23.12.2021
-free_response_list <- function(response_matrix){
+free_response_list <- function(response_matrix, min_response, max_response){
   
   # Obtain IDs
   IDs <- unique(response_matrix[,"ID"])
