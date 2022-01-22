@@ -27,8 +27,10 @@ From raw data to semantic network analysis in three lines of code: The Shiny app
 group <- SemNeT::open.group
 
 # Preprocessed data
-clean <- SemNetCleaner::textcleaner(data = SemNetCleaner::open.animals[,-c(1,2)],
-                                    miss = 99, partBY = "row", dictionary = "animals")
+clean <- SemNetCleaner::textcleaner(
+    data = SemNetCleaner::open.animals[,-c(1,2)], type = "fluency",
+    miss = 99, partBY = "row", dictionary = "animals"
+)
 
 # SemNeT Shiny app for network estimation and analyses
 SemNeT::SemNeTShiny()
