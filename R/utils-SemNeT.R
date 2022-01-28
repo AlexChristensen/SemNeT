@@ -1595,11 +1595,13 @@ boot.one.test <- function (bootSemNeT.obj,
       edge.col <- which(colnames(aov.obj) == "Edges")
       
       #Convert groups to factors
-      for(g in 1:ncol(groups))
-      {aov.obj[,(edge.col+g)] <- as.factor(as.character(aov.obj[,(edge.col+g)]))}
+      for(g in 1:ncol(groups)){
+        aov.obj[,(edge.col+g)] <- as.factor(as.character(aov.obj[,(edge.col+g)]))
+      }
       
       #Remove variables that are all equal
-      keep.vars <- apply(aov.obj[,1:ncol(aov.obj)], 2, function(x){length(unique(x)) != 1})
+      keep.vars <- apply(aov.obj[,1:ncol(aov.obj)], 2,
+                         function(x){length(unique(x)) != 1})
       aov.obj <- aov.obj[,keep.vars]
       
       #Group mean center
@@ -1634,18 +1636,15 @@ boot.one.test <- function (bootSemNeT.obj,
       
       #ANOVA
       if(test == "ANOVA"){
-        
         if("Edges" %in% names(aov.obj)){
-          
           aov.obj$Edges <- NULL
-          
         }
-        
       }
       
       #Formula
-      if(is.null(formula))
-      {formula <- paste("y ~", paste(colnames(groups), collapse = " + "))}
+      if(is.null(formula)){
+        formula <- paste("y ~", paste(colnames(groups), collapse = " + "))
+      }
       
       #Replace 'y' with 'Measure'
       formula <- gsub("y", "Measure", formula)
@@ -1740,26 +1739,103 @@ boot.one.test <- function (bootSemNeT.obj,
           HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
         }else{
           HSD <- suppressWarnings(TukeyHSD(aov.test))
+          
+          # Keep names
+          HSD_names <- names(HSD)
         }
         
         #Split row names
-        group_split <- strsplit(row.names(HSD), split = "-")
-        
-        # Obtain Cohen's d
-        ds <- unlist(
-          lapply(group_split, function(x){
+        if(is.list(HSD)){
+          
+          HSD <- lapply(seq_along(HSD), function(i){
             
-            d(
-              aov.obj$Measure[aov.obj$Name == x[1]],
-              aov.obj$Measure[aov.obj$Name == x[2]]
-            )
+            # Target output
+            target <- HSD[[i]]
+            
+            # Target name
+            target_name <- names(HSD)[i]
+            
+            # Split row names
+            group_split <- strsplit(row.names(target), split = "-")
+            
+            # Check for interaction
+            interaction <- grep(":", target_name)
+            
+            # Organize for Cohen's d
+            if(length(interaction) == 0){
+              
+              ds <- unlist(
+                lapply(group_split, function(x){
+                  
+                  d(
+                    aov.obj$Measure[aov.obj[target_name] == x[1]],
+                    aov.obj$Measure[aov.obj[target_name] == x[2]]
+                  )
+                  
+                })
+              )
+
+            }else{
+              
+              # Adjust target names
+              target_name <- unlist(strsplit(target_name, split = ":"))
+              
+              ds <- unlist(
+                lapply(group_split, function(x){
+                  
+                  # Interaction
+                  int1 <- unlist(strsplit(x[1], split = ":"))
+                  int2 <- unlist(strsplit(x[2], split = ":"))
+                  
+                  d(
+                    aov.obj$Measure[
+                      aov.obj[target_name[1]] == int1[1] &
+                        aov.obj[target_name[2]] == int1[2]
+                    ],
+                    aov.obj$Measure[
+                      aov.obj[target_name[1]] == int2[1] &
+                        aov.obj[target_name[2]] == int2[2]
+                    ]
+                  )
+                  
+                })
+              )
+              
+            }
+            
+            # Insert Cohen's d
+            HSD[[i]] <- cbind(HSD[[i]], ds)
+            colnames(HSD[[i]])[ncol(HSD[[i]])] <- "d"
+            
+            return(HSD[[i]])
+          
             
           })
-        )
-        
-        # Insert Cohen's d
-        HSD <- cbind(HSD, ds)
-        colnames(HSD)[ncol(HSD)] <- "d"
+          
+          # Rename HSD
+          names(HSD) <- HSD_names
+          
+        }else{
+          
+          group_split <- strsplit(row.names(HSD), split = "-")
+          
+          # Obtain Cohen's d
+          ds <- unlist(
+            lapply(group_split, function(x){
+              
+              d(
+                aov.obj$Measure[aov.obj$Name == x[1]],
+                aov.obj$Measure[aov.obj$Name == x[2]]
+              )
+              
+            })
+          )
+          
+          # Insert Cohen's d
+          HSD <- cbind(HSD, ds)
+          colnames(HSD)[ncol(HSD)] <- "d"
+          
+        }
         
         #Insert HSD
         tests[[paste(measures[i])]]$HSD <- HSD

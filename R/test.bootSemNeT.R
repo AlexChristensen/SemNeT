@@ -166,11 +166,13 @@ test.bootSemNeT <- function (...,
     attr(name, "na.action") <- NULL
     
     #Check for groups
-    if(is.null(groups))
-    {groups <- name}
+    if(is.null(groups)){
+        groups <- name
+    }
     
-    if(!is.matrix(groups))
-    {groups <- as.matrix(groups)}
+    if(!is.matrix(groups)){
+        groups <- as.matrix(groups)
+    }
     
     #Check for wrong test
     if(ncol(groups) > 1){
@@ -190,9 +192,16 @@ test.bootSemNeT <- function (...,
     type <- input[[1]]$type
     
     #Proportions
-    if(type == "node")
-    {props <- paste("Proportion (", unlist(lapply(input, function(x){x$prop})), "0)", sep = "")
-    }else{props <- "Case"}
+    if(type == "node"){
+        props <- paste(
+            "Proportion (",
+            unlist(lapply(input, function(x){x$prop})),
+            "0)",
+            sep = ""
+        )
+    }else{
+        props <- "Case"
+    }
     
     #Initialize result list
     res <- list()
