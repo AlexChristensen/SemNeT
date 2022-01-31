@@ -7,6 +7,7 @@
 bootSemNeT(
   ...,
   input_list = NULL,
+  covars = list(),
   method = c("CN", "NRW", "PF", "TMFG"),
   methodArgs = list(),
   type = c("case", "node"),
@@ -26,6 +27,11 @@ Cleaned response matrices (e.g., \code{responses$clean} from
 \item{input_list}{List.
 Bypasses \code{...} argument in favor of using a list
 as an input}
+
+\item{covars}{List.
+Covariates to be included in the ANCOVA.
+Assumes indices to correspond to the data input.
+Names \strong{must} match input names}
 
 \item{method}{Character.
 Network estimation method to use.
@@ -106,6 +112,9 @@ used from the \code{iter} argument}
 
 \item{resampling}{A list containing the resampling indices for each bootstrap for either
 nodes (\code{type = "node"}) or cases (\code{type = "case"})}
+
+\item{covariates}{A list containing the covariates corresponding to the
+resampled indices from each boostrap}
 }
 \description{
 Bootstrap techniques to generate
