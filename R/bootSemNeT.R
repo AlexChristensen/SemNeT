@@ -12,6 +12,11 @@
 #' Bypasses \code{...} argument in favor of using a list
 #' as an input
 #' 
+#' @param covars List.
+#' Covariates to be included in the ANCOVA.
+#' Assumes indices to correspond to the data input.
+#' Names \strong{must} match input names
+#' 
 #' @param method Character.
 #' Network estimation method to use.
 #' Current options include:
@@ -91,6 +96,9 @@
 #' \item{resampling}{A list containing the resampling indices for each bootstrap for either
 #' nodes (\code{type = "node"}) or cases (\code{type = "case"})}
 #' 
+#' \item{covariates}{A list containing the covariates corresponding to the
+#' resampled indices from each boostrap}
+#' 
 #' @examples
 #' # Simulate Dataset
 #' one <- sim.fluency(20)
@@ -124,6 +132,7 @@
 # Bootstrapped Semantic Network Analysis----
 # Updated 31.01.2022
 bootSemNeT <- function (..., input_list = NULL,
+                        covars = list(),
                         method = c("CN", "NRW", "PF", "TMFG"),
                         methodArgs = list(),
                         type = c("case", "node"),
@@ -170,6 +179,19 @@ bootSemNeT <- function (..., input_list = NULL,
         
     }
     
+    # Check for covariates list
+    if(length(covars) != 0){
+        
+        # Obtain names of covariates
+        covars_names <- names(covars)
+        
+        # Check if all match
+        if(!all.equal(covars_names, name)){
+            stop("Names of the covariates list in the 'covar' argument must match the data input")
+        }
+        
+    }
+    
     #Assign network function
     NET.FUNC <- switch(method,
                        "TMFG" = TMFG,
@@ -205,8 +227,23 @@ bootSemNeT <- function (..., input_list = NULL,
         }
     }
     
+    #Check for type of bootstrap
+    if(type == "node"){
+        if(length(covars) != 0){
+            message("Covariates will not be used with node-wise bootstrap.")
+        }
+    }
+    
     #Number of nodes in full data
     full <- unique(unlist(lapply(datalist,ncol)))
+    
+    #Initialize full resampling list
+    full_rand <- list()
+    
+    #Initialize full covariates list
+    if(length(covars) != 0){
+        full_covar <- list()
+    }
     
     #######################
     #### GENERATE DATA ####
@@ -223,9 +260,13 @@ bootSemNeT <- function (..., input_list = NULL,
         #Initialize new data list
         new <- list()
         
+        #Initialize new covariates list
+        if(length(covars) != 0){
+            covar <- list()
+        }
+        
         #Initialize resampling list
         rand <- list()
-        full_rand <- list()
         
         repeat{
             
@@ -242,7 +283,7 @@ bootSemNeT <- function (..., input_list = NULL,
                 rand[[count]] <- sample(1:full, (full*prop), replace=FALSE)
                 
                 #Input into data list
-                new[[count]] <- get(name[i], envir = environment())[,rand]
+                new[[count]] <- get(name[i], envir = environment())[,rand[[count]]]
                 
             }else if(type == "case"){
                 
@@ -253,6 +294,12 @@ bootSemNeT <- function (..., input_list = NULL,
                 
                 #Input into data list
                 new[[count]] <- get(name[i], envir = environment())[rand[[count]],]
+                
+                #Input into covar list
+                if(length(covars) != 0){
+                    covar[[count]] <- covars[[name[i]]][rand[[count]],]   
+                }
+                
             }
             
             # Check for TMFG
@@ -278,8 +325,14 @@ bootSemNeT <- function (..., input_list = NULL,
         #Insert data list
         assign(paste("dl.", name[i] ,sep=""), new, envir = environment())
         
-        #Assign rand
-        full_rand[name[i]] <- rand
+        #Assign resampling indices
+        full_rand[[name[i]]] <- rand
+        
+        #Assign covariates indices
+        if(length(covars) != 0){
+            full_covar[[name[i]]] <- covar  
+        }
+        
     }
     
     #Let user know data generation is finished
@@ -518,6 +571,10 @@ bootSemNeT <- function (..., input_list = NULL,
     bootlist$type <- type
     
     bootlist$resampling <- full_rand
+    
+    if(length(covars) != 0){
+        bootlist$covariates <- full_covar
+    }
     
     class(bootlist) <- "bootSemNeT"
     
