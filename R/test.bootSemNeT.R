@@ -22,6 +22,10 @@
 #' and edges in the networks and includes adjusted means
 #' and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}}
 #' 
+#' @param covars List.
+#' Covariates to be included in the ANCOVA.
+#' Requires indices to correspond to the data input to \code{\link[SemNeT]{bootSemNeT}}
+#' 
 #' @param measures Character.
 #' Network measures to be tested.
 #' 
@@ -140,9 +144,10 @@
 #' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 19.01.2022
+# Updated 31.01.2022
 test.bootSemNeT <- function (...,
                              test = c("ANCOVA", "ANOVA", "t-test"),
+                             covars = list(),
                              measures = c("ASPL", "CC", "Q"),
                              formula = NULL, groups = NULL)
 {

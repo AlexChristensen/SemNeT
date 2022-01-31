@@ -7,6 +7,7 @@
 test.bootSemNeT(
   ...,
   test = c("ANCOVA", "ANOVA", "t-test"),
+  covars = list(),
   measures = c("ASPL", "CC", "Q"),
   formula = NULL,
   groups = NULL
@@ -31,6 +32,10 @@ Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}
 {Computes ANCOVAs that control for the number of nodes
 and edges in the networks and includes adjusted means
 and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}}}
+
+\item{covars}{List.
+Covariates to be included in the ANCOVA.
+Requires indices to correspond to the data input to \code{\link[SemNeT]{bootSemNeT}}}
 
 \item{measures}{Character.
 Network measures to be tested.

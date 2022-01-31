@@ -225,6 +225,7 @@ bootSemNeT <- function (..., input_list = NULL,
         
         #Initialize resampling list
         rand <- list()
+        full_rand <- list()
         
         repeat{
             
@@ -276,6 +277,9 @@ bootSemNeT <- function (..., input_list = NULL,
     
         #Insert data list
         assign(paste("dl.", name[i] ,sep=""), new, envir = environment())
+        
+        #Assign rand
+        full_rand[name[i]] <- rand
     }
     
     #Let user know data generation is finished
@@ -513,7 +517,7 @@ bootSemNeT <- function (..., input_list = NULL,
     
     bootlist$type <- type
     
-    bootlist$resampling <- rand
+    bootlist$resampling <- full_rand
     
     class(bootlist) <- "bootSemNeT"
     
