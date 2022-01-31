@@ -273,22 +273,33 @@ test.bootSemNeT <- function (...,
         })
         
         ##Get adjusted mean values
-        adj.vals <- unlist(lapply(temp.res, function(x){
-            lapply(x, function(x){
-                means <- as.vector(x$adjustedMeans$Group$fit)
-                names(means) <- x$adjustedMeans$variables$Group$levels
-                return(means)
-            })
-        }), recursive = FALSE)
-        
-        adj.vals <- t(simplify2array(adj.vals))
-        
-        if(length(row.names(adj.vals)) > length(measures)){
-            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
-            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        if(ncol(groups) == 1){
+            adj.vals <- unlist(lapply(temp.res, function(x){
+                lapply(x, function(x){
+                    means <- as.vector(x$adjustedMeans$Group$fit)
+                    names(means) <- x$adjustedMeans$variables$Group$levels
+                    return(means)
+                })
+            }), recursive = FALSE)  
+            
+            
+            adj.vals <- t(simplify2array(adj.vals))
+            
+            if(length(row.names(adj.vals)) > length(measures)){
+                row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+                colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+            }else{
+                row.names(adj.vals) <- measures
+                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
+            }
+            
         }else{
-            row.names(adj.vals) <- measures
-            colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
+            adj.vals <- unlist(lapply(temp.res, function(x){
+                lapply(x, function(x){
+                    means <- x$adjustedMeans
+                    return(means[[length(means)]])
+                })
+            }), recursive = FALSE)   
         }
         
         #Insert adjusted means
@@ -339,8 +350,8 @@ test.bootSemNeT <- function (...,
                 
             }else{
                 
-                for(j in 1:length(measures))
-                {
+                for(j in 1:length(measures)){
+                    
                     #Get measures
                     meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
                     #Get residual degrees of freedom
