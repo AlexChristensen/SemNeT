@@ -88,15 +88,8 @@
 #' \item{iter}{Outputs the number of bootstrapped samples
 #' used from the \code{iter} argument}
 #' 
-#' If a \code{paired} network is input, then also returns:
-#' 
-#' \item{pairedMeas}{A matrix for the network input in the \code{paired}
-#' argument, where columns are the semantic network measures
-#' from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
-#' bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
-#' 
-#' \item{pairedSumm}{Summary statistics across the bootrapped samples for the
-#' network input in the \code{paired} argument}
+#' \item{resampling}{A list containing the resampling indices for each bootstrap for either
+#' nodes (\code{type = "node"}) or cases (\code{type = "case"})}
 #' 
 #' @examples
 #' # Simulate Dataset
@@ -129,7 +122,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 21.01.2022
+# Updated 31.01.2022
 bootSemNeT <- function (..., input_list = NULL,
                         method = c("CN", "NRW", "PF", "TMFG"),
                         methodArgs = list(),
@@ -230,6 +223,9 @@ bootSemNeT <- function (..., input_list = NULL,
         #Initialize new data list
         new <- list()
         
+        #Initialize resampling list
+        rand <- list()
+        
         repeat{
             
             #Increase count
@@ -242,7 +238,7 @@ bootSemNeT <- function (..., input_list = NULL,
                 {stop("bootSemNeT(): All datasets must have the same number of columns")}
                 
                 #Randomly sample nodes
-                rand <- sample(1:full, (full*prop), replace=FALSE)
+                rand[[count]] <- sample(1:full, (full*prop), replace=FALSE)
                 
                 #Input into data list
                 new[[count]] <- get(name[i], envir = environment())[,rand]
@@ -250,12 +246,12 @@ bootSemNeT <- function (..., input_list = NULL,
             }else if(type == "case"){
                 
                 #Randomly sample nodes
-                rand <- sample(1:nrow(get(name[i], envir = environment())),
+                rand[[count]] <- sample(1:nrow(get(name[i], envir = environment())),
                                nrow(get(name[i], envir = environment())),
                                replace=TRUE)
                 
                 #Input into data list
-                new[[count]] <- get(name[i], envir = environment())[rand,]
+                new[[count]] <- get(name[i], envir = environment())[rand[[count]],]
             }
             
             # Check for TMFG
@@ -516,6 +512,8 @@ bootSemNeT <- function (..., input_list = NULL,
     bootlist$iter <- iter
     
     bootlist$type <- type
+    
+    bootlist$resampling <- rand
     
     class(bootlist) <- "bootSemNeT"
     

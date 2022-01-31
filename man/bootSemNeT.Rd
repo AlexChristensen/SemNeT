@@ -104,15 +104,8 @@ network input in the \code{data} argument}
 \item{iter}{Outputs the number of bootstrapped samples
 used from the \code{iter} argument}
 
-If a \code{paired} network is input, then also returns:
-
-\item{pairedMeas}{A matrix for the network input in the \code{paired}
-argument, where columns are the semantic network measures
-from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
-bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
-
-\item{pairedSumm}{Summary statistics across the bootrapped samples for the
-network input in the \code{paired} argument}
+\item{resampling}{A list containing the resampling indices for each bootstrap for either
+nodes (\code{type = "node"}) or cases (\code{type = "case"})}
 }
 \description{
 Bootstrap techniques to generate
