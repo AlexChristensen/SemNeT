@@ -1580,18 +1580,13 @@ boot.one.test <- function (bootSemNeT.obj,
         
         #Covariates
         if(isTRUE(covars)){
-          covar <- unlist(
-            lapply(bootSemNeT.obj$covariates[[name[j]]], colMeans, na.rm = TRUE)
-          )
           
-          #Check for matrix
-          if(!is.matrix(covar)){
-            covar <- as.matrix(covar, ncol = 1)
-          }
+          #Obtain mean of covariates for bootstrap group
+          covar <- lapply(bootSemNeT.obj$covariates[[name[j]]], colMeans, na.rm = TRUE)
           
-          #Ensure column names
-          colnames(covar) <- colnames(bootSemNeT.obj$covariates[[name[j]]][[1]])
-          
+          #Simplify to matrix
+          covar <- t(simplify2array(covar))
+
         }
         
         # Nodes
