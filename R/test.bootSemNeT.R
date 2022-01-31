@@ -172,6 +172,10 @@ test.bootSemNeT <- function (...,
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
     attr(name, "na.action") <- NULL
     
+    #Remove resampling and covariates
+    name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
+    attr(name, "na.action") <- NULL
+    
     #Check for groups
     if(is.null(groups)){
         groups <- name
@@ -221,6 +225,7 @@ test.bootSemNeT <- function (...,
             boot.one.test(
                 input[[i]],
                 test = test,
+                covars = covars,
                 measures = measures,
                 formula = formula,
                 groups = groups
@@ -250,13 +255,14 @@ test.bootSemNeT <- function (...,
         #Create tables of results
         ##Get ANCOVA values
         
-        if(ncol(groups) == 1)
-        {
+        if(ncol(groups) == 1){
+            
             acov.vals <- lapply(temp.res, function(x, extra){
                 lapply(x, function(x, extra){
                     x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
                 })
             })
+            
         }
         
         ##Get Residual degrees of freedom
@@ -269,28 +275,30 @@ test.bootSemNeT <- function (...,
         ##Get adjusted mean values
         adj.vals <- unlist(lapply(temp.res, function(x){
             lapply(x, function(x){
-                means <- as.vector(x$adjustedMeans$fit)
+                means <- as.vector(x$adjustedMeans$Group$fit)
                 names(means) <- x$adjustedMeans$variables$Group$levels
-                means
+                return(means)
             })
         }), recursive = FALSE)
         
         adj.vals <- t(simplify2array(adj.vals))
         
-        if(length(row.names(adj.vals)) > length(measures))
-        {
+        if(length(row.names(adj.vals)) > length(measures)){
             row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
             colnames(adj.vals) <- paste("Group", 1:nrow(groups))
-        }else{row.names(adj.vals) <- measures}
+        }else{
+            row.names(adj.vals) <- measures
+            colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
+        }
         
         #Insert adjusted means
         res$adjustedMeans <- adj.vals
         
-        if(ncol(groups) == 1)
-        {
+        if(ncol(groups) == 1){
+            
             ##Loop through to get tables
-            if(length(acov.vals) == 1)
-            {
+            if(length(acov.vals) == 1){
+                
                 #Get measures
                 meas.val <- unlist(acov.vals, recursive = FALSE)
                 #Table measures
@@ -303,8 +311,8 @@ test.bootSemNeT <- function (...,
                 name <- colnames(tab.acov)[1:length(name)]
                 
                 # Provided direction if two groups
-                if(length(name) == 2)
-                {
+                if(length(name) == 2){
+                    
                     #Add direction
                     Direction <- apply(tab.acov, 1, function(x, name){
                         p.num <- as.numeric(gsub("< ", "", x["p-value"]))

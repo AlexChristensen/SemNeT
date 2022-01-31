@@ -1498,9 +1498,10 @@ rep.rows <- function (mat, times)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics
-# Updated 16.08.2021
+# Updated 31.01.2022
 boot.one.test <- function (bootSemNeT.obj,
                            test = c("ANCOVA", "ANOVA", "t-test"),
+                           covars = TRUE,
                            measures = c("ASPL", "CC", "Q"),
                            formula = NULL,
                            groups = NULL)
@@ -1517,6 +1518,10 @@ boot.one.test <- function (bootSemNeT.obj,
   
   #Remove proportion and iter
   name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
+  attr(name, "na.action") <- NULL
+  
+  #Remove resampling and covariates
+  name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
   attr(name, "na.action") <- NULL
   
   #Number of input
@@ -1543,6 +1548,17 @@ boot.one.test <- function (bootSemNeT.obj,
   #Identify iterations
   iter <- bootSemNeT.obj$iter
   
+  #Check for covars
+  if(isTRUE(covars)){
+    
+    #Ensure ANCOVA
+    test <- "ANCOVA"
+    
+    #Obtain number of covariates
+    covar_num <- ncol(bootSemNeT.obj$covariates[[1]][[1]])
+    
+  }
+  
   #%%%%%%%%%%%%%%%%%%%%#
   # SIGNIFICANCE TESTS #
   #%%%%%%%%%%%%%%%%%%%%#
@@ -1562,6 +1578,22 @@ boot.one.test <- function (bootSemNeT.obj,
         #Insert measure values
         meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
         
+        #Covariates
+        if(isTRUE(covars)){
+          covar <- unlist(
+            lapply(bootSemNeT.obj$covariates[[name[j]]], colMeans, na.rm = TRUE)
+          )
+          
+          #Check for matrix
+          if(!is.matrix(covar)){
+            covar <- as.matrix(covar, ncol = 1)
+          }
+          
+          #Ensure column names
+          colnames(covar) <- colnames(bootSemNeT.obj$covariates[[name[j]]][[1]])
+          
+        }
+        
         # Nodes
         #nodes <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){ncol(x)}))
         
@@ -1573,26 +1605,45 @@ boot.one.test <- function (bootSemNeT.obj,
         }))
         
         #Initialize matrix
-        mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
-                     edges)
+        if(isTRUE(covars)){
+          mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
+                       edges, covar)
+        }else{
+          mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
+                       edges) 
+        }
         
-        if(j != 1)
-        {new.mat <- rbind(new.mat, mat)
-        }else{new.mat <- mat}
+        if(j != 1){
+          new.mat <- rbind(new.mat, mat)
+        }else{
+          new.mat <- mat
+        }
       }
       
       #Convert to data frame
       aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-      colnames(aov.obj) <- c("Name", "Measure", #"Nodes",
-                             "Edges")
+      colnames(aov.obj)[1:3] <- c("Name", "Measure", "Edges")
       aov.obj$Name <- factor(as.character(aov.obj$Name))
-      aov.obj[,2:3] <- apply(aov.obj[,2:3], 2, function(x){as.numeric(as.character(x))})
-      
+      aov.obj[,2:ncol(aov.obj)] <- apply(
+        aov.obj[,2:ncol(aov.obj)],
+        2,
+        function(x){as.numeric(as.character(x))}
+      )
       #Organize groups
-      aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
+      aov.obj <- suppressWarnings(
+        as.data.frame(
+          cbind(aov.obj, rep.rows(groups, iter)),
+          stringsAsFactors = FALSE
+        ) 
+      )
       
       #Get column before groups
       edge.col <- which(colnames(aov.obj) == "Edges")
+      
+      #Check for covariates
+      if(isTRUE(covars)){
+        edge.col <- edge.col + covar_num
+      }
       
       #Convert groups to factors
       for(g in 1:ncol(groups)){
@@ -1660,7 +1711,17 @@ boot.one.test <- function (bootSemNeT.obj,
       #}
       
       if(test == "ANCOVA"){
-        aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
+        
+        if(isTRUE(covars)){
+          aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3:(3+covar_num)][keep.vars[3:(3+covar_num)]],
+                                                             collapse = " + "), " +",
+                               split.formula[2], sep = "")
+        }else{
+          aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]],
+                                                             collapse = " + "), " +",
+                               split.formula[2], sep = "")
+        }
+  
       }else if(test == "ANOVA"){
         aov.formula <- paste(split.formula[1], "~ ", split.formula[2], sep = "")
       }
@@ -1682,19 +1743,39 @@ boot.one.test <- function (bootSemNeT.obj,
       #Get partial etas
       if(test == "ANCOVA"){
         
-        etas <- round(
-          unlist(
-            lapply(
-              acov.test$`Sum Sq`, # Sum of squares
-              partial.eta.sq, # Partial eta squared function
-              sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-            )
-          )[-c(1,length(acov.test$`Sum Sq`))], # Removes intercept and RSS
-          3
-        )
-        
-        #Attach etas to tidy ANCOVA
-        tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
+        if(isTRUE(covars)){
+          
+          etas <- round(
+            unlist(
+              lapply(
+                acov.test$`Sum Sq`, # Sum of squares
+                partial.eta.sq, # Partial eta squared function
+                sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
+              )
+            )[-c(length(acov.test$`Sum Sq`))], # Removes intercept and RSS
+            3
+          )
+          
+          #Attach etas to tidy ANCOVA
+          tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
+          
+        }else{
+          
+          etas <- round(
+            unlist(
+              lapply(
+                acov.test$`Sum Sq`, # Sum of squares
+                partial.eta.sq, # Partial eta squared function
+                sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
+              )
+            )[-c(length(acov.test$`Sum Sq`))], # Removes intercept and RSS
+            3
+          )
+          
+          #Attach etas to tidy ANCOVA
+          tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
+          
+        }
         
       }else if(test == "ANOVA"){
         
@@ -1730,7 +1811,7 @@ boot.one.test <- function (bootSemNeT.obj,
       tests[[paste(measures[i])]]$ANCOVA <- tidy.acov
       
       #Insert adjusted means
-      tests[[paste(measures[i])]]$adjustedMeans <- adj.means[[which(names(adj.means) != "Nodes" & names(adj.means) != "Edges")]]
+      tests[[paste(measures[i])]]$adjustedMeans <- adj.means
       
       #Get pairwise comparisons
       if(nrow(groups) > 2){

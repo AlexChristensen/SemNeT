@@ -297,7 +297,16 @@ bootSemNeT <- function (..., input_list = NULL,
                 
                 #Input into covar list
                 if(length(covars) != 0){
-                    covar[[count]] <- covars[[name[i]]][rand[[count]],]   
+                    #Set up covariates
+                    covs <- covars[[name[i]]][rand[[count]],]
+                    #Check for matrix
+                    if(!is.matrix(covs)){
+                        covs <- matrix(covs, ncol = 1)
+                    }
+                    #Ensure column names
+                    colnames(covs) <- colnames(covars[[name[i]]])
+                    
+                    covar[[count]] <- covs
                 }
                 
             }
