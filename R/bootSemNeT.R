@@ -130,7 +130,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 31.01.2022
+# Updated 02.02.2022
 bootSemNeT <- function (..., input_list = NULL,
                         covars = list(),
                         method = c("CN", "NRW", "PF", "TMFG"),
@@ -300,7 +300,7 @@ bootSemNeT <- function (..., input_list = NULL,
                     #Set up covariates
                     covs <- covars[[name[i]]][rand[[count]],]
                     #Check for matrix
-                    if(!is.matrix(covs)){
+                    if(!is.matrix(covs) & !is.data.frame(covs)){
                         covs <- matrix(covs, ncol = 1)
                     }
                     #Ensure column names
