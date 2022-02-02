@@ -17,7 +17,7 @@
 #' 
 #' @export
 # Extract groups
-# Updated 21.01.2022
+# Updated 02.02.2022
 extract_groups <- function(object, groups, type = c("fluency", "free"))
 {
   
@@ -26,7 +26,7 @@ extract_groups <- function(object, groups, type = c("fluency", "free"))
     
     # Obtain response matrix
     if(any(class(object) == "fluency")){
-      response_matrix <- object$data$clean
+      response_matrix <- object$responses$clean
     }else if(any(class(object) == "free")){
       response_matrix <- object$data$clean
     }
