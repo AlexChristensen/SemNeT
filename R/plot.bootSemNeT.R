@@ -47,6 +47,10 @@ plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
     attr(name, "na.action") <- NULL
     
+    #Remove resampling and covariates
+    name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
+    attr(name, "na.action") <- NULL
+    
     #Missing arguments
     if(missing(measures))
     {measures <- c("ASPL","CC","Q")
