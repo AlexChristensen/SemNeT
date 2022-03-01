@@ -1548,14 +1548,20 @@ boot.one.test <- function (bootSemNeT.obj,
   #Identify iterations
   iter <- bootSemNeT.obj$iter
   
+  #Check for covariates
+  if(!"covariates" %in% names(bootSemNeT.obj)){
+    covars <- FALSE
+  }
+  
   #Check for covars
   if(isTRUE(covars)){
     
-    #Ensure ANCOVA
-    test <- "ANCOVA"
-    
-    #Obtain number of covariates
-    covar_num <- ncol(bootSemNeT.obj$covariates[[1]][[1]])
+    if(test == "ANCOVA"){
+      
+      #Obtain number of covariates
+      covar_num <- ncol(bootSemNeT.obj$covariates[[1]][[1]])
+      
+    }
     
   }
   
