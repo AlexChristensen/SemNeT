@@ -1157,14 +1157,23 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
     if(!is.matrix(groups))
     {groups <- as.matrix(groups)}
     
+    #Check for ANOVA and ANCOVA
+    if(test == "ANOVA" | test == "ANCOVA"){
+        groups <- unique(groups)
+    }
+    
     #Check for wrong test
     if(ncol(groups) > 1){
         if(test == "t-test"){
             stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
         }
-    }else if(nrow(groups) < 3){
+    }else if(nrow(unique(groups)) < 3){
         if(test == "ANOVA"){
-            stop("Groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
+            stop("Number of groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
+        }
+    }else if(nrow(unique(groups)) > 2){
+        if(test == "t-test"){
+            stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
         }
     }
     
@@ -1191,11 +1200,6 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
     
     #Initialize temporary results list
     temp.res <- list()
-    
-    #Check for ANOVA and ANCOVA
-    if(test == "ANOVA" | test == "ANCOVA"){
-        groups <- unique(groups)
-    }
     
     for(i in 1:length(input)){
         temp.res[[props[i]]] <- suppressPackageStartupMessages(
