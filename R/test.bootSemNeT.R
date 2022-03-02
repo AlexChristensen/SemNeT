@@ -220,6 +220,11 @@ test.bootSemNeT <- function (...,
     #Initialize temporary results list
     temp.res <- list()
     
+    #Check for ANOVA and ANCOVA
+    if(test == "ANOVA" | test == "ANCOVA"){
+        groups <- unique(groups)
+    }
+    
     for(i in 1:length(input)){
         temp.res[[props[i]]] <- suppressPackageStartupMessages(
             boot.one.test(
