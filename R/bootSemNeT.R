@@ -130,7 +130,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 02.02.2022
+# Updated 25.03.2022
 bootSemNeT <- function (..., input_list = NULL,
                         covars = list(),
                         method = c("CN", "NRW", "PF", "TMFG"),
@@ -140,12 +140,12 @@ bootSemNeT <- function (..., input_list = NULL,
                         iter = 1000, cores)
 {
     ####Missing arguments####
-    if(missing(sim))
-    {sim <- "cosine"
+    if(missing(sim)){
+        sim <- "cosine"
     }else{sim <- sim}
     
-    if(missing(cores))
-    {cores <- parallel::detectCores() / 2
+    if(missing(cores)){
+        cores <- parallel::detectCores() / 2
     }else{cores <- cores}
     ####Missing arguments####
     
@@ -193,11 +193,13 @@ bootSemNeT <- function (..., input_list = NULL,
     }
     
     #Assign network function
-    NET.FUNC <- switch(method,
-                       "TMFG" = TMFG,
-                       "CN" = CN,
-                       "NRW" = NRW,
-                       "PF" = PF)
+    NET.FUNC <- switch(
+        method,
+        "TMFG" = TMFG,
+        "CN" = CN,
+        "NRW" = NRW,
+        "PF" = PF
+    )
     
     #Check for missing arguments in function
     form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
@@ -456,10 +458,12 @@ bootSemNeT <- function (..., input_list = NULL,
                                 c("NET.FUNC"),
                             envir = environment())
     
-    if(method == "TMFG")
-    {
-        for(i in 1:length(name))
-        {
+    ## THIS CAN BE CODED MORE EFFICIENCTLY -- TO DO ###
+    
+    if(method == "TMFG"){
+        
+        for(i in 1:length(name)){
+            
             #Compute networks
             newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
                                         cl = cl,
@@ -468,12 +472,13 @@ bootSemNeT <- function (..., input_list = NULL,
             
             #Insert network list
             assign(paste("Semnet.",name[i],sep=""), newNet)
+            
         }
         
-    }else if(method == "CN")
-    {
-        for(i in 1:length(name))
-        {
+    }else if(method == "CN"){
+        
+        for(i in 1:length(name)){
+            
             #Compute networks
             newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
                                         cl = cl,
@@ -483,12 +488,13 @@ bootSemNeT <- function (..., input_list = NULL,
             
             #Insert network list
             assign(paste("Semnet.",name[i],sep=""), newNet)
+            
         }
         
-    }else if(method == "NRW")
-    {
-        for(i in 1:length(name))
-        {
+    }else if(method == "NRW"){
+        
+        for(i in 1:length(name)){
+            
             #Compute networks
             newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
                                         cl = cl,
@@ -498,12 +504,13 @@ bootSemNeT <- function (..., input_list = NULL,
             
             #Insert network list
             assign(paste("Semnet.",name[i],sep=""), newNet)
+            
         }
         
-    }else if(method == "PF")
-    {
-        for(i in 1:length(name))
-        {
+    }else if(method == "PF"){
+        
+        for(i in 1:length(name)){
+            
             #Compute networks
             newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
                                         cl = cl,
@@ -511,6 +518,7 @@ bootSemNeT <- function (..., input_list = NULL,
             
             #Insert network list
             assign(paste("Semnet.",name[i],sep=""), newNet)
+            
         }
         
     }
@@ -532,8 +540,8 @@ bootSemNeT <- function (..., input_list = NULL,
     parallel::clusterExport(cl = cl, varlist = c(),#paste("Semnet.",name[i],sep=""),
                                 envir = environment())
     
-    for(i in 1:length(name))
-    {
+    for(i in 1:length(name)){
+        
         #Compute network measures
         netMeas <- pbapply::pbsapply(X = get(paste("Semnet.",name[i],sep=""), envir = environment()),
                                      cl = cl,
@@ -542,14 +550,15 @@ bootSemNeT <- function (..., input_list = NULL,
         
         #Insert network measures list
         assign(paste("meas.",name[i],sep=""),netMeas)
+        
     }
     
     #Stop Cluster
     parallel::stopCluster(cl)
         
     #Compute summary statistics
-    summ.table <- function (data, n)
-    {
+    summ.table <- function (data, n){
+        
         stats <- list()
         stats$mean <- rowMeans(data, na.rm = TRUE)
         stats$stdev <- apply(data, 1, sd, na.rm = TRUE)
@@ -558,22 +567,25 @@ bootSemNeT <- function (..., input_list = NULL,
         stats$upper <- stats$mean + (1.96 * stats$se)
         
         return(stats)
+        
     }
     
     #Initialize bootlist
     bootlist <- list()
     
     #Insert results
-    for(i in 1:length(name))
-    {
+    for(i in 1:length(name)){
+        
         bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("Semnet.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
         bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
+        
     }
     
     #Insert proportion remaining and iterations
-    if(type == "node")
-    {bootlist$prop <- prop}
+    if(type == "node"){
+        bootlist$prop <- prop
+    }
     
     bootlist$iter <- iter
     

@@ -974,9 +974,12 @@ ff_function <- function(
       max_response
     )
     
+    # Words split in response list
+    split_list <- lapply(response_list, strsplit, split = " ")
+    
     # Shrink semantic space to only unique words
     ## Obtain unique words
-    unique_words <- unique(unlist(response_list))
+    unique_words <- unique(unlist(split_list))
     ## Obtain words that exist in space
     space_index <- na.omit(match(
       unique_words, row.names(space)
