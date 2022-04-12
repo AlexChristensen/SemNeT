@@ -130,7 +130,7 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 25.03.2022
+# Updated 12.04.2022
 bootSemNeT <- function (..., input_list = NULL,
                         covars = list(),
                         method = c("CN", "NRW", "PF", "TMFG"),
@@ -139,6 +139,7 @@ bootSemNeT <- function (..., input_list = NULL,
                         prop = .50, sim, weighted = FALSE,
                         iter = 1000, cores)
 {
+  
     ####Missing arguments####
     if(missing(sim)){
         sim <- "cosine"
@@ -178,6 +179,34 @@ bootSemNeT <- function (..., input_list = NULL,
         }
         
     }
+  
+  # Check for datasets with no variance
+  if(method == "TMFG" & sim == "cor"){
+    
+    # Loop through datasets
+    sink <- lapply(seq_along(datalist), function(i){
+      
+      # Check for binary matrix
+      if(all(apply(datalist[[i]], 2, is.numeric))){
+        
+        # Means
+        means <- colMeans(datalist[[i]], na.rm = TRUE)
+        
+        # Check for no variance
+        if(any(means == 1) | any(means == 0)){
+          
+          stop(
+            paste("Dataset", name[i], "has responses with no variance. Consider using `sim = \"cosine\"` to avoid this issue. Otherwise, remove responses with no variance from all datasets.")
+          )
+          
+        }
+        
+      }
+      
+    })
+    
+    
+  }
     
     # Check for covariates list
     if(length(covars) != 0){
@@ -255,7 +284,7 @@ bootSemNeT <- function (..., input_list = NULL,
     message("Generating data...", appendLF = FALSE)
     
     for(i in 1:length(name)){
-        
+      
         #Initialize count
         count <- 0
         
@@ -306,7 +335,7 @@ bootSemNeT <- function (..., input_list = NULL,
                         covs <- matrix(covs, ncol = 1)
                     }
                     #Ensure column names
-                    colnames(covs) <- colnames(covars[[name[i]]])
+                  {  colnames(covs) <- colnames(covars[[name[i]]])
                     
                     covar[[count]] <- covs
                 }
@@ -315,17 +344,22 @@ bootSemNeT <- function (..., input_list = NULL,
             
             # Check for TMFG
             if(method == "TMFG"){
+              
+              # Check for Pearson's correlation
+              if(sim == "cor"){
                 
                 # Check for binary matrix
                 if(all(apply(new[[count]], 2, is.numeric))){
-                    
-                    # Check for no variance
-                    variance <- apply(new[[count]], 2, function(x){all(x == 1)})
-                    
-                    # Reduce count if no variance in response
-                    if(any(variance)){count <- count - 1}
-                    
+                  
+                  # Check for no variance
+                  variance <- apply(new[[count]], 2, function(x){all(x == 1)})
+                  
+                  # Reduce count if no variance in response
+                  if(any(variance)){count <- count - 1}
+                  
                 }
+                
+              }
                 
             }
             
