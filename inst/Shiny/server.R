@@ -5,18 +5,19 @@ server <- function(input, output, session)
   prev.env <<- ls(envir = globalenv())
   
   # Check if anything exists in previous environment
-  if(length(prev.env) != 0)
-  {
+  if(length(prev.env) != 0){
+    
     # Initialize textcleaner objects variable
     tc.object <<- vector(length = length(prev.env))
     
     # Check for textcleaner objects
-    for(i in 1:length(prev.env))
-    {tc.object[i] <- "textcleaner" %in% class(get(prev.env[i], envir = globalenv()))}
+    for(i in 1:length(prev.env)){
+      tc.object[i] <- "textcleaner" %in% class(get(prev.env[i], envir = globalenv()))
+    }
     
     # Set up environment objects
-    if(sum(tc.object) != 0)
-    {
+    if(sum(tc.object) != 0){
+      
       output$clean_ui <- renderUI({
         
         tagList(
@@ -37,6 +38,7 @@ server <- function(input, output, session)
         )
         
       })
+      
     }
     
     if(exists("group"))
@@ -149,8 +151,7 @@ server <- function(input, output, session)
                  # Let user know
                  showNotification("Loading data...")
                  
-                 if(!is.null(input$clean_envir) || !is.null(input$group_envir))
-                 {
+                 if(!is.null(input$clean_envir) || !is.null(input$group_envir)){
                    
                    # Load data from R environment
                    if(!is.null(input$clean_envir)){
@@ -173,23 +174,25 @@ server <- function(input, output, session)
                  }
                  
                  # Load preprocessed data
-                 if(!is.null(input$data))
-                 {dat <<- suppressWarnings(SemNeT:::read.data(input$data$datapath))}
+                 if(!is.null(input$data)){
+                   dat <<- suppressWarnings(SemNeT:::read.data(input$data$datapath))
+                 }
                  
                  # Load group data
-                 if(!is.null(input$group))
-                 {group <<- suppressWarnings(SemNeT:::read.data(input$group$datapath))}
+                 if(!is.null(input$group)){
+                   group <<- suppressWarnings(SemNeT:::read.data(input$group$datapath))
+                 }
                  
                  # Load data from SemNeT package
-                 if(!exists("dat"))
-                 {
+                 if(!exists("dat")){
                    dat <<- SemNeT::open.clean
                    group <<- SemNeT::open.group
                  }
                  
                  # Load group data from SemNeT package
-                 if(!exists("group"))
-                 {group <<- rep(1, nrow(dat))}
+                 if(!exists("group")){
+                   group <<- rep(1, nrow(dat))
+                 }
                  
                  # Organize group data
                  group <<- unlist(group)
@@ -430,8 +433,8 @@ server <- function(input, output, session)
                  )
                  
                  ## Change responses to binary matrix
-                 if(network == "TMFG")
-                 {
+                 if(network == "TMFG"){
+                   
                    if(is.character(unlist(dat))){
                      bin_dat <<- SemNeT:::resp2bin(dat)$binary
                    }else{
@@ -439,26 +442,28 @@ server <- function(input, output, session)
                    }
                    
                    ## Create new data
-                   for(i in 1:length(uniq))
-                   {
+                   for(i in 1:length(uniq)){
+                     
                      assign(paste(uniq[i]),
                             bin_dat[which(group == uniq[i]),],
                             envir = globalenv())
                    }
                    
                  }else{
+                   
                    ## Create new data
-                   for(i in 1:length(uniq))
-                   {
+                   for(i in 1:length(uniq)){
+                     
                      assign(paste(uniq[i]),
                             dat[which(group == uniq[i]),],
                             envir = globalenv())
                    }
+                   
                  }
                  
                  ## Estimate networks
-                 if(network == "CN")
-                 {
+                 if(network == "CN"){
+                   
                    window_size <<- input$window
                    sig_alpha <<- as.numeric(input$alpha)
                    enrichment <<- as.logical(input$enrich)
@@ -479,8 +484,7 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "NRW")
-                 {
+                 }else if(network == "NRW"){
                    
                    nrw_type <<- switch(input$NRW_type,
                                        "Number" = "num",
@@ -505,8 +509,8 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "PF")
-                 {
+                 }else if(network == "PF"){
+                   
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
                                    function(x){PF(x)})
@@ -527,8 +531,8 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "TMFG")
-                 {
+                 }else if(network == "TMFG"){
+                   
                    ## Store binary groups
                    minCase <<- as.numeric(input$minCase)
                    
