@@ -17,7 +17,7 @@
 #' 
 #' @export
 # Extract groups
-# Updated 02.02.2022
+# Updated 18.04.2022
 extract_groups <- function(object, groups, type = c("fluency", "free"))
 {
   
@@ -70,8 +70,71 @@ extract_groups <- function(object, groups, type = c("fluency", "free"))
     unique_ids <- na.omit(unique(response_matrix[,"ID"]))
     
     # Check if groups match IDs
-    if(length(groups) != length(unique_ids)){
+    if(length(groups) %% length(unique_ids) != 0){
       stop("The length of group membership does not match the number of unique IDs in the response matrix")
+    }else{
+      
+      # Obtain number of times
+      times <- length(groups) / length(unique_ids)
+      
+      if(times > 1){
+        
+        # Re-obtain unique IDs
+        ids <- response_matrix[,"ID"]
+        
+        # Obtain sequences
+        id_sequences <- lapply(unique_ids, function(x){
+          
+          # Obtain target ID
+          target_id <- which(ids == x)
+          
+          # Return minimum
+          return(seq_min_max(target_id))
+          
+        })
+        
+        # Create new IDs
+        new_ids <- vector(length = nrow(response_matrix))
+        
+        # Obtain minimums to obtain ordering
+        id_min_matrix <- simplify2array(lapply(id_sequences, function(x){
+          x$min
+        }), higher = FALSE)
+        
+        # Order across rows
+        id_orders <- apply(id_min_matrix, 1, order)
+        
+        # Loop through for new IDs
+        for(i in seq_along(id_sequences)){
+          
+          # Obtain sequences
+          target_sequence <- id_sequences[[i]]
+          
+          # Loop through number of times
+          for(j in seq_along(target_sequence$min)){
+            
+            # Sequence
+            sequence <- target_sequence$min[j]:target_sequence$max[j]
+            
+            new_ids[ # start and end of sequence
+              target_sequence$min[j]:target_sequence$max[j]
+            ] <- paste( # get ID from orderings
+              unique_ids[id_orders[i,j]], j, sep = "_"
+            )
+            
+          }
+          
+        }
+        
+        # Create new unique_ids
+        new_unique_ids <- na.omit(unique(new_ids))
+        
+        # Assign new IDs to previous IDs
+        response_matrix[,"ID"] <- new_ids
+        unique_ids <- new_unique_ids
+        
+      }
+      
     }
     
     # Obtain unique groups

@@ -2,6 +2,65 @@
 #### MANY FUNCTIONS ####
 #%%%%%%%%%%%%%%%%%%%%%%#
 
+#' Obtains minimum and maximum of number sequences in a single vector
+#' @noRd
+#
+# Minimums and maximums of a sequence
+# Updated 06.04.2022
+seq_min_max <- function(sequence)
+{
+  # Determine sequences
+  ## Obtain differences between values
+  value_differences <- diff(sequence)
+  
+  ## Identify differences equal to one
+  if(all(value_differences == 1)){
+    
+    # Obtain minimum and maximum
+    minimum <- min(sequence, na.rm = TRUE)
+    maximum <- max(sequence, na.rm = TRUE)
+    
+  }else{
+    
+    ## Determine breaks in sequences
+    breaks <- which(value_differences != 1)
+    
+    ## Add end of sequence
+    breaks <- c(breaks, length(sequence))
+    
+    ## Set up start of breaks
+    starts <- (breaks + 1) - c(breaks[1], diff(breaks))
+    
+    ## Obtain sequences
+    split_sequences <- lapply(1:length(breaks), function(i){
+      return(sequence[starts[i]:breaks[i]])
+    })
+    
+    ## Obtain lengths
+    lengths <- unlist(lapply(split_sequences, length))
+    
+    ## Obtain minimums
+    minimum <- unlist(lapply(split_sequences, min, na.rm = TRUE))
+    
+    ## Obtain maximums
+    maximum <- unlist(lapply(split_sequences, max, na.rm = TRUE))
+    
+  }
+  
+  # Return list
+  res <- list()
+  res$min <- minimum
+  res$max <- maximum
+  if(exists("breaks", envir = environment())){
+    res$breaks  <- breaks
+    res$starts <- starts
+    res$lengths <- lengths
+  }
+  
+  return(res)
+  
+}
+
 #' @noRd
 # Partial eta squared
 # Updated 02.09.2020
