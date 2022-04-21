@@ -946,7 +946,7 @@ ff_function <- function(
     # Download semantic space
     space_file <- suppressMessages(
       googledrive::drive_download(
-        as_id(semantic_space),
+        googledrive::as_id(semantic_space),
         path = paste(tempdir(), semantic_space, sep = "\\"),
         overwrite = TRUE
       )
