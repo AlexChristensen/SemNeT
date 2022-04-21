@@ -258,7 +258,7 @@ plot.SemNeT <- function(
     
     semnet_plot <- semnet_plot +
       ggplot2::geom_text(
-        ggplot2::aes(label = colnames(x)),
+        label = colnames(x),
         size = label_size
       )
     
