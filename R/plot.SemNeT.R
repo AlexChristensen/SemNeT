@@ -80,7 +80,9 @@
 #' Defaults to \code{TRUE}.
 #' Used mainly for other functions (e.g., \code{\link{compare_nets}})
 #' 
-#' @return Plots networks using \code{\link[qgraph]{qgraph}}
+#' @param ... Additional arguments for \code{\link[GGally]{ggnet2}}
+#' 
+#' @return Plots networks using \code{\link[GGally]{ggnet2}}
 #' 
 #' @examples
 #' # Simulate Datasets

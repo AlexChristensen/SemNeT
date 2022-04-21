@@ -102,9 +102,11 @@ Use different numbers to switch up the layout
 Should plot be produced?
 Defaults to \code{TRUE}.
 Used mainly for other functions (e.g., \code{\link{compare_nets}})}
+
+\item{...}{Additional arguments for \code{\link[GGally]{ggnet2}}}
 }
 \value{
-Plots networks using \code{\link[qgraph]{qgraph}}
+Plots networks using \code{\link[GGally]{ggnet2}}
 }
 \description{
 Uses \code{\link[GGally]{ggnet2}} to plot networks

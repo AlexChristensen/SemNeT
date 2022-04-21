@@ -28,7 +28,7 @@ Accepts any number of networks and will organize the plots
 in the number of side-by-side columns using the heuristic of taking the square root of the number of 
 input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
 
-\strong{Examples}
+\strong{How plots will be automatically organized}
 \itemize{
 \item{3 networks:}
 {1 x 3}
