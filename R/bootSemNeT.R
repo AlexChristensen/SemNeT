@@ -363,9 +363,10 @@ bootSemNeT <- function (..., input_list = NULL,
           
         }
         
-        if(count == iter)
-        {break}
       }
+      
+      if(count == iter){break}
+      
     }
     
     #Insert data list

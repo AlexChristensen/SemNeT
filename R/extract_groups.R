@@ -7,6 +7,10 @@
 #' @param groups Vector.
 #' Specify groups using character or numeric values
 #' 
+#' @param type Character.
+#' Whether data are from a \code{"fluency"} task or
+#' \code{"free"} association task
+#' 
 #' @return Returns a list containing the cleaned data split by groups
 #' 
 #' @examples
@@ -17,7 +21,7 @@
 #' 
 #' @export
 # Extract groups
-# Updated 18.04.2022
+# Updated 21.04.2022
 extract_groups <- function(object, groups, type = c("fluency", "free"))
 {
   

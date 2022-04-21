@@ -145,9 +145,6 @@ NRW <- function(data, type = c("num", "prop"), threshold = 0)
     bin.mat[bin.mat != 0] <- 1
   }
   
-  # Set class for plotting
-  class(bin.mat) <- "SemNeT"
-  
   return(bin.mat)
 }
 #----

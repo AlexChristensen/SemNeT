@@ -51,6 +51,7 @@ cos2 <- similarity(two, method = "cosine")
 net1 <- TMFG(cos1)
 net2 <- TMFG(cos2)
 
+\donttest{
 # Compare networks
 compare_nets(
    net1, net2, title = c("One", "Two")
@@ -67,6 +68,7 @@ compare_nets(
    net1, net2, title = c("One", "Two"),
    plot.args = list(edge_color = "blue") 
 )
+}
 
 }
 \references{

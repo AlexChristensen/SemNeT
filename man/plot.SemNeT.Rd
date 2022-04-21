@@ -5,7 +5,7 @@
 \title{Plots a Single Network}
 \usage{
 \method{plot}{SemNeT}(
-  A,
+  x,
   weighted = FALSE,
   node_size = 7,
   node_color = "#EFB0A1",
@@ -25,7 +25,7 @@
 )
 }
 \arguments{
-\item{A}{Matrix or data frame.
+\item{x}{Matrix or data frame.
 An adjacency matrix of a network}
 
 \item{weighted}{Boolean.

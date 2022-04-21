@@ -25,7 +25,7 @@
 #' 
 #' @export
 # Louvain Community Detection (SemNeT)----
-# Updated 02.09.2020
+# Updated 21.04.2022
 Q <- function (A)
 {
   Q <- max(igraph::cluster_louvain(convert2igraph(abs(A)))$modularity)

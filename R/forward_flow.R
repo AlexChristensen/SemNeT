@@ -4,24 +4,10 @@
 #' forward flow of a list of words (Gray et. al, 2019).
 #' Forward flow is a way to quantify the forward motion of
 #' naturalistic thought. See \href{https://forwardflow.org}{forwardflow.org} for more information.
-#' 
-#' @usage 
-#' forward_flow <- function(
-#'  response_matrix,
-#'  semantic_space = c(
-#'    "baroni", "cbow", "cbow_ukwac",
-#'    "en100", "glove", "tasa", "all"
-#'  ),
-#'  min_cue = NULL,
-#'  min_response = 3,
-#'  max_response = NULL,
-#'  task = c("free", "fluency"),
-#'  cores
-#')
 #'
 #' @param response_matrix Matrix, data frame, or
 #' \code{\link[SemNetCleaner]{textcleaner}} object.
-#' For \code{task = "fluency"}, data are expected to
+#' For \code{type = "fluency"}, data are expected to
 #' follow wide formatting (IDs are the row names
 #' and are \strong{not} a column in the matrix
 #' or data frame):
@@ -34,7 +20,7 @@
 #' ID_n \tab 1 \tab 2 \tab n 
 #' }
 #' 
-#' For \code{task = "free"}, data are expected to
+#' For \code{type = "free"}, data are expected to
 #' follow long formatting:
 #' 
 #' \tabular{ccc}{
@@ -135,7 +121,7 @@
 #' Defaults to \code{NULL}, which uses all possible responses.
 #' When set, only the first \code{n} responses will be used
 #' 
-#' @param task Character.
+#' @param type Character.
 #' Type of semantic task.
 #' Automatically determined when a
 #' \code{\link[SemNetCleaner]{textcleaner}} object is
@@ -154,6 +140,7 @@
 #' could not be computed for that participant or cue
 #' 
 #' @references 
+#' # \code{"baroni"} \cr
 #' Baroni, M., Dinu, G., & Kruszewski, G. (2014).
 #' Don't count, predict! a systematic comparison of context-counting vs. context-predicting semantic vectors.
 #' In \emph{Proceedings of the 52nd annual meting of the association for computational linguistics} (pp. 238-247).
@@ -166,6 +153,7 @@
 #' "Forward flow": A new measure to quantify free thought and predict creativity.
 #' \emph{American Psychologist}, \emph{74}(5), 539-554.
 #' 
+#' # \code{"glove"} \cr
 #' Pennington, J., Socher, R., & Manning, C. D. (2014).
 #' GloVe: Global vectors for word representation.
 #' In \emph{Proceedings of the 2014 conference on empirical methods in natural language processing} (pp. 1532-1543).
@@ -185,7 +173,7 @@ forward_flow <- function(
   min_cue = NULL,
   min_response = 3,
   max_response = NULL,
-  task = c("free", "fluency"),
+  type = c("free", "fluency"),
   cores
 )
 {
@@ -194,12 +182,12 @@ forward_flow <- function(
     
     if("free" %in% class(response_matrix)){
       
-      task <- "free"
+      type <- "free"
       response_matrix <- response_matrix$data$clean
       
     }else if("fluency" %in% class(response_matrix)){
       
-      task <- "fluency"
+      type <- "fluency"
       response_matrix <- response_matrix$responses$clean
       
     }
@@ -247,7 +235,7 @@ forward_flow <- function(
       min_cue = min_cue,
       min_response = min_response,
       max_response = max_response,
-      task = task,
+      task = type,
       cores = cores
     )
     

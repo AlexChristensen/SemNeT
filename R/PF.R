@@ -145,9 +145,6 @@ PF <- function (data)
   row.names(pfn) <- colnames(data)
   colnames(pfn) <- colnames(data)
   
-  # Set class for plotting
-  class(pfn) <- "SemNeT"
-  
   return(pfn)
 }
 #----

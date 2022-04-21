@@ -42,6 +42,7 @@
 #' net1 <- TMFG(cos1)
 #' net2 <- TMFG(cos2)
 #' 
+#' \donttest{
 #' # Compare networks
 #' compare_nets(
 #'    net1, net2, title = c("One", "Two")
@@ -58,6 +59,7 @@
 #'    net1, net2, title = c("One", "Two"),
 #'    plot.args = list(edge_color = "blue") 
 #' )
+#' }
 #' 
 #' @references 
 #' Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
@@ -117,7 +119,7 @@ compare_nets <- function (
     cols <- floor(sqrt(length(datalist)))
     
     # Number of rows
-    rows <- ceiling(length(datalist) / len)
+    rows <- ceiling(length(datalist) / cols)
 
   }
   
@@ -149,7 +151,7 @@ compare_nets <- function (
   network_plots <- lapply(datalist, function(x){
     
     # Set up `do.call`
-    default.args$A <- x
+    default.args$x <- x
     
     # Call `do.call`
     do.call(

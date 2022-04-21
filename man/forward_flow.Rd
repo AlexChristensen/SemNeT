@@ -4,23 +4,20 @@
 \alias{forward_flow}
 \title{Forward Flow}
 \usage{
-forward_flow <- function(
- response_matrix,
- semantic_space = c(
-   "baroni", "cbow", "cbow_ukwac",
-   "en100", "glove", "tasa", "all"
- ),
- min_cue = NULL,
- min_response = 3,
- max_response = NULL,
- task = c("free", "fluency"),
- cores
+forward_flow(
+  response_matrix,
+  semantic_space = c("baroni", "cbow", "cbow_ukwac", "en100", "glove", "tasa", "all"),
+  min_cue = NULL,
+  min_response = 3,
+  max_response = NULL,
+  type = c("free", "fluency"),
+  cores
 )
 }
 \arguments{
 \item{response_matrix}{Matrix, data frame, or
 \code{\link[SemNetCleaner]{textcleaner}} object.
-For \code{task = "fluency"}, data are expected to
+For \code{type = "fluency"}, data are expected to
 follow wide formatting (IDs are the row names
 and are \strong{not} a column in the matrix
 or data frame):
@@ -33,7 +30,7 @@ ID_2 \tab 1 \tab 2 \tab n \cr
 ID_n \tab 1 \tab 2 \tab n 
 }
 
-For \code{task = "free"}, data are expected to
+For \code{type = "free"}, data are expected to
 follow long formatting:
 
 \tabular{ccc}{
@@ -134,7 +131,7 @@ by a participant) when computing forward flow.
 Defaults to \code{NULL}, which uses all possible responses.
 When set, only the first \code{n} responses will be used}
 
-\item{task}{Character.
+\item{type}{Character.
 Type of semantic task.
 Automatically determined when a
 \code{\link[SemNetCleaner]{textcleaner}} object is
@@ -160,6 +157,7 @@ Forward flow is a way to quantify the forward motion of
 naturalistic thought. See \href{https://forwardflow.org}{forwardflow.org} for more information.
 }
 \references{
+# \code{"baroni"} \cr
 Baroni, M., Dinu, G., & Kruszewski, G. (2014).
 Don't count, predict! a systematic comparison of context-counting vs. context-predicting semantic vectors.
 In \emph{Proceedings of the 52nd annual meting of the association for computational linguistics} (pp. 238-247).
@@ -172,6 +170,7 @@ Gray, K., Anderson, S., Chen, E. E., Kelly, J. M., Christian, M. S., Patrick, J.
 "Forward flow": A new measure to quantify free thought and predict creativity.
 \emph{American Psychologist}, \emph{74}(5), 539-554.
 
+# \code{"glove"} \cr
 Pennington, J., Socher, R., & Manning, C. D. (2014).
 GloVe: Global vectors for word representation.
 In \emph{Proceedings of the 2014 conference on empirical methods in natural language processing} (pp. 1532-1543).

@@ -82,7 +82,7 @@ randnet.test <- function (..., input_list = NULL, iter, cores)
         }
         
         # Assign input list to data list
-        listdata <- input_list
+        datalist <- input_list
         
     }
     
@@ -91,7 +91,7 @@ randnet.test <- function (..., input_list = NULL, iter, cores)
     
     for(i in 1:length(name))
         for(j in 1:iter)
-            {data.list[[i]][[j]] <- listdata[[i]]}
+            {data.list[[i]][[j]] <- datalist[[i]]}
     
     #Initialize random networks list
     rand.list <- vector("list", length = length(name))
@@ -151,7 +151,7 @@ randnet.test <- function (..., input_list = NULL, iter, cores)
         sig.mat[,"SD.rand"] <- round(apply(net.meas[[i]],1,sd),4)
         
         #Compute semantic network measures for network
-        meas <- semnetmeas(listdata[[i]])
+        meas <- semnetmeas(datalist[[i]])
         
         ##ASPL
         z.aspl <- (meas["ASPL"] - sig.mat["ASPL","M.rand"]) / sig.mat["ASPL","SD.rand"]

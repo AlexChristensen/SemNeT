@@ -2,7 +2,7 @@
 #' 
 #' @description Uses \code{\link[GGally]{ggnet2}} to plot networks
 #' 
-#' @param A Matrix or data frame.
+#' @param x Matrix or data frame.
 #' An adjacency matrix of a network
 #' 
 #' @param weighted Boolean.
@@ -113,7 +113,7 @@
 # Plot SemNeT
 # Updated 21.04.2022
 plot.SemNeT <- function(
-    A, weighted = FALSE,
+    x, weighted = FALSE,
     node_size = 7, node_color = "#EFB0A1",
     labels = FALSE, label_size = 4.5,
     edge_size = 1, edge_color = "grey",
@@ -141,11 +141,11 @@ plot.SemNeT <- function(
   }
   
   # Insignificant values (keeps ggnet2 from erroring out)
-  A <- ifelse(abs(as.matrix(A)) <= .00001, 0, as.matrix(A))
+  x <- ifelse(abs(as.matrix(x)) <= .00001, 0, as.matrix(x))
   
   # Convert to 'network' object
   A_network <- network::network(
-    A, ignore.eval = FALSE,
+    x, ignore.eval = FALSE,
     names.eval = "weights", directed = FALSE
   )
   
@@ -171,20 +171,20 @@ plot.SemNeT <- function(
     network::set.edge.attribute(A_network, "color", edge_color)
     
     # Binarize weights
-    A <- binarize(A)
+    x <- binarize(x)
     
   }
   
   # Set edge values
-  network::set.edge.value(A_network, attrname = "AbsWeights", value = abs(A))
+  network::set.edge.value(A_network, attrname = "AbsWeights", value = abs(x))
   
   # Scale edge weight size
   network::set.edge.value(
     A_network, attrname = "ScaledWeights",
     value = matrix(
-      rescale.edges(A, edge_size),
-      nrow = nrow(A),
-      ncol = ncol(A)
+      rescale.edges(x, edge_size),
+      nrow = nrow(x),
+      ncol = ncol(x)
     )
   )
   
@@ -194,12 +194,12 @@ plot.SemNeT <- function(
   # Set layout to "spring"
   if(layout == "qgraph_spring"){
     
-    graph <- convert2igraph(A)
+    graph <- convert2igraph(x)
     edge_list <- igraph::as_edgelist(graph)
     graph_layout <- qgraph::qgraph.layout.fruchtermanreingold(
       edgelist = edge_list,
       weights = abs(igraph::E(graph)$weight / max(abs(igraph::E(graph)$weight)))^2,
-      vcount = ncol(A)
+      vcount = ncol(x)
     )
     
   }else{
@@ -218,7 +218,7 @@ plot.SemNeT <- function(
     
     # Assign adjacency matrix to layout arguments
     sna_layout <- list()
-    sna_layout$d <- A
+    sna_layout$d <- x
     sna_layout$layout.par <- layout_args
     
     # Obtain layout
@@ -230,7 +230,7 @@ plot.SemNeT <- function(
   }
   
   # Set edge alpha
-  lower <- abs(A[lower.tri(A)])
+  lower <- abs(x[lower.tri(x)])
   non_zero <- sqrt(lower[lower != 0])
   
   # Set up plot
@@ -239,8 +239,8 @@ plot.SemNeT <- function(
     alpha = .80, color = "white",
     shape = 19, node.size = 0,
     edge.color = "color", edge.size = "ScaledWeights",
-    edge.alpha = non_zero, label = colnames(A),
-    node.label = rep("", ncol(A)), label.size = label_size,
+    edge.alpha = non_zero, label = colnames(x),
+    node.label = rep("", ncol(x)), label.size = label_size,
     layout.exp = expand_plot, ...
   ) +
     ggplot2::theme(legend.title = ggplot2::element_blank())
@@ -258,7 +258,7 @@ plot.SemNeT <- function(
     
     semnet_plot <- semnet_plot +
       ggplot2::geom_text(
-        ggplot2::aes(label = colnames(A)),
+        ggplot2::aes(label = colnames(x)),
         size = label_size
       )
     

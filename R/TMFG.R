@@ -249,9 +249,6 @@ TMFG <-function (data, depend = FALSE)
     row.names(x)<-colnames(x)
     x <- as.matrix(x)
     
-    # Set class for plotting
-    class(x) <- "SemNeT"
-    
     return(x)
 }
 #----

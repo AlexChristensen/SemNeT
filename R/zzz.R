@@ -1,3 +1,5 @@
+#' @importFrom utils packageVersion
+
 .onload <- function(libname, pkgname)
 {library.dynam("SemNeT",package=pkgname,lib.loc=libname)}
 

@@ -11,6 +11,10 @@ extract_groups(object, groups, type = c("fluency", "free"))
 
 \item{groups}{Vector.
 Specify groups using character or numeric values}
+
+\item{type}{Character.
+Whether data are from a \code{"fluency"} task or
+\code{"free"} association task}
 }
 \value{
 Returns a list containing the cleaned data split by groups
