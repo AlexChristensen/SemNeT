@@ -585,29 +585,12 @@ server <- function(input, output, session)
                  ## Organized output
                  meas.mat <<- sapply(meas, c)
                  
-                 ## Generate plot
-                 plots <<- SemNeT:::compare_netShiny(nets, config = "spring", weighted = FALSE)
-                 
                  ## Render semantic networks plot
                  output$viz <- renderPlot({
-                   
-                   ### Manipulate Shiny plot window
-                   if(length(plots$datalist) == 2)
-                   {layout(t(1:2))
-                   }else if(length(plots$datalist) > 2)
-                   {
-                     #Find square root
-                     len <<- floor(sqrt(length(plots$datalist)))
-                     
-                     #Remainder
-                     remain <<- length(plots$datalist)%%len
-                     
-                     #Change layout accordingly
-                     layout(t(matrix(1:(length(plots$datalist)+remain),ncol=len)))
-                   }
-                   
-                   ### Generate plot
-                   SemNeT:::plot.compareShiny(plots)
+                   plots <<- compare_nets(
+                     input_list = nets, weighted = FALSE, plot.args = list(node_size = 4)
+                   )
+                   plots
                  })
                  
                  ## Render network measures table

@@ -6,6 +6,8 @@ o UPDATE: functionality for free association tasks from *SemNetCleaner*'s `textc
 
 o ADD: Forward Flow for free association and verbal fluency data can be computed (see `?forward_flow`)
 
+o UPDATE: changed plotting from *qgraph* to *GGally*
+
 
 Changes in version 1.4.3
 

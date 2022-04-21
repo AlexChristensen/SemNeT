@@ -4,15 +4,7 @@
 \alias{compare_nets}
 \title{Plots Networks for Comparison}
 \usage{
-compare_nets(
-  ...,
-  input_list = NULL,
-  title,
-  config,
-  placement = c("match", "default"),
-  weighted = FALSE,
-  qgraph.args = list()
-)
+compare_nets(..., input_list = NULL, title = NULL, plot.args = list())
 }
 \arguments{
 \item{...}{Matrices or data frames of network adjacency matrices}
@@ -21,42 +13,17 @@ compare_nets(
 Bypasses \code{...} argument in favor of using a list
 as an input}
 
-\item{title}{List.
+\item{title}{Character vector.
 Characters denoting titles of plots}
 
-\item{config}{Character.
-Defaults to \code{"spring"}
-See \code{\link[qgraph]{qgraph}} for more options}
-
-\item{placement}{Character.
-How should nodes be placed when comparing groups?
-Defaults to \code{"default"}
-
-\itemize{
-\item{\code{"match"}}
-{places nodes in the same position for all networks}
-
-\item{\code{"default"}}
-{places nodes in the default \code{config} positions} 
-}}
-
-\item{weighted}{Boolean.
-Should networks be plotted with weights?
-Defaults to \code{FALSE}.
-Set to \code{TRUE} to plot networks with weights
-corresponding to association strength. Often, unweighted
-networks are more aesthetically representational of the
-networks}
-
-\item{qgraph.args}{List.
-An argument list to be passed onto \code{\link[qgraph]{qgraph}}.
-See \code{\link[qgraph]{qgraph}} for possible arguments}
+\item{plot.args}{List.
+Arguments to be passed along to \code{\link[SemNeT]{plot.SemNeT}}}
 }
 \value{
-Plots networks using \code{\link[qgraph]{qgraph}}
+Plots networks
 }
 \description{
-Uses \code{\link[qgraph]{qgraph}} to plot networks.
+Uses \code{\link[SemNeT]{plot.SemNeT}} to plot networks.
 Accepts any number of networks and will organize the plots
 in the number of side-by-side columns using the heuristic of taking the square root of the number of 
 input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
@@ -85,25 +52,27 @@ net1 <- TMFG(cos1)
 net2 <- TMFG(cos2)
 
 # Compare networks
-compare_nets(net1, net2, title = list("One", "Two"), config = "spring")
+compare_nets(
+   net1, net2, title = c("One", "Two")
+)
+
+# Change node colors
+compare_nets(
+   net1, net2, title = c("One", "Two"),
+   plot.args = list(node_color = "blue") 
+)
 
 # Change edge colors
-compare_nets(net1, net2, title = list("One", "Two"),
-config = "spring", qgraph.args = list(edge.color = "blue"))
+compare_nets(
+   net1, net2, title = c("One", "Two"),
+   plot.args = list(edge_color = "blue") 
+)
 
 }
 \references{
 Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
 qgraph: Network visualizations of relationships in psychometric data.
 \emph{Journal of Statistical Software}, \emph{48}, 1-18.
-
-Jones, P. J. (2019).
-networktools: Tools for Identifying Important Nodes in Networks.
-R package version 1.2.1.
-
-Jones, P. J., Mair, P., & McNally, R. (2018).
-Visualizing psychological networks: A tutorial in R.
-\emph{Frontiers in Psychology}, \emph{9}, 1742.
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

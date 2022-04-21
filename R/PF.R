@@ -30,7 +30,7 @@
 #' 
 #' @export
 # Pathfinder Network Estimation
-# Updated 02.12.2020
+# Updated 21.04.2022
 PF <- function (data)
 {
   # Check if the matrix is responses
@@ -144,6 +144,9 @@ PF <- function (data)
   # Name dimensions
   row.names(pfn) <- colnames(data)
   colnames(pfn) <- colnames(data)
+  
+  # Set class for plotting
+  class(pfn) <- "SemNeT"
   
   return(pfn)
 }

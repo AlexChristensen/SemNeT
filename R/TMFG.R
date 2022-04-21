@@ -61,7 +61,7 @@
 #' 
 #' @export
 # TMFG Filtering Method (SemNeT)----
-# 31.08.2020
+# Updated 21.04.2022
 TMFG <-function (data, depend = FALSE)
 {
     # Association matrix
@@ -248,6 +248,9 @@ TMFG <-function (data, depend = FALSE)
     x <- as.data.frame(x)
     row.names(x)<-colnames(x)
     x <- as.matrix(x)
+    
+    # Set class for plotting
+    class(x) <- "SemNeT"
     
     return(x)
 }
