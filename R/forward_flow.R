@@ -101,7 +101,7 @@
 #' 
 #' All semantic spaces are available for download on our
 #' \href{https://osf.io/4fmnd/}{OSF}. Semantic spaces are downloaded
-#' into R using the \code{\link[osfr]{osfr-package}}. For more information
+#' into R using the \code{\link[googledrive]{drive_download}}. For more information
 #' on these spaces, see 
 #' \href{https://sites.google.com/site/fritzgntr/software-resources/semantic_spaces}{Gunther, Dudschig, & Kaup (2015)}
 #' and \href{https://nlp.stanford.edu/projects/glove/}{Pennington, Socher, & Manning (2014).}
@@ -163,7 +163,7 @@
 #' @export
 #' 
 # Forward Flow
-# Updated 23.12.2021
+# Updated 21.04.2022
 forward_flow <- function(
   response_matrix,
   semantic_space = c(
@@ -240,6 +240,9 @@ forward_flow <- function(
     )
     
   }
+  
+  # Let user know about the rounding to three of the semantic space
+  message("Dimension vectors of the semantic space are rounded to three decimal places to ensure efficient analysis")
   
   return(results)
   

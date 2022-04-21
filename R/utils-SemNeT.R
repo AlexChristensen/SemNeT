@@ -910,8 +910,8 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 #%%%%%%%%%%%%%%%%%%%%#
 
 #' @noRd
-# Function for foward flow
-# Updated 23.12.2021
+# Function for forward flow
+# Updated 21.04.2022
 ff_function <- function(
   response_matrix,
   semantic_space,
@@ -923,15 +923,15 @@ ff_function <- function(
 )
 {
   
-  # Identify OSF link
-  osf_link <- switch(
+  # Identify Google Drive link
+  drive_link <- switch(
     semantic_space,
-    "baroni" = "ztxjc",
-    "cbow" = "3nfha",
-    "cbow_ukwac" = "zxkjb",
-    "en100" = "f2jv5",
-    "glove" = "e3js4",
-    "tasa" = "3kvmq"
+    "baroni" = "1bsDJDs11sBJxc3g2jIcHx7CRZLCPp0or",
+    "cbow" = "16XV3wkSG9Gkki35kGTDz8ulwKZgVMi90",
+    "cbow_ukwac" = "1kQBIkpJS0wHU3l_N-R8K4nFVWDFeCvYt",
+    "en100" = "1Ii98-iBgd_bscXJNxX1QRI18Y11QUMYn",
+    "glove" = "1FMqS0GiIL1KXG5HQFns62IUeYtcP1bKC",
+    "tasa" = "16ISxg7IiQk1LGX6dZkVMbM_cxG9CP1DS"
   )
   
   # Check if semantic space exists
@@ -940,16 +940,20 @@ ff_function <- function(
     tolower(list.files(tempdir()))
   ){
     
+    # Let user know semantic space is downloading
+    message("Downloading semantic space...", appendLF = FALSE)
+    
     # Download semantic space
     space_file <- suppressMessages(
-      osfr::osf_download(
-        osfr::osf_retrieve_file(
-          osf_link
-        ),
-        path = tempdir(),
-        progress = TRUE
+      googledrive::drive_download(
+        as_id(semantic_space),
+        path = paste(tempdir(), semantic_space, sep = "\\"),
+        overwrite = TRUE
       )
     )
+    
+    # Let user know downloading is finished
+    message("done")
   
   }else{
     

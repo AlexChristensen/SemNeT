@@ -6,7 +6,9 @@ o UPDATE: functionality for free association tasks from *SemNetCleaner*'s `textc
 
 o ADD: Forward Flow for free association and verbal fluency data can be computed (see `?forward_flow`)
 
-o UPDATE: changed plotting from *qgraph* to *GGally*
+o CHANGE: plotting from *qgraph* to *GGally*
+
+o CHANGE: semantic space downloads from *googledrive* rather than *osfr* (some issues kept popping up with OSF) 
 
 
 Changes in version 1.4.3

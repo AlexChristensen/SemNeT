@@ -12,7 +12,7 @@ LazyData: true
 Imports: pbapply, dplyr, plyr, RColorBrewer, purrr, magrittr, broom, 
          ggplot2, GGally, grid, scales, ggpubr, 
          igraph, qgraph, network, sna,
-         car, effects, methods, philentropy, LSAfun, osfr
+         car, effects, methods, philentropy, LSAfun, googledrive
 URL: https://github.com/AlexChristensen/SemNeT
 BugReports: https://github.com/AlexChristensen/SemNeT/issues
 NeedsCompilation: no

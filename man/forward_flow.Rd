@@ -111,7 +111,7 @@ Uses co-occurrence of words in text documents (uses cosine similarity)}
 
 All semantic spaces are available for download on our
 \href{https://osf.io/4fmnd/}{OSF}. Semantic spaces are downloaded
-into R using the \code{\link[osfr]{osfr-package}}. For more information
+into R using the \code{\link[googledrive]{drive_download}}. For more information
 on these spaces, see 
 \href{https://sites.google.com/site/fritzgntr/software-resources/semantic_spaces}{Gunther, Dudschig, & Kaup (2015)}
 and \href{https://nlp.stanford.edu/projects/glove/}{Pennington, Socher, & Manning (2014).}}
