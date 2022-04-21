@@ -145,6 +145,9 @@ PF <- function (data)
   row.names(pfn) <- colnames(data)
   colnames(pfn) <- colnames(data)
   
+  # Set class
+  class(pfn) <- c(class(pfn), "SemNeT")
+  
   return(pfn)
 }
 #----

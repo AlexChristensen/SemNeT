@@ -67,6 +67,9 @@ CN <- function (data, window = 2, alpha = .05, enrich = FALSE)
   if(enrich)
   {adj <- enrich.network(adj, gtom(adj))}
   
+  # Set class
+  class(adj) <- c(class(adj), "SemNeT")
+  
   return(adj)
 }
 #----
