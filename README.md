@@ -8,7 +8,7 @@ if(!"devtools" %in% row.names(installed.packages())){
   install.packages("devtools")
 }
 
-devtools::install_github("AlexChristensen/SemNeT")
+devtools::install_github("AlexChristensen/SemNeT", dependencies = c("Imports", "Suggests"))
 ```
 
 # How To Use
