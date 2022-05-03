@@ -1145,7 +1145,7 @@ server <- function(input, output, session)
                      
                    }else if(input$test == "t-test"){
                      
-                     if(length(percents) == 1 & input$type_select == "Node"){
+                     if(length(percents) == 1){
                        
                        output$tab <- renderTable({
                          bootTest <<- list()
