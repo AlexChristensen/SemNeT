@@ -922,7 +922,7 @@ ff_function <- function(
   cores
 )
 {
-  
+
   # Identify Google Drive link
   drive_link <- switch(
     semantic_space,
@@ -939,6 +939,9 @@ ff_function <- function(
     !paste(semantic_space, "rdata", sep = ".") %in%
     tolower(list.files(tempdir()))
   ){
+    
+    # Authorize Google Drive
+    googledrive::drive_auth()
     
     # Let user know semantic space is downloading
     message("Downloading semantic space...", appendLF = FALSE)
