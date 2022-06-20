@@ -1659,6 +1659,9 @@ boot.one.test <- function (bootSemNeT.obj,
     
   }
   
+  #Original formula
+  orig.formula <- formula
+  
   #%%%%%%%%%%%%%%%%%%%%#
   # SIGNIFICANCE TESTS #
   #%%%%%%%%%%%%%%%%%%%%#
@@ -1671,6 +1674,9 @@ boot.one.test <- function (bootSemNeT.obj,
     
     #Loop through measures
     for(i in 1:length(measures)){
+      
+      #Return to original formula
+      formula <- orig.formula
       
       #Create ANCOVA data frame
       for(j in 1:len){
