@@ -1793,7 +1793,7 @@ boot.one.test <- function (bootSemNeT.obj,
       }
       
       #Replace 'y' with 'Measure'
-      formula <- gsub("y", "Measure", formula)
+      formula <- sub("y", "Measure", formula)
       
       #Split formula to add 'Nodes' and 'Edges'
       split.formula <- unlist(strsplit(formula, split = "~"))

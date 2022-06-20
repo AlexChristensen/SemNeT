@@ -146,7 +146,7 @@
 #' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 02.03.2022
+# Updated 15.06.2022
 test.bootSemNeT <- function (...,
                              test = c("ANCOVA", "ANOVA", "t-test"),
                              covars = TRUE,
@@ -232,7 +232,7 @@ test.bootSemNeT <- function (...,
     for(i in 1:length(input)){
         temp.res[[props[i]]] <- suppressPackageStartupMessages(
             boot.one.test(
-                input[[i]],
+                bootSemNeT.obj = input[[i]],
                 test = test,
                 covars = covars,
                 measures = measures,
