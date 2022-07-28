@@ -1592,7 +1592,7 @@ rep.rows <- function (mat, times)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics
-# Updated 31.01.2022
+# Updated 25.07.2022
 boot.one.test <- function (bootSemNeT.obj,
                            test = c("ANCOVA", "ANOVA", "t-test"),
                            covars = TRUE,
@@ -1692,6 +1692,11 @@ boot.one.test <- function (bootSemNeT.obj,
           
           #Simplify to matrix
           covar <- t(simplify2array(covar))
+          
+          #Check for one covariate
+          if(nrow(covar) == 1 | ncol(covar) == 1){
+            covar <- as.vector(covar)
+          }
 
         }
         
