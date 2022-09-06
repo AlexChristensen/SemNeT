@@ -106,6 +106,9 @@
 #' \href{https://sites.google.com/site/fritzgntr/software-resources/semantic_spaces}{Gunther, Dudschig, & Kaup (2015)}
 #' and \href{https://nlp.stanford.edu/projects/glove/}{Pennington, Socher, & Manning (2014).}
 #' 
+#' User-defined semantic spaces can also be used. The data object
+#' should be input instead of a character 
+#' 
 #' @param min_cue Numeric.
 #' Minimum number of cues participant must have provided responses
 #' to compute forward flow (given \code{NA} if criterion not met)
@@ -163,7 +166,7 @@
 #' @export
 #' 
 # Forward Flow
-# Updated 21.04.2022
+# Updated 06.09.2022
 forward_flow <- function(
   response_matrix,
   semantic_space = c(
@@ -199,8 +202,6 @@ forward_flow <- function(
   if(missing(semantic_space)){
     message("No semantic space selected. Using default: GloVe")
     semantic_space <- "glove"
-  }else{
-    semantic_space <- match.arg(semantic_space, several.ok = TRUE)
   }
   
   ## Parallel processing cores
@@ -208,30 +209,52 @@ forward_flow <- function(
     cores <- round(parallel::detectCores() / 2, 0)
   }else{cores <- cores}
   
-  # Convert semantic space to lower
-  semantic_space <- tolower(semantic_space)
+  # Determine whether semantic space is pre-defined
+  predefined <- is(semantic_space, "character")
   
-  # Check for all semantic spaces
-  if("all" %in% semantic_space){
-    semantic_space <- c("baroni", "cbow", "cbow_ukwac", "en100", "glove", "tasa")
+  # Check for pre-defined semantic space
+  if(isTRUE(predefined)){
+    
+    # Convert semantic space to lower
+    semantic_space <- tolower(semantic_space)
+    
+    # Check for all semantic spaces
+    if("all" %in% semantic_space){
+      semantic_space <- c("baroni", "cbow", "cbow_ukwac", "en100", "glove", "tasa")
+    }
+    
+    # Initialize results list
+    results <- vector("list", length(semantic_space))
+    names(results) <- semantic_space
+    
+  }else{
+    
+    # Initialize results list
+    results <- vector("list", 1)
+    names(results) <- deparse(substitute(semantic_space))
+    
   }
-  
-  # Initialize results list
-  results <- vector("list", length(semantic_space))
-  names(results) <- semantic_space
     
   # Loop through semantic spaces
-  for(i in seq_along(semantic_space)){
+  for(i in seq_along(results)){
     
     # Let user know which semantic space
     message(
-      paste("Computing forward flow with ", semantic_space[i], "...", sep = "")
+      paste("Computing forward flow with ", names(results)[i], "...", sep = "")
     )
+    
+    # Check for predefined semantic space
+    if(isTRUE(predefined)){
+      input_space <- semantic_space[i]
+    }else{
+      input_space <- semantic_space
+    }
+    
     
     # Compute forward flow
     results[[i]] <- ff_function(
       response_matrix = response_matrix,
-      semantic_space = semantic_space[i],
+      semantic_space = input_space,
       min_cue = min_cue,
       min_response = min_response,
       max_response = max_response,

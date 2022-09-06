@@ -919,7 +919,7 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 
 #' @noRd
 # Function for forward flow
-# Updated 21.04.2022
+# Updated 06.09.2022
 ff_function <- function(
   response_matrix,
   semantic_space,
@@ -931,69 +931,88 @@ ff_function <- function(
 )
 {
 
-  # Identify Google Drive link
-  drive_link <- switch(
-    semantic_space,
-    "baroni" = "1bsDJDs11sBJxc3g2jIcHx7CRZLCPp0or",
-    "cbow" = "16XV3wkSG9Gkki35kGTDz8ulwKZgVMi90",
-    "cbow_ukwac" = "1kQBIkpJS0wHU3l_N-R8K4nFVWDFeCvYt",
-    "en100" = "1Ii98-iBgd_bscXJNxX1QRI18Y11QUMYn",
-    "glove" = "1FMqS0GiIL1KXG5HQFns62IUeYtcP1bKC",
-    "tasa" = "16ISxg7IiQk1LGX6dZkVMbM_cxG9CP1DS"
-  )
+  # Determine whether semantic space is pre-defined
+  predefined <- is(semantic_space, "character")
   
-  # Check if semantic space exists
-  if(
-    !paste(semantic_space, "rdata", sep = ".") %in%
-    tolower(list.files(tempdir()))
-  ){
+  # Check if semantic space is pre-defined
+  if(isTRUE(predefined)){
     
-    # Authorize Google Drive
-    googledrive::drive_auth()
-    
-    # Let user know semantic space is downloading
-    message("Downloading semantic space...", appendLF = FALSE)
-    
-    # Download semantic space
-    space_file <- suppressMessages(
-      googledrive::drive_download(
-        googledrive::as_id(drive_link),
-        path = paste(tempdir(), semantic_space, sep = "\\"),
-        overwrite = TRUE
-      )
+    # Identify Google Drive link
+    drive_link <- switch(
+      semantic_space,
+      "baroni" = "1bsDJDs11sBJxc3g2jIcHx7CRZLCPp0or",
+      "cbow" = "16XV3wkSG9Gkki35kGTDz8ulwKZgVMi90",
+      "cbow_ukwac" = "1kQBIkpJS0wHU3l_N-R8K4nFVWDFeCvYt",
+      "en100" = "1Ii98-iBgd_bscXJNxX1QRI18Y11QUMYn",
+      "glove" = "1FMqS0GiIL1KXG5HQFns62IUeYtcP1bKC",
+      "tasa" = "16ISxg7IiQk1LGX6dZkVMbM_cxG9CP1DS"
     )
     
-    # Let user know downloading is finished
+    # Check if semantic space exists
+    if(
+      !paste(semantic_space, "rdata", sep = ".") %in%
+      tolower(list.files(tempdir()))
+    ){
+      
+      # Authorize Google Drive
+      googledrive::drive_auth()
+      
+      # Let user know semantic space is downloading
+      message("Downloading semantic space...", appendLF = FALSE)
+      
+      # Download semantic space
+      space_file <- suppressMessages(
+        googledrive::drive_download(
+          googledrive::as_id(drive_link),
+          path = paste(tempdir(), semantic_space, sep = "\\"),
+          overwrite = TRUE
+        )
+      )
+      
+      # Let user know downloading is finished
+      message("done")
+      
+    }else{
+      
+      # Create dummy space file list
+      space_file <- list()
+      space_file$local_path <- paste(
+        tempdir(), "\\",
+        semantic_space, ".RData",
+        sep = ""
+      )
+      
+    }
+    
+    # Let user know semantic space is loading
+    message("Loading semantic space...", appendLF = FALSE)
+    
+    # Load semantic space
+    load(space_file$local_path)
+    
+    # Let user know loading is finished
     message("done")
-  
+    
+    # Set semantic space to generic name
+    space <- get(semantic_space)
+    
   }else{
     
-    # Create dummy space file list
-    space_file <- list()
-    space_file$local_path <- paste(
-      tempdir(), "\\",
-      semantic_space, ".RData",
-      sep = ""
-    )
+    # Set semantic space to generic name
+    space <- semantic_space
     
   }
   
-  # Let user know semantic space is loading
-  message("Loading semantic space...", appendLF = FALSE)
-  
-  # Load semantic space
-  load(space_file$local_path)
-  
-  # Let user know loading is finished
-  message("done")
-  
-  # Set semantic space to generic name
-  space <- get(semantic_space)
-  
   # Remove semantic space from environment
   rm(
-    list = ls()[which(ls() == semantic_space)]
+    list = ls()[which(ls() == deparse(
+      substitute(semantic_space)
+    ))],
+    envir = environment()
   )
+  
+  # Clear memory
+  sink <- capture.output(gc())
   
   # Check for task type
   if(task == "fluency"){
@@ -1008,11 +1027,15 @@ ff_function <- function(
     space_index <- na.omit(match(
       unique_words, row.names(space)
     ))
+    
     ## Shrink space
     shrink_space <- space[space_index,]
     
     # Remove space
     rm(space)
+    
+    # Clear memory
+    sink <- capture.output(gc())
     
     # Let user know forward flow is being computed
     message("Computing forward flow...")

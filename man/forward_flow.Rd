@@ -114,7 +114,10 @@ All semantic spaces are available for download on our
 into R using the \code{\link[googledrive]{drive_download}}. For more information
 on these spaces, see 
 \href{https://sites.google.com/site/fritzgntr/software-resources/semantic_spaces}{Gunther, Dudschig, & Kaup (2015)}
-and \href{https://nlp.stanford.edu/projects/glove/}{Pennington, Socher, & Manning (2014).}}
+and \href{https://nlp.stanford.edu/projects/glove/}{Pennington, Socher, & Manning (2014).}
+
+User-defined semantic spaces can also be used. The data object
+should be input instead of a character}
 
 \item{min_cue}{Numeric.
 Minimum number of cues participant must have provided responses
