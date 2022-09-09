@@ -919,7 +919,7 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 
 #' @noRd
 # Function for forward flow
-# Updated 06.09.2022
+# Updated 09.09.2022
 ff_function <- function(
   response_matrix,
   semantic_space,
@@ -1096,9 +1096,24 @@ ff_function <- function(
       max_response
     )
     
-    # Words split in response list
-    split_list <- lapply(response_list, strsplit, split = " ")
-    
+    # Check for whether response list matches
+    # the number of IDs
+    if(
+      length(response_list) ==
+      length(unique(response_matrix[,"ID"]))
+    ){
+      
+      # Words split in response list
+      split_list <- lapply(
+        unlist(response_list, recursive = FALSE),
+        strsplit, split = " "
+      )
+      
+    }else{
+      # Words split in response list
+      split_list <- lapply(response_list, strsplit, split = " ")
+    }
+
     # Shrink semantic space to only unique words
     ## Obtain unique words
     unique_words <- unique(unlist(split_list))

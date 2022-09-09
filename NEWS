@@ -8,7 +8,9 @@ o ADD: Forward Flow for free association and verbal fluency data can be computed
 
 o CHANGE: plotting from *qgraph* to *GGally*
 
-o CHANGE: semantic space downloads from *googledrive* rather than *osfr* (some issues kept popping up with OSF) 
+o CHANGE: semantic space downloads from *googledrive* rather than *osfr* (some issues kept popping up with OSF)
+
+o FIX: "free" response list bug in `forward_flow`
 
 
 Changes in version 1.4.3
