@@ -3,7 +3,7 @@
 #' @description This function calculates the
 #' forward flow of a list of words (Gray et. al, 2019).
 #' Forward flow is a way to quantify the forward motion of
-#' naturalistic thought. See \href{https://forwardflow.org}{forwardflow.org} for more information.
+#' naturalistic thought. See forwardflow <dot> org for more information.
 #'
 #' @param response_matrix Matrix, data frame, or
 #' \code{\link[SemNetCleaner]{textcleaner}} object.

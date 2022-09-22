@@ -261,7 +261,7 @@ tmfg_setup <- function(..., minCase)
 bin2resp <- function (rmat, to.data.frame = FALSE)
 {
   # Check for resp2bin class
-  if(class(rmat) == "resp2bin" || {all(apply(rmat, 2, is.numeric)) && max(rmat) > 1})
+  if(is(rmat, "resp2bin") || {all(apply(rmat, 2, is.numeric)) && max(rmat) > 1})
   {
     # Get ordered responses
     ordered <- rmat$order

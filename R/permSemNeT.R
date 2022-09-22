@@ -108,7 +108,7 @@
 #' 
 #' @noRd
 # Semantic Network Permutation Test----
-# 15.09.2020
+# Updated 22.09.2022
 permSemNeT <- function(sample1 = NULL, sample2 = NULL, iter,
                        method = c("CN", "NRW", "PF", "TMFG"), sim = NULL, minCase = NULL,
                        measure = c("ASPL", "CC", "Q"), weighted = FALSE,
@@ -133,7 +133,7 @@ permSemNeT <- function(sample1 = NULL, sample2 = NULL, iter,
       stop("Arguments 'sample1' and 'sample2' must be input or
            argument 'prev.perm' must have a previous result")
     }
-  }else if(class(prev.perm) != "permSemNeT")
+  }else if(!is(prev.perm, "permSemNeT"))
   {
     stop("Object input into argument 'prev.perm' is not 
          a 'permSemNeT' class object")

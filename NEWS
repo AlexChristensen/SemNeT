@@ -10,7 +10,7 @@ o CHANGE: plotting from *qgraph* to *GGally*
 
 o CHANGE: semantic space downloads from *googledrive* rather than *osfr* (some issues kept popping up with OSF)
 
-o FIX: "free" response list bug in `forward_flow`
+o UPDATE: `forward_flow` now outputs mean flow, individual flow (by response/cue), and mean cue flow (`"free"` only) 
 
 
 Changes in version 1.4.3
