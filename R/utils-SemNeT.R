@@ -68,6 +68,7 @@ partial.eta.sq <- function(ESS, RSS)
 {ESS / (ESS + RSS)}
 
 #' @noRd
+#' @importFrom stats var
 # Cohen's d
 # Updated 01.08.2021
 d <- function(samp1, samp2)

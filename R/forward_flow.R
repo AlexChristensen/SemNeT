@@ -185,6 +185,8 @@
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com> & Brendan Baker <bsb5477@psu.edu>
 #' 
+#' @importFrom methods is
+#' 
 #' @export
 #' 
 # Forward Flow
@@ -203,7 +205,7 @@ forward_flow <- function(
 )
 {
   # Check response matrix for textcleaner
-  if("textcleaner" %in% class(response_matrix)){
+  if(is(response_matrix, "textcleaner")){
     
     if("free" %in% class(response_matrix)){
       
