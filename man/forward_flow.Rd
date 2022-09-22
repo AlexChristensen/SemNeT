@@ -159,6 +159,19 @@ forward flow of a list of words (Gray et. al, 2019).
 Forward flow is a way to quantify the forward motion of
 naturalistic thought. See \href{https://forwardflow.org}{forwardflow.org} for more information.
 }
+\examples{
+# Load data
+response_matrix <- open.clean
+
+\dontrun{# Forward flow on fluency
+animals_ff <- forward_flow(
+ response_matrix = response_matrix,
+ semantic_space = "glove",
+ type = "fluency",
+ cores = 2 # for CRAN checks
+)}
+
+}
 \references{
 # \code{"baroni"} \cr
 Baroni, M., Dinu, G., & Kruszewski, G. (2014).

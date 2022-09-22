@@ -919,7 +919,7 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 
 #' @noRd
 # Function for forward flow
-# Updated 09.09.2022
+# Updated 22.09.2022
 ff_function <- function(
   response_matrix,
   semantic_space,
@@ -950,8 +950,10 @@ ff_function <- function(
     
     # Check if semantic space exists
     if(
-      !paste(semantic_space, "rdata", sep = ".") %in%
-      tolower(list.files(tempdir()))
+      # not sure why ".RData" is no longer needed (22.09.2022)
+      # !paste(semantic_space, "rdata", sep = ".") %in%
+      # tolower(list.files(tempdir())) &
+      !semantic_space %in% tolower(list.files(tempdir()))
     ){
       
       # Authorize Google Drive
@@ -978,7 +980,9 @@ ff_function <- function(
       space_file <- list()
       space_file$local_path <- paste(
         tempdir(), "\\",
-        semantic_space, ".RData",
+        semantic_space,
+        # not sure why ".RData" is no longer needed (22.09.2022)
+        # ".RData",
         sep = ""
       )
       
@@ -1002,14 +1006,6 @@ ff_function <- function(
     space <- semantic_space
     
   }
-  
-  # Remove semantic space from environment
-  rm(
-    list = ls()[which(ls() == deparse(
-      substitute(semantic_space)
-    ))],
-    envir = environment()
-  )
   
   # Clear memory
   sink <- capture.output(gc())
@@ -1044,48 +1040,22 @@ ff_function <- function(
     cl <- parallel::makeCluster(cores)
     
     # Run parallelized forward flow
-    ff_result <- pbapply::pblapply(
+    results <- pbapply::pblapply(
       X = response_list,
       cl = cl,
       FUN = ff,
       space = shrink_space
     )
     
+    # Organize results
+    results <- list(
+      mean_flow = unlist(lapply(results, function(x){x$mean_flow})),
+      response_flow = lapply(results, function(x){x$flow})
+      
+    )
+    
     # Stop cluster
     parallel::stopCluster(cl)
-    
-    # Create vector of forward flow
-    results <- unlist(ff_result)
-    
-    # Create data frame of forward flow
-    # ff_mat <- t(simplify2array(lapply(
-    #   ff_result, function(x){
-    #     x$descriptives
-    #   }
-    # ), higher = FALSE))
-    # ff_df <- data.frame(
-    #   mean = as.numeric(ff_mat[,"mean"]),
-    #   mean_change = as.numeric(ff_mat[,"mean_change"]),
-    #   sd_change = as.numeric(ff_mat[,"sd_change"])
-    # )
-    # 
-    # # Create list for values
-    # ff_values <- lapply(ff_result, function(x){
-    #   x$values
-    # })
-    # names(ff_values) <- row.names(response_matrix)
-    # 
-    # # Create list for derivatives
-    # ff_derivatives <- lapply(ff_result, function(x){
-    #   x$derivatives
-    # })
-    # names(ff_derivatives) <- row.names(response_matrix)
-    # 
-    # # Populate results list
-    # results <- list()
-    # results$metrics <- ff_df
-    # results$values <- ff_values
-    # results$derivatives <- ff_derivatives
     
   }else if(task == "free"){
     
@@ -1127,6 +1097,9 @@ ff_function <- function(
     # Remove space
     rm(space)
     
+    # Clear memory
+    sink <- capture.output(gc())
+    
     # Initialize results list
     results_list <- vector("list", length(response_list))
     names(results_list) <- names(response_list)
@@ -1146,86 +1119,95 @@ ff_function <- function(
       )
       
       # Run parallelized forward flow
-      ff_result <- pbapply::pblapply(
+      result <- pbapply::pblapply(
         X = response_list[[i]],
         cl = cl,
         FUN = ff,
         space = shrink_space
       )
       
-      # Organize result
-      result <- unlist(ff_result)
-      
+      # Define NULL result
       if(is.null(result)){
         
-        # Create dummy data frame of result
-        df <- as.matrix(data.frame(
+        # Create dummy data frame of mean flow
+        mean_df <- as.matrix(data.frame(
+          ID = names(response_list)[i],
+          FF = NA
+        ))
+        row.names(mean_df) <- NULL
+        
+        # Create dummy data frame of response flow
+        response_df <- as.matrix(data.frame(
           ID = names(response_list)[i],
           Cue = NA,
           FF = NA
         ))
-        row.names(df) <- NULL
+        row.names(response_df) <- NULL
+        
+        # Create dummy list of response flow
+        response_flow <- NULL
         
       }else{
         
-        # Create data frame of result
-        df <- as.matrix(data.frame(
+        # Create data frame of mean flow
+        mean_df <- as.matrix(data.frame(
+          ID = names(response_list)[i],
+          FF = mean(unlist(lapply(result, function(x){x$flow})), na.rm = TRUE)
+        ))
+        row.names(mean_df) <- NULL
+        
+        # Create data frame of response flow
+        response_df <- as.matrix(data.frame(
           ID = names(response_list)[i],
           Cue = names(result),
-          FF = result
+          FF = unlist(lapply(result, function(x){x$mean_flow}))
         ))
-        row.names(df) <- NULL
+        row.names(response_df) <- NULL
+        
+        # Response flow
+        response_flow <- lapply(result, function(x){x$flow})
+        
       }
       
+      
       # Populate results list
-      results_list[[i]] <- df
+      results_list[[i]]$mean_flow <- mean_df
+      results_list[[i]]$mean_response_flow <- response_df
+      results_list[[i]]$response_flow <- response_flow
       
     }
     
     # Stop cluster
     parallel::stopCluster(cl)
     
-    # Create long results
-    res_long <- long_results(results_list)
+    # Create long mean results
+    long_mean <- long_results(lapply(results_list, function(x){x$mean_flow}))
     
     # Convert to data frame
-    results <- as.data.frame(res_long)
-    results$ID <- as.character(results$ID)
-    results$Cue <- as.character(results$Cue)
-    results$FF <- as.numeric(results$FF)
+    long_mean <- as.data.frame(long_mean)
+    long_mean$ID <- as.character(long_mean$ID)
+    long_mean$FF <- as.numeric(long_mean$FF)
     
-    # Create vector of forward flow
-    #ff_vector <- unlist(ff_values)
+    # Create long mean response results
+    long_response <- long_results(
+      lapply(results_list, function(x){x$mean_response_flow})
+    )
     
-    # Create data frame of forward flow
-    # ff_mat <- t(simplify2array(lapply(
-    #   ff_result, function(x){
-    #     x$descriptives
-    #   }
-    # ), higher = FALSE))
-    # ff_df <- data.frame(
-    #   mean = as.numeric(ff_mat[,"mean"]),
-    #   mean_change = as.numeric(ff_mat[,"mean_change"]),
-    #   sd_change = as.numeric(ff_mat[,"sd_change"])
-    # )
-    # 
-    # # Create list for values
-    # ff_values <- lapply(ff_result, function(x){
-    #   x$values
-    # })
-    # names(ff_values) <- row.names(response_matrix)
-    # 
-    # # Create list for derivatives
-    # ff_derivatives <- lapply(ff_result, function(x){
-    #   x$derivatives
-    # })
-    # names(ff_derivatives) <- row.names(response_matrix)
-    # 
-    # # Populate results list
-    # results <- list()
-    # results$metrics <- ff_df
-    # results$values <- ff_values
-    # results$derivatives <- ff_derivatives
+    # Convert to data frame
+    long_response <- as.data.frame(long_response)
+    long_response$ID <- as.character(long_response$ID)
+    long_response$Cue <- as.character(long_response$Cue)
+    long_response$FF <- as.numeric(long_response$FF)
+    
+    # Response results
+    response_results <- lapply(results_list, function(x){x$response_flow})
+    
+    # Set final results
+    results <- list(
+      mean_flow = long_mean,
+      mean_response_flow = long_response,
+      response_flow = response_results
+    )
     
   }
   
@@ -1235,26 +1217,12 @@ ff_function <- function(
 
 #' @noRd
 # Function for forward flow
-# Updated 23.12.2021
+# Updated 22.09.2022
 ff <- function(responses, space){
   
   # Check for responses
   if(length(responses) <= 1){
-    
-    # # Populate results list
-    # ff_res <- list()
-    # ff_res$values <- NA
-    # ff_res$derivatives <- NA
-    # ff_res$descriptives <- data.frame(
-    #   mean = NA,
-    #   mean_change = NA,
-    #   sd_change = NA
-    # )
-    # 
-    # return(ff_res)
-    
     return(NA)
-    
   }
   
   # Make responses lowercase
@@ -1282,31 +1250,14 @@ ff <- function(responses, space){
     instant_FF[i - 1] <- cur_val
     
   }
-  return(mean(instant_FF, na.rm = TRUE))
   
-  # # Get derivative
-  # if(length(responses) >= 3){
-  #   derivative <- EGAnet::glla(
-  #     x = instant_FF, n.embed = 3, tau = 1,
-  #     delta = 1, order = 1
-  #   )[,"DerivOrd1"]
-  # }else{
-  #   derivative <- rep(NA, length(responses))
-  # }
+  # Set up results list
+  results <- list(
+    flow = instant_FF,
+    mean_flow = mean(instant_FF, na.rm = TRUE)
+  )
   
-  # # Get results list
-  # ff_res <- list()
-  # ff_res$values <- instant_FF
-  # ff_res$derivatives <- derivative
-  # ff_res$descriptives <- data.frame(
-  #   mean = mean(instant_FF, na.rm = TRUE),
-  #   mean_change = mean(derivative, na.rm = TRUE),
-  #   sd_change = sd(derivative, na.rm = TRUE)
-  # )
-  # 
-  # 
-  # # Return dynamic forward flow
-  # return(ff_res)
+  return(results)
   
 }
 

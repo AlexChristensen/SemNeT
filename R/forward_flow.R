@@ -138,9 +138,30 @@
 #' 
 #' @return A list labeled with each semantic space used. Values in 
 #' each list correspond to dynamic forward flow values (Gray et al., 2019).
-#' Free association will return a data frame that includes columns for
-#' \code{ID} and \code{Cue}. \code{NA} values suggest that forward flow
-#' could not be computed for that participant or cue
+#' For \code{"fluency"} \strong{and} \code{"free"} data, each list will contain:
+#' 
+#' \item{mean_flow}{A data frame of the average forward flow over all responses (in all cues)
+#' for each participant}
+#' 
+#' \item{response_flow}{A list corresponding to each participants forward flow
+#' for each of their responses (for each cue)}
+#' 
+#' In addition, \code{"free"} has a data frame containing:
+#' 
+#' \item{mean_response_flow}{A data frame storing the mean forward flow
+#' for each cue for each participant}
+#' 
+#' @examples
+#' # Load data
+#' response_matrix <- open.clean
+#' 
+#' \dontrun{# Forward flow on fluency
+#' animals_ff <- forward_flow(
+#'  response_matrix = response_matrix,
+#'  semantic_space = "glove",
+#'  type = "fluency",
+#'  cores = 2 # for CRAN checks
+#' )}
 #' 
 #' @references 
 #' # \code{"baroni"} \cr
@@ -166,7 +187,7 @@
 #' @export
 #' 
 # Forward Flow
-# Updated 06.09.2022
+# Updated 22.09.2022
 forward_flow <- function(
   response_matrix,
   semantic_space = c(
