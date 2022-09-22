@@ -155,7 +155,8 @@
 #' # Load data
 #' response_matrix <- open.clean
 #' 
-#' \dontrun{# Forward flow on fluency
+#' \dontrun{
+#' # Forward flow on fluency
 #' animals_ff <- forward_flow(
 #'  response_matrix = response_matrix,
 #'  semantic_space = "glove",
