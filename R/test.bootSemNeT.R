@@ -146,7 +146,7 @@
 #' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 15.06.2022
+# Updated 06.10.2022
 test.bootSemNeT <- function (...,
                              test = c("ANCOVA", "ANOVA", "t-test"),
                              covars = TRUE,
@@ -188,6 +188,11 @@ test.bootSemNeT <- function (...,
     #Check for ANOVA and ANCOVA
     if(test == "ANOVA" | test == "ANCOVA"){
         groups <- unique(groups)
+    }
+    
+    #Check for groups names
+    if(is.null(colnames(groups))){
+      colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))
     }
     
     #Check for wrong test
@@ -268,7 +273,7 @@ test.bootSemNeT <- function (...,
             
             acov.vals <- lapply(temp.res, function(x, extra){
                 lapply(x, function(x, extra){
-                    x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
+                    x$ANCOVA[which(x$ANCOVA$Term == colnames(groups)),]
                 })
             })
             
@@ -285,8 +290,8 @@ test.bootSemNeT <- function (...,
         if(ncol(groups) == 1){
             adj.vals <- unlist(lapply(temp.res, function(x){
                 lapply(x, function(x){
-                    means <- as.vector(x$adjustedMeans$Group$fit)
-                    names(means) <- x$adjustedMeans$variables$Group$levels
+                    means <- as.vector(x$adjustedMeans[[colnames(groups)]]$fit)
+                    names(means) <- x$adjustedMeans$variables[[colnames(groups)]]$levels
                     return(means)
                 })
             }), recursive = FALSE)  
@@ -299,7 +304,7 @@ test.bootSemNeT <- function (...,
                 colnames(adj.vals) <- paste("Group", 1:nrow(groups))
             }else{
                 row.names(adj.vals) <- measures
-                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
+                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans[[colnames(groups)]]$variables[[colnames(groups)]]$levels
             }
             
         }else{

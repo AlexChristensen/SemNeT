@@ -1632,11 +1632,6 @@ boot.one.test <- function (bootSemNeT.obj,
   #Enforce matrix
   groups <- as.matrix(groups)
   
-  #Check for groups names
-  if(is.null(colnames(groups))){
-    colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))
-  }
-  
   #Identify iterations
   iter <- bootSemNeT.obj$iter
   
