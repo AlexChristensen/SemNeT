@@ -920,7 +920,7 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
 
 #' @noRd
 # Function for forward flow
-# Updated 22.09.2022
+# Updated 26.01.2023
 ff_function <- function(
   response_matrix,
   semantic_space,
@@ -1015,7 +1015,13 @@ ff_function <- function(
   if(task == "fluency"){
     
     # Create list to parallelize
-    response_list <- lapply(seq_len(nrow(response_matrix)), function(i) na.omit(response_matrix[i,]))
+    response_list <- lapply(
+      seq_len(nrow(response_matrix)),
+      function(i){
+        # Ensure responses are in a vector
+        na.omit(as.vector(as.matrix(response_matrix[i,])))
+      }
+    )
     
     # Shrink semantic space to only unique words
     ## Obtain unique words
