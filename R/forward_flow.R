@@ -190,7 +190,7 @@
 #' @export
 #' 
 # Forward Flow
-# Updated 22.09.2022
+# Updated 31.01.2023
 forward_flow <- function(
   response_matrix,
   semantic_space = c(
@@ -217,6 +217,14 @@ forward_flow <- function(
       type <- "fluency"
       response_matrix <- response_matrix$responses$clean
       
+    }else{
+      
+      warning(
+        "The `textcleaner` object appears to be from {SemNetCleaner} version <= 1.3.4\nUsing 'type = \"fluency\"' by default."
+      )
+      
+      type <- "fluency"
+      response_matrix <- response_matrix$responses$clean
     }
     
   }
