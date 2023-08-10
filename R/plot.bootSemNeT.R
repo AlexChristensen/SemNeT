@@ -21,16 +21,13 @@
 #' one.result <- bootSemNeT(one, prop = .50, iter = 1000,
 #' sim = "cosine", cores = 2, type = "node", method = "TMFG")
 #' }
-#' \dontrun{
 #' # Plot
 #' plot(one.result, groups = c("One"))
-#' }
 #' 
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #' 
 #' @export
 #Plot: Partial Bootstrapped Semantic Network Analysis----
-# Updated 22.09.2022
 plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
 {
     #Obtain ... in a list
@@ -48,10 +45,6 @@ plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
     
     #Remove proportion and iter
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
-    attr(name, "na.action") <- NULL
-    
-    #Remove resampling and covariates
-    name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
     attr(name, "na.action") <- NULL
     
     #Missing arguments

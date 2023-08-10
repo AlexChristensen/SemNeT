@@ -6,23 +6,24 @@ plot.bootSemNeT <- function (..., groups = NULL, measures = c("ASPL","CC","Q"))
     #Obtain ... in a list
     input <- list(...)
     
-    #Check for 'partboot' object
-    if(all(unlist(lapply(input, class)) != "bootSemNeT"))
-    {stop("Object input into 'bootSemNeT.obj' is not a 'bootSemNeT' object")}
-    
     #Number of input
     len <- length(input)
     
-    #Get names of networks
-    name <- unique(gsub("Net", "", gsub("Summ","",gsub("Meas","",names(input[[1]])))))
+    #Identify if input is paired
+    paired <- vector("logical", length = len)
+    for(i in 1:len)
+    {
+        if(length(grep("paired",names(input[[i]])))!=0)
+        {paired[i] <- TRUE
+        }else{paired[i] <- FALSE}
+    }
     
-    #Remove proportion and iter
-    name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
-    attr(name, "na.action") <- NULL
-    
-    #Remove resampling and covariates
-    name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
-    attr(name, "na.action") <- NULL
+    #Error if single sample results are mixed with
+    if(all(paired))
+    {paired <- 2 # used in 'org.plot'
+    }else if(all(!paired))
+    {paired <- 1 # used in 'org.plot'
+    }else{stop("Single samples are mixed with paired samples")}
     
     #Missing arguments
     if(missing(measures))

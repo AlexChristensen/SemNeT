@@ -50,7 +50,7 @@
 #' @export
 #' 
 # Community Network----
-# Updated 21.04.2022
+# Updated 13.09.2020
 CN <- function (data, window = 2, alpha = .05, enrich = FALSE)
 {
   # Compute statistical co-occurrence
@@ -66,9 +66,6 @@ CN <- function (data, window = 2, alpha = .05, enrich = FALSE)
   # Check for network enrichment
   if(enrich)
   {adj <- enrich.network(adj, gtom(adj))}
-  
-  # Set class
-  class(adj) <- c(class(adj), "SemNeT")
   
   return(adj)
 }

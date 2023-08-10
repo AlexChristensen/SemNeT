@@ -193,6 +193,279 @@ equateShiny <- function(dat)
     return(finlist)
 }
 
+#' Plots Networks for Comparison in Shiny
+#' 
+#' @description Uses \code{\link[qgraph]{qgraph}}
+#' to plot networks. Accepts any number of networks and will organize the plots
+#' in the number of side-by-side columns using the heuristic of taking the square root of the number of 
+#' input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
+#' 
+#' \strong{Examples}
+#' \itemize{
+#' \item{3 networks:}
+#' {1 x 3}
+#' \item{6 networks:}
+#' {2 x 3}
+#' \item{9 networks:}
+#' {3 x 3}
+#' }
+#' 
+#' @param dat List.
+#' Matrices or data frames of network adjacency matrices
+#' 
+#' @param title List.
+#' Characters denoting titles of plots
+#' 
+#' @param config Character.
+#' Defaults to \code{"spring"}.
+#' See \code{\link[qgraph]{qgraph}} for more options
+#' 
+#' @param placement Character.
+#' How should nodes be placed when comparing groups?
+#' Defaults to \code{"default"}
+#' 
+#' \itemize{
+#' \item{\code{"match"}}
+#' {places nodes in the same position for all networks}
+#' 
+#' \item{\code{"default"}}
+#' {places nodes in the default \code{config} positions} 
+#' }
+#' 
+#' @param weighted Boolean.
+#' Should networks be plotted with weights?
+#' Defaults to \code{FALSE}.
+#' Set to \code{TRUE} to plot networks with weights
+#' corresponding to association strength. Often, unweighted
+#' networks are more aesthetically representational of the
+#' networks
+#' 
+#' @param qgraph.args List.
+#' An argument list to be passed onto \code{\link[qgraph]{qgraph}}.
+#' See \code{\link[qgraph]{qgraph}} for possible arguments
+#' 
+#' @return Plots networks using \code{\link[qgraph]{qgraph}}
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @noRd
+# Compare Graphs----
+# Updated 20.03.2020
+compare_netShiny <- function (dat, title, config,
+                              placement = c("match", "default"),
+                              weighted = FALSE,
+                              qgraph.args = list())
+{
+    #Get names of networks
+    name <- names(dat)
+    
+    # MISSING ARGUMENTS
+    if(missing(title))
+    {
+        #Initialize title list
+        title <- list()
+        
+        for(i in 1:length(name))
+        {title[[i]] <- name[i]}
+    }else if(!is.list(title))
+    {stop("Argument 'title' only takes list objects")}
+    
+    if(missing(config))
+    {config <- tolower("spring")
+    }else{config <- tolower(config)}
+    
+    if(missing(placement))
+    {placement <- "default"
+    }else{placement <- match.arg(placement)}
+    # MISSING ARGUMENTS
+    
+    #Create list of input
+    datalist <- dat
+    
+    #Initialize layout and labels list
+    layouts <- list()
+    labs <- list()
+    
+    for(i in 1:length(datalist))
+    {
+        #Change weights
+        if(!weighted)
+        {datalist[[i]] <- binarize(datalist[[i]])}
+        
+        #Diagonals to zero
+        diag(datalist[[i]]) <- 0
+        
+        #Create graph layouts
+        #if(config == "mds")
+        #{layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE)
+        #}else{
+        layouts[[i]] <- qgraph::qgraph(datalist[[i]],DoNotPlot=TRUE,layout=config)#}
+        
+        #Get labels
+        labs[[i]] <- as.factor(colnames(datalist[[i]]))
+    }
+    
+    #Manipulate R plot window
+    if(length(datalist) == 2)
+    {layout(t(1:2))
+    }else if(length(datalist) > 2)
+    {
+        #Find square root
+        len <- floor(sqrt(length(datalist)))
+        
+        #Remainder
+        remain <- length(datalist)%%len
+        
+        #Change layout accordingly
+        layout(t(matrix(1:(length(datalist)+remain),ncol=len)))
+    }
+    
+    #Change layout arguments to FALSE
+    for(i in 1:length(layouts))
+    {layouts[[i]]$Arguments$DoNotPlot <- FALSE}
+    
+    #Create average layout
+    if(placement == "match")
+    {Layout <- qgraph::averageLayout(layouts)
+    }else if(placement == "default")
+    {Layout <- config}
+    
+    #Default 'qgraph' arguments for 'compare.nets()'
+    if(is.list(qgraph.args))
+    {
+        #Name of arguments
+        arg.name <- names(qgraph.args)
+        
+        #Check for 'compare.nets' defaults
+        ##Vertex size
+        if(!"vsize" %in% arg.name)
+        {qgraph.args$vsize <- 4}
+        ##Label proportion
+        if(!"label.prop" %in% arg.name)
+        {qgraph.args$label.prop <- 1}
+        ##Aspect
+        if(!"aspect" %in% arg.name)
+        {qgraph.args$aspect <- FALSE}
+        ##Repulsion
+        if(config == "spring")
+        {
+            if(!"repulsion" %in% arg.name)
+            {qgraph.args$repulsion <- 1.15}
+        }
+        ##Edge color
+        if(!"edge.color" %in% arg.name)
+        {
+            if(!weighted)
+            {qgraph.args$edge.color <- "black"}
+        }
+        
+    }else{stop("qgraph.args must be input as a list")}
+    
+    #Add general defaults arguments
+    qgraph.args$layout <- Layout
+    
+    #Return
+    res <- list()
+    res$datalist <- datalist
+    res$qgraph.args <- qgraph.args
+    res$config <- config
+    res$title <- title
+    res$labs <- labs
+    res$layouts <- layouts
+    
+    class(res) <- "compareShiny"
+    
+    return(res)
+}
+#----
+
+
+#' Plots Networks for Comparison from Shiny
+#' 
+#' @description Uses \code{\link[qgraph]{qgraph}}
+#' to plot networks. Accepts any number of networks and will organize the plots
+#' in the number of side-by-side columns using the heuristic of taking the square root of the number of 
+#' input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
+#' Performs the same operations as \code{\link[SemNeT]{compare_nets}}
+#' 
+#' \strong{Examples}
+#' \itemize{
+#' \item{3 networks:}
+#' {1 x 3}
+#' \item{6 networks:}
+#' {2 x 3}
+#' \item{9 networks:}
+#' {3 x 3}
+#' }
+#' 
+#' @param x Shiny result \code{resultShiny$comparePlot}
+#' 
+#' @param ... Additional arguments
+#' 
+#' @return Plots networks using \code{\link[qgraph]{qgraph}}
+#' 
+#' @examples
+#' # Simulate Datasets
+#' one <- sim.fluency(10)
+#' two <- sim.fluency(10)
+#' 
+#' # Compute similarity matrix
+#' cos1 <- similarity(one, method = "cosine")
+#' cos2 <- similarity(two, method = "cosine")
+#' 
+#' # Compute networks
+#' net1 <- TMFG(cos1)
+#' net2 <- TMFG(cos2)
+#' 
+#' # Compare networks
+#' compare_nets(net1, net2, title = list("One", "Two"), config = "spring")
+#' 
+#' # Change edge colors
+#' compare_nets(net1, net2, title = list("One", "Two"),
+#' config = "spring", qgraph.args = list(edge.color = "blue"))
+#' 
+#' @references 
+#' Epskamp, S., Cramer, A. O. J., Waldorp, L. J., Schmittmann, V. D., & Borsboom, D. (2012).
+#' qgraph: Network visualizations of relationships in psychometric data.
+#' \emph{Journal of Statistical Software}, \emph{48}, 1-18.
+#' 
+#' Jones, P. J. (2019).
+#' networktools: Tools for Identifying Important Nodes in Networks.
+#' R package version 1.2.1.
+#' 
+#' Jones, P. J., Mair, P., & McNally, R. (2018).
+#' Visualizing psychological networks: A tutorial in R.
+#' \emph{Frontiers in Psychology}, \emph{9}, 1742.
+#' 
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @export
+#Compare Graphs----
+# Updated 05.04.2020
+plot.compareShiny <- function (x, ...)
+{
+    for(i in 1:length(x$datalist))
+    {
+        #Network specific arguments
+        ##Networks
+        #if(x$config == "mds")
+        #{x$qgraph.args$qgraph_net <- x$layouts[[i]]
+        #}else{
+        x$qgraph.args$input <- x$layouts[[i]]
+        #}
+        ##Network title and labels
+        x$qgraph.args$title <- x$title[[i]]
+        x$qgraph.args$labels <- x$labs[[i]]
+        
+        #Generate plot
+        #ifelse(x$config == "mds",
+               #do.call(networktools::MDSnet, args = x$qgraph.args),
+               do.call(qgraph::qgraph, args = x$qgraph.args)
+               #)
+    }
+}
+#----
+
 #' Test Against Random Networks
 #' @description Performs significance tests for global measures
 #' of semantic networks against the global measures of equivalent
@@ -862,7 +1135,7 @@ bootSemNeTShiny <- function (dat, method = c("CN", "NRW", "PF", "TMFG"),
 #Test: Bootstrapped Network Statistics----
 # Updated 26.04.2021
 test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
-                                  measures = c("ASPL", "CC", "Q"), covars = list(),
+                                  measures = c("ASPL", "CC", "Q"),
                                   formula = NULL, groups = NULL)
 {
     #Missing arguments
@@ -884,23 +1157,14 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
     if(!is.matrix(groups))
     {groups <- as.matrix(groups)}
     
-    #Check for ANOVA and ANCOVA
-    if(test == "ANOVA" | test == "ANCOVA"){
-        groups <- unique(groups)
-    }
-    
     #Check for wrong test
     if(ncol(groups) > 1){
         if(test == "t-test"){
             stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
         }
-    }else if(nrow(unique(groups)) < 3){
+    }else if(nrow(groups) < 3){
         if(test == "ANOVA"){
-            stop("Number of groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
-        }
-    }else if(nrow(unique(groups)) > 2){
-        if(test == "t-test"){
-            stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
+            stop("Groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
         }
     }
     
@@ -911,16 +1175,9 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
     type <- input[[1]]$type
     
     #Proportions
-    if(type == "node"){
-        props <- paste(
-            "Proportion (",
-            unlist(lapply(input, function(x){x$prop})),
-            "0)",
-            sep = ""
-        )
-    }else{
-        props <- "Case"
-    }
+    if(type == "node")
+    {props <- paste("Proportion (", unlist(lapply(input, function(x){x$prop})), "0)", sep = "")
+    }else{props <- "Case"}
     
     #Initialize result list
     res <- list()
@@ -928,30 +1185,22 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
     #Initialize temporary results list
     temp.res <- list()
     
-    for(i in 1:length(input)){
-        temp.res[[props[i]]] <- suppressPackageStartupMessages(
-            boot.one.test(
-                input[[i]],
-                test = test,
-                covars = covars,
-                measures = measures,
-                formula = formula,
-                groups = groups
-            )
-        )
-    }
+    for(i in 1:length(input))
+    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]],
+                                                                          test = test,
+                                                                          measures = measures,
+                                                                          formula = formula,
+                                                                          groups = groups))}
     
     
     #Check for ANOVA
     if(test == "ANOVA"){
-        
         temp.res <- lapply(temp.res, function(x){
             lapply(x, function(x){
-                names(x) <- c("ANOVA", "adjustedMeans", "HSD")
+                names(x) <- c("ANOVA", "Means", "HSD")
                 return(x)
             })
         })
-        
     }
     
     # Insert full results
@@ -963,17 +1212,16 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
         #Create tables of results
         ##Get ANCOVA values
         
-        if(ncol(groups) == 1){
-            
+        if(ncol(groups) == 1)
+        {
             acov.vals <- lapply(temp.res, function(x, extra){
                 lapply(x, function(x, extra){
                     x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
                 })
             })
-            
         }
         
-        ##Get Residual degrees of freedom
+        ##Get Residual degress of freedom
         res.df <- lapply(temp.res, function(x){
             lapply(x, function(x){
                 x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
@@ -981,43 +1229,30 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
         })
         
         ##Get adjusted mean values
-        if(ncol(groups) == 1){
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- as.vector(x$adjustedMeans$Group$fit)
-                    names(means) <- x$adjustedMeans$variables$Group$levels
-                    return(means)
-                })
-            }), recursive = FALSE)  
-            
-            
-            adj.vals <- t(simplify2array(adj.vals))
-            
-            if(length(row.names(adj.vals)) > length(measures)){
-                row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
-                colnames(adj.vals) <- paste("Group", 1:nrow(groups))
-            }else{
-                row.names(adj.vals) <- measures
-                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
-            }
-            
-        }else{
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- x$adjustedMeans
-                    return(means[[length(means)]])
-                })
-            }), recursive = FALSE)   
-        }
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$adjustedMeans$fit)
+                names(means) <- x$adjustedMeans$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
+        
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
+        {
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
         
         #Insert adjusted means
         res$adjustedMeans <- adj.vals
         
-        if(ncol(groups) == 1){
-            
+        if(ncol(groups) == 1)
+        {
             ##Loop through to get tables
-            if(length(acov.vals) == 1){
-                
+            if(length(acov.vals) == 1)
+            {
                 #Get measures
                 meas.val <- unlist(acov.vals, recursive = FALSE)
                 #Table measures
@@ -1025,13 +1260,13 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 #Adjusted means
                 tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.df), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
                 # Provided direction if two groups
-                if(length(name) == 2){
-                    
+                if(length(name) == 2)
+                {
                     #Add direction
                     Direction <- apply(tab.acov, 1, function(x, name){
                         p.num <- as.numeric(gsub("< ", "", x["p-value"]))
@@ -1048,7 +1283,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 }
                 
                 #Change column name
-                colnames(tab.acov)[length(name)+1] <- "Residual df"
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
                 colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                 #Change row names
                 row.names(tab.acov) <- measures
@@ -1058,8 +1293,8 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 
             }else{
                 
-                for(j in 1:length(measures)){
-                    
+                for(j in 1:length(measures))
+                {
                     #Get measures
                     meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
                     #Get residual degrees of freedom
@@ -1069,7 +1304,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                     #Adjusted means
                     tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
                     #Add residual degrees of freedom
-                    tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.val), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                     #Recheck names
                     name <- colnames(tab.acov)[1:length(name)]
                     
@@ -1092,7 +1327,7 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                     }
                     
                     #Change column name
-                    colnames(tab.acov)[length(name)+1] <- "Residual df"
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
                     colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                     #Change row names
                     row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
@@ -1113,7 +1348,8 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
         #Create tables of results
         ##Get ANOVA values
         
-        if(ncol(groups) == 1){
+        if(ncol(groups) == 1)
+        {
             acov.vals <- lapply(temp.res, function(x, extra){
                 lapply(x, function(x, extra){
                     x$ANOVA[which(x$ANOVA$Term == "Group"),]
@@ -1129,58 +1365,44 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
         })
         
         ##Get adjusted mean values
-        if(ncol(groups) == 1){
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- as.vector(x$adjustedMeans$Group$fit)
-                    names(means) <- x$adjustedMeans$variables$Group$levels
-                    return(means)
-                })
-            }), recursive = FALSE)  
-            
-            
-            adj.vals <- t(simplify2array(adj.vals))
-            
-            if(length(row.names(adj.vals)) > length(measures)){
-                row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
-                colnames(adj.vals) <- paste("Group", 1:nrow(groups))
-            }else{
-                row.names(adj.vals) <- measures
-                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
-            }
-            
-        }else{
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- x$adjustedMeans
-                    return(means[[length(means)]])
-                })
-            }), recursive = FALSE)   
-        }
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$Means$fit)
+                names(means) <- x$Means$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
         
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
+        {
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
         
         #Insert adjusted means
-        res$adjustedMeans <- adj.vals
+        res$Means <- adj.vals
         
-        if(ncol(groups) == 1){
-            
+        if(ncol(groups) == 1)
+        {
             ##Loop through to get tables
-            if(length(acov.vals) == 1){
-                
+            if(length(acov.vals) == 1)
+            {
                 #Get measures
                 meas.val <- unlist(acov.vals, recursive = FALSE)
                 #Table measures
-                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
                 #Adjusted means
                 tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.df), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.df), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
                 # Provided direction if two groups
-                if(length(name) == 2){
-                    
+                if(length(name) == 2)
+                {
                     #Add direction
                     Direction <- apply(tab.acov, 1, function(x, name){
                         p.num <- as.numeric(gsub("< ", "", x["p-value"]))
@@ -1197,8 +1419,8 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 }
                 
                 #Change column name
-                colnames(tab.acov)[length(name)+1] <- "Residual df"
-                colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
                 #Change row names
                 row.names(tab.acov) <- measures
                 
@@ -1207,18 +1429,18 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                 
             }else{
                 
-                for(j in 1:length(measures)){
-                    
+                for(j in 1:length(measures))
+                {
                     #Get measures
                     meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
                     #Get residual degrees of freedom
                     res.val <- lapply(res.df, function(x){x[[measures[j]]]})
                     #Table measures
-                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
                     #Adjusted means
                     tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
                     #Add residual degrees of freedom
-                    tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.val), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.val), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
                     #Recheck names
                     name <- colnames(tab.acov)[1:length(name)]
                     
@@ -1241,8 +1463,8 @@ test.bootSemNeTShiny <- function (input, test = c("ANCOVA", "ANOVA", "t-test"),
                     }
                     
                     #Change column name
-                    colnames(tab.acov)[length(name)+1] <- "Residual df"
-                    colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
+                    colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
                     #Change row names
                     row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
                     
@@ -1385,11 +1607,11 @@ boot.one.testShiny <- function (bootSemNeT.obj,
     if(test == "ANCOVA" | test == "ANOVA"){##ANCOVA or ANOVA
         
         #Loop through measures
-        for(i in 1:length(measures)){
-            
+        for(i in 1:length(measures))
+        {
             #Create ANCOVA data frame
-            for(j in 1:len){
-                
+            for(j in 1:len)
+            {
                 #Insert measure values
                 meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
                 
@@ -1450,8 +1672,8 @@ boot.one.testShiny <- function (bootSemNeT.obj,
             #  }
             #}
             
-            if("Edges" %in% names(aov.obj)){
-                
+            if("Edges" %in% names(aov.obj))
+            {
                 for(g in 1:nrow(groups))
                 {
                     if(length(unique((aov.obj$Edges[which(aov.obj$Group == groups[g,])]))) == 1){
@@ -1460,7 +1682,6 @@ boot.one.testShiny <- function (bootSemNeT.obj,
                         aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])
                     }
                 }
-                
             }
             
             #ANOVA
@@ -1501,50 +1722,17 @@ boot.one.testShiny <- function (bootSemNeT.obj,
             aov.test <- aov(as.formula(aov.formula), data = aov.obj)
             
             #ANCOVA
-            if(ncol(groups) > 1){
-                acov.test <- car::Anova(aov.test, type = "III")
-            }else{
-                acov.test <- car::Anova(aov.test, type = "II")
-            }
+            acov.test <- car::Anova(aov.test, type = "III")
             
             #Tidy ANCOVA
             tidy.acov <- as.data.frame(broom::tidy(acov.test), stringsAsFactors = FALSE)
             tidy.acov[,-1] <- round(apply(tidy.acov[,-1], 2, as.numeric), 3)
             
             #Get partial etas
-            if(test == "ANCOVA"){
-                
-                etas <- round(
-                    unlist(
-                        lapply(
-                            acov.test$`Sum Sq`, # Sum of squares
-                            partial.eta.sq, # Partial eta squared function
-                            sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-                        )
-                    )[-c(1,length(acov.test$`Sum Sq`))], # Removes intercept and RSS
-                    3
-                )
-                
-                #Attach etas to tidy ANCOVA
-                tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
-                
-            }else if(test == "ANOVA"){
-                
-                etas <- round(
-                    unlist(
-                        lapply(
-                            acov.test$`Sum Sq`, # Sum of squares
-                            partial.eta.sq, # Partial eta squared function
-                            sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-                        )
-                    )[-length(acov.test$`Sum Sq`)], # Removes intercept and RSS
-                    3
-                )
-                
-                #Attach etas to tidy ANCOVA
-                tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
-                
-            }
+            etas <- round(unlist(lapply(acov.test$`Sum Sq`, partial.eta.sq, sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)])))[-c(1,length(acov.test$`Sum Sq`))], 3)
+            
+            #Attach etas to tidy ANCOVA
+            tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
             
             #Change column names
             colnames(tidy.acov) <- c("Term", "Sum of Squares", "df", "F-statistic", "p-value", "Partial Eta Squared")
@@ -1567,14 +1755,13 @@ boot.one.testShiny <- function (bootSemNeT.obj,
             #Get pairwise comparisons
             if(nrow(groups) > 2){
                 
-                if(ncol(groups) == 1){
-                    tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
-                }else{
+                if(ncol(groups) > 1){
                     tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
+                }else{
+                    tests[[paste(measures[i])]]$HSD <- unlist(suppressWarnings(TukeyHSD(aov.test)), recursive = FALSE)
                 }
                 
             }
-            
         }
         
     }else if(test == "t-test"){##t-test

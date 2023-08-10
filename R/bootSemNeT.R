@@ -8,15 +8,6 @@
 #' \code{\link[SemNetCleaner]{textcleaner}}) or  binary response matrices
 #' (e.g., \code{binary} output from \code{\link[SemNetCleaner]{textcleaner}})
 #' 
-#' @param input_list List.
-#' Bypasses \code{...} argument in favor of using a list
-#' as an input
-#' 
-#' @param covars List.
-#' Covariates to be included in the ANCOVA.
-#' Assumes indices to correspond to the data input.
-#' Names \strong{must} match input names
-#' 
 #' @param method Character.
 #' Network estimation method to use.
 #' Current options include:
@@ -93,11 +84,15 @@
 #' \item{iter}{Outputs the number of bootstrapped samples
 #' used from the \code{iter} argument}
 #' 
-#' \item{resampling}{A list containing the resampling indices for each bootstrap for either
-#' nodes (\code{type = "node"}) or cases (\code{type = "case"})}
+#' If a \code{paired} network is input, then also returns:
 #' 
-#' \item{covariates}{A list containing the covariates corresponding to the
-#' resampled indices from each boostrap}
+#' \item{pairedMeas}{A matrix for the network input in the \code{paired}
+#' argument, where columns are the semantic network measures
+#' from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
+#' bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
+#' 
+#' \item{pairedSumm}{Summary statistics across the bootrapped samples for the
+#' network input in the \code{paired} argument}
 #' 
 #' @examples
 #' # Simulate Dataset
@@ -130,28 +125,22 @@
 #' 
 #' @export
 # Bootstrapped Semantic Network Analysis----
-# Updated 12.04.2022
-bootSemNeT <- function (..., input_list = NULL,
-                        covars = list(),
-                        method = c("CN", "NRW", "PF", "TMFG"),
+# Updated 16.08.2021
+bootSemNeT <- function (..., method = c("CN", "NRW", "PF", "TMFG"),
                         methodArgs = list(),
                         type = c("case", "node"),
                         prop = .50, sim, weighted = FALSE,
                         iter = 1000, cores)
 {
-  
-  ####Missing arguments####
-  if(missing(sim)){
-    sim <- "cosine"
-  }else{sim <- sim}
-  
-  if(missing(cores)){
-    cores <- parallel::detectCores() / 2
-  }else{cores <- cores}
-  ####Missing arguments####
-  
-  # Check for input list
-  if(is.null(input_list)){
+    ####Missing arguments####
+    if(missing(sim))
+    {sim <- "cosine"
+    }else{sim <- sim}
+    
+    if(missing(cores))
+    {cores <- parallel::detectCores() / 2
+    }else{cores <- cores}
+    ####Missing arguments####
     
     #Get names of networks
     name <- as.character(substitute(list(...)))
@@ -160,484 +149,347 @@ bootSemNeT <- function (..., input_list = NULL,
     #Create list of input
     datalist <- list(...)
     
-  }else{
+    #Assign network function
+    NET.FUNC <- switch(method,
+                       "TMFG" = TMFG,
+                       "CN" = CN,
+                       "NRW" = NRW,
+                       "PF" = PF)
     
-    # Obtain list names
-    name <- names(input_list)
+    #Check for missing arguments in function
+    form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
     
-    # Check if list names are NULL
-    if(is.null(name)){
-      name <- 1:length(input_list)
-    }
-    
-    # Assign input list to data list
-    datalist <- input_list
-    
-    # Assign objects
-    for(i in seq_along(name)){
-      assign(name[i], value = input_list[[i]], envir = environment())
-    }
-    
-  }
-  
-  # Check for datasets with no variance
-  if(method == "TMFG" & sim == "cor"){
-    
-    # Loop through datasets
-    sink <- lapply(seq_along(datalist), function(i){
-      
-      # Check for binary matrix
-      if(all(apply(datalist[[i]], 2, is.numeric))){
+    #Get arguments
+    if(any(!form.args %in% names(methodArgs))){
         
-        # Means
-        means <- colMeans(datalist[[i]], na.rm = TRUE)
+        #Find which arguments are needed
+        need.args <- form.args[which(!form.args %in% names(methodArgs))]
         
-        # Check for no variance
-        if(any(means == 1) | any(means == 0)){
-          
-          stop(
-            paste("Dataset", name[i], "has responses with no variance. Consider using `sim = \"cosine\"` to avoid this issue. Otherwise, remove responses with no variance from all datasets.")
-          )
-          
-        }
-        
-      }
-      
-    })
-    
-    
-  }
-  
-  # Check for covariates list
-  if(length(covars) != 0){
-    
-    # Obtain names of covariates
-    covars_names <- names(covars)
-    
-    # Check if all match
-    if(!all.equal(covars_names, name)){
-      stop("Names of the covariates list in the 'covar' argument must match the data input")
-    }
-    
-  }
-  
-  #Assign network function
-  NET.FUNC <- switch(
-    method,
-    "TMFG" = TMFG,
-    "CN" = CN,
-    "NRW" = NRW,
-    "PF" = PF
-  )
-  
-  #Check for missing arguments in function
-  form.args <- methods::formalArgs(NET.FUNC)[-which(methods::formalArgs(NET.FUNC) == "data")]
-  
-  #Get arguments
-  if(any(!form.args %in% names(methodArgs))){
-    
-    #Find which arguments are needed
-    need.args <- form.args[which(!form.args %in% names(methodArgs))]
-    
-    #Get default arguments for methods
-    if(method == "CN"){
-      
-      if("window" %in% need.args){methodArgs$window <- 2}
-      if("alpha" %in% need.args){methodArgs$alpha <- .05}
-      if("enrich" %in% need.args){methodArgs$enrich <- FALSE}
-      
-    }else if(method == "NRW"){
-      
-      if("type" %in% need.args){methodArgs$type <- "num"}
-      if("threshold" %in% need.args){methodArgs$threshold <- 0}
-      
-    }else if(method == "TMFG"){
-      
-      if("depend" %in% need.args){methodArgs$depend <- FALSE}
-      
-    }
-  }
-  
-  #Check for type of bootstrap
-  if(type == "node"){
-    if(length(covars) != 0){
-      message("Covariates will not be used with node-wise bootstrap.")
-    }
-  }
-  
-  #Number of nodes in full data
-  full <- unique(unlist(lapply(datalist,ncol)))
-  
-  #Initialize full resampling list
-  full_rand <- list()
-  
-  #Initialize full covariates list
-  if(length(covars) != 0){
-    full_covar <- list()
-  }
-  
-  #######################
-  #### GENERATE DATA ####
-  #######################
-  
-  #Let user know data is being generated
-  message("Generating data...", appendLF = FALSE)
-  
-  for(i in 1:length(name)){
-    
-    #Initialize count
-    count <- 0
-    
-    #Initialize new data list
-    new <- list()
-    
-    #Initialize new covariates list
-    if(length(covars) != 0){
-      covar <- list()
-    }
-    
-    #Initialize resampling list
-    rand <- list()
-    
-    repeat{
-      
-      #Increase count
-      count <- count + 1
-      
-      if(type == "node"){
-        
-        #Check that all data have same number of nodes
-        if(length(unique(unlist(lapply(datalist,ncol))))!=1)
-        {stop("bootSemNeT(): All datasets must have the same number of columns")}
-        
-        #Randomly sample nodes
-        rand[[count]] <- sample(1:full, (full*prop), replace=FALSE)
-        
-        #Input into data list
-        new[[count]] <- get(name[i], envir = environment())[,rand[[count]]]
-        
-      }else if(type == "case"){
-        
-        #Randomly sample nodes
-        rand[[count]] <- sample(1:nrow(get(name[i], envir = environment())),
-                                nrow(get(name[i], envir = environment())),
-                                replace=TRUE)
-        
-        #Input into data list
-        new[[count]] <- get(name[i], envir = environment())[rand[[count]],]
-        
-        #Input into covar list
-        if(length(covars) != 0){
-          #Set up covariates
-          covs <- covars[[name[i]]][rand[[count]],]
-          #Check for matrix
-          if(!is.matrix(covs) & !is.data.frame(covs)){
-            covs <- matrix(covs, ncol = 1)
-          }
-          #Ensure column names
-          {  colnames(covs) <- colnames(covars[[name[i]]])
+        #Get default arguments for methods
+        if(method == "CN"){
             
-            covar[[count]] <- covs
-          }
-          
-        }
-        
-        # Check for TMFG
-        if(method == "TMFG"){
-          
-          # Check for Pearson's correlation
-          if(sim == "cor"){
+            if("window" %in% need.args){methodArgs$window <- 2}
+            if("alpha" %in% need.args){methodArgs$alpha <- .05}
+            if("enrich" %in% need.args){methodArgs$enrich <- FALSE}
             
-            # Check for binary matrix
-            if(all(apply(new[[count]], 2, is.numeric))){
-              
-              # Check for no variance
-              variance <- apply(new[[count]], 2, function(x){all(x == 1)})
-              
-              # Reduce count if no variance in response
-              if(any(variance)){count <- count - 1}
-              
-            }
+        }else if(method == "NRW"){
             
-          }
-          
+            if("type" %in% need.args){methodArgs$type <- "num"}
+            if("threshold" %in% need.args){methodArgs$threshold <- 0}
+            
+        }else if(method == "TMFG"){
+            
+            if("depend" %in% need.args){methodArgs$depend <- FALSE}
+            
         }
-        
-      }
-      
-      if(count == iter){break}
-      
     }
     
-    #Insert data list
-    assign(paste("dl.", name[i] ,sep=""), new, envir = environment())
+    #Number of nodes in full data
+    full <- unique(unlist(lapply(datalist,ncol)))
     
-    #Assign resampling indices
-    full_rand[[name[i]]] <- rand
+    #######################
+    #### GENERATE DATA ####
+    #######################
     
-    #Assign covariates indices
-    if(length(covars) != 0){
-      full_covar[[name[i]]] <- covar  
-    }
+    #Let user know data is being generated
+    message("Generating data...", appendLF = FALSE)
     
-  }
-  
-  #Let user know data generation is finished
-  message("done\n")
-  
-  ##################
-  #### EQUATING ####
-  ##################
-  
-  #Check for appropriate conditions
-  if(method == "TMFG" && type == "case"){
-    
-    #Let user know the samples are being equated
-    message("Equating samples...", appendLF = FALSE)
-    
-    # If missing minCase
-    if("minCase" %in% names(methodArgs))
-    {minCase <- methodArgs$minCase
-    }else{minCase <- 2}
-    
-    # Finalize each sample
     for(i in 1:length(name))
     {
-      assign(
-        paste("dl.",name[i],sep=""),
+        #Initialize count
+        count <- 0
         
-        lapply(get(paste("dl.",name[i],sep=""), envir = environment()),
-               FUN = finalize,
-               minCase = minCase),
+        #Initialize new data list
+        new <- list()
         
-        envir = environment()
-      )
-    }
+        repeat{
+            
+            #Increase count
+            count <- count + 1
+            
+            if(type == "node")
+            {
+                #Check that all data have same number of nodes
+                if(length(unique(unlist(lapply(datalist,ncol))))!=1)
+                {stop("bootSemNeT(): All datasets must have the same number of columns")}
+                
+                #Randomly sample nodes
+                rand <- sample(1:full, (full*prop), replace=FALSE)
+                
+                #Input into data list
+                new[[count]] <- get(name[i], envir = environment())[,rand]
+                
+            }else if(type == "case")
+            {
+                #Randomly sample nodes
+                rand <- sample(1:nrow(get(name[i], envir = environment())),
+                               nrow(get(name[i], envir = environment())),
+                               replace=TRUE)
+                
+                #Input into data list
+                new[[count]] <- get(name[i], envir = environment())[rand,]
+            }
+            
+            # Check for TMFG
+            if(method == "TMFG"){
+                
+                # Check for binary matrix
+                if(all(apply(new[[count]], 2, is.numeric))){
+                    
+                    # Check for no variance
+                    variance <- apply(new[[count]], 2, function(x){all(x == 1)})
+                    
+                    # Reduce count if no variance in response
+                    if(any(variance)){count <- count - 1}
+                    
+                }
+                
+            }
+            
+            if(count == iter)
+            {break}
+        }
     
-    if(length(name) > 1){
-      
-      #Get data to equate into a single list
-      eq.dat <- mget(paste("dl.",name,sep=""), envir = environment())
-      
-      #Initialize equating list
-      eq <- vector("list", length = iter)
-      
-      for(i in 1:iter)
-      {eq[[i]] <- equateShiny(lapply(eq.dat, function(x){x[[i]]}))}
-      
-      for(i in 1:length(name))
-      {
-        assign(
-          paste("dl.",name[i],sep=""),
-          unlist(lapply(eq, function(x){x[paste("dl.",name[i],sep="")]}), recursive = FALSE),
-          envir = environment()
-        )
-      }
+        #Insert data list
+        assign(paste("dl.",name[i],sep=""),new, envir = environment())
     }
     
     #Let user know data generation is finished
     message("done\n")
-  }
-  
-  ############################
-  #### COMPUTE SIMILARITY ####
-  ############################
-  
-  if(method == "TMFG"){
     
-    #Let user know simliarity is being computed
-    message("Computing similarity measures...\n", appendLF = FALSE)
+    ##################
+    #### EQUATING ####
+    ##################
+    
+    #Check for appropriate conditions
+    if(method == "TMFG" && type == "case")
+    {
+        #Let user know the samples are being equated
+        message("Equating samples...", appendLF = FALSE)
+        
+        # If missing minCase
+        if("minCase" %in% names(methodArgs))
+        {minCase <- methodArgs$minCase
+        }else{minCase <- 2}
+        
+        # Finalize each sample
+        for(i in 1:length(name))
+        {
+            assign(
+                paste("dl.",name[i],sep=""),
+                
+                lapply(get(paste("dl.",name[i],sep=""), envir = environment()),
+                       FUN = finalize,
+                       minCase = minCase),
+                
+                envir = environment()
+            )
+        }
+        
+        if(length(name) > 1)
+        {
+            #Get data to equate into a single list
+            eq.dat <- mget(paste("dl.",name,sep=""), envir = environment())
+            
+            #Initialize equating list
+            eq <- vector("list", length = iter)
+            
+            for(i in 1:iter)
+            {eq[[i]] <- equateShiny(lapply(eq.dat, function(x){x[[i]]}))}
+            
+            for(i in 1:length(name))
+            {
+                assign(
+                    paste("dl.",name[i],sep=""),
+                    unlist(lapply(eq, function(x){x[paste("dl.",name[i],sep="")]}), recursive = FALSE),
+                    envir = environment()
+                )
+            }
+        }
+        
+        #Let user know data generation is finished
+        message("done\n")
+    }
+
+    ############################
+    #### COMPUTE SIMILARITY ####
+    ############################
+    
+    if(method == "TMFG")
+    {
+        #Let user know simliarity is being computed
+        message("Computing similarity measures...\n", appendLF = FALSE)
+        
+        #Parallel processing
+        cl <- parallel::makeCluster(cores)
+        
+        #Export datalist
+        parallel::clusterExport(cl = cl, varlist = c(),#paste("dl.",name,sep=""),
+                                envir = environment())
+        
+        for(i in 1:length(name))
+        {
+            #Compute similarity
+            newSim <- pbapply::pblapply(X = get(paste("dl.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = similarity,
+                                        method = sim)
+            
+            #Insert similarity list
+            assign(paste("sim.",name[i],sep=""),newSim, envir = environment())
+        }
+        
+        #Stop Cluster
+        parallel::stopCluster(cl)
+    }else{
+        for(i in 1:length(name))
+        {
+            #Insert similarity list
+            assign(paste("sim.",name[i],sep=""),
+                   get(paste("dl.",name[i],sep=""), envir = environment()))
+        }
+    }
+    
+    ############################
+    #### CONSTRUCT NETWORKS ####
+    ############################
+    
+    #Let user know networks are being computed
+    message("Estimating networks...\n", appendLF = FALSE)
     
     #Parallel processing
     cl <- parallel::makeCluster(cores)
     
     #Export datalist
-    parallel::clusterExport(cl = cl, varlist = c(),#paste("dl.",name,sep=""),
+    parallel::clusterExport(cl = cl, varlist = #c(paste("sim.",name,sep=""),
+                                c("NET.FUNC"),
                             envir = environment())
     
-    for(i in 1:length(name)){
-      
-      #Compute similarity
-      newSim <- pbapply::pblapply(X = get(paste("dl.",name[i],sep=""), envir = environment()),
-                                  cl = cl,
-                                  FUN = similarity,
-                                  method = sim)
-      
-      #Insert similarity list
-      assign(paste("sim.",name[i],sep=""),newSim, envir = environment())
+    if(method == "TMFG")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        depend = methodArgs$depend)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
+    }else if(method == "CN")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        window = methodArgs$window,
+                                        alpha = methodArgs$alpha)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
+    }else if(method == "NRW")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC,
+                                        type = methodArgs$type,
+                                        threshold = methodArgs$threshold)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
+    }else if(method == "PF")
+    {
+        for(i in 1:length(name))
+        {
+            #Compute networks
+            newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
+                                        cl = cl,
+                                        FUN = NET.FUNC)
+            
+            #Insert network list
+            assign(paste("Semnet.",name[i],sep=""), newNet)
+        }
+        
     }
     
     #Stop Cluster
     parallel::stopCluster(cl)
-  }else{
     
-    for(i in 1:length(name)){
-      
-      #Insert similarity list
-      assign(paste("sim.",name[i],sep=""),
-             get(paste("dl.",name[i],sep=""), envir = environment()))
-    }
-  }
-  
-  ############################
-  #### CONSTRUCT NETWORKS ####
-  ############################
-  
-  #Let user know networks are being computed
-  message("Estimating networks...\n", appendLF = FALSE)
-  
-  #Parallel processing
-  cl <- parallel::makeCluster(cores)
-  
-  #Export datalist
-  parallel::clusterExport(cl = cl, varlist = #c(paste("sim.",name,sep=""),
-                            c("NET.FUNC"),
-                          envir = environment())
-  
-  ## THIS CAN BE CODED MORE EFFICIENCTLY -- TO DO ###
-  
-  if(method == "TMFG"){
+    ##############################
+    #### COMPUTING STATISTICS ####
+    ##############################
     
-    for(i in 1:length(name)){
-      
-      #Compute networks
-      newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
-                                  cl = cl,
-                                  FUN = NET.FUNC,
-                                  depend = methodArgs$depend)
-      
-      #Insert network list
-      assign(paste("Semnet.",name[i],sep=""), newNet)
-      
+    #Let user know network measures are being computed
+    message("Computing network measures...\n", appendLF = FALSE)
+    
+    #Parallel processing
+    cl <- parallel::makeCluster(cores)
+    
+    #Export datalist
+    parallel::clusterExport(cl = cl, varlist = c(),#paste("Semnet.",name[i],sep=""),
+                                envir = environment())
+    
+    for(i in 1:length(name))
+    {
+        #Compute network measures
+        netMeas <- pbapply::pbsapply(X = get(paste("Semnet.",name[i],sep=""), envir = environment()),
+                                     cl = cl,
+                                     FUN = semnetmeas
+                                     )
+        
+        #Insert network measures list
+        assign(paste("meas.",name[i],sep=""),netMeas)
     }
     
-  }else if(method == "CN"){
-    
-    for(i in 1:length(name)){
-      
-      #Compute networks
-      newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
-                                  cl = cl,
-                                  FUN = NET.FUNC,
-                                  window = methodArgs$window,
-                                  alpha = methodArgs$alpha)
-      
-      #Insert network list
-      assign(paste("Semnet.",name[i],sep=""), newNet)
-      
+    #Stop Cluster
+    parallel::stopCluster(cl)
+        
+    #Compute summary statistics
+    summ.table <- function (data, n)
+    {
+        stats <- list()
+        stats$mean <- rowMeans(data, na.rm = TRUE)
+        stats$stdev <- apply(data, 1, sd, na.rm = TRUE)
+        stats$se <- stats$stdev/sqrt(n)
+        stats$lower <- stats$mean - (1.96 * stats$se)
+        stats$upper <- stats$mean + (1.96 * stats$se)
+        
+        return(stats)
     }
     
-  }else if(method == "NRW"){
+    #Initialize bootlist
+    bootlist <- list()
     
-    for(i in 1:length(name)){
-      
-      #Compute networks
-      newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
-                                  cl = cl,
-                                  FUN = NET.FUNC,
-                                  type = methodArgs$type,
-                                  threshold = methodArgs$threshold)
-      
-      #Insert network list
-      assign(paste("Semnet.",name[i],sep=""), newNet)
-      
+    #Insert results
+    for(i in 1:length(name))
+    {
+        bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("Semnet.",name[i],sep=""), envir = environment())
+        bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
+        bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
     }
     
-  }else if(method == "PF"){
+    #Insert proportion remaining and iterations
+    if(type == "node")
+    {bootlist$prop <- prop}
     
-    for(i in 1:length(name)){
-      
-      #Compute networks
-      newNet <- pbapply::pblapply(X = get(paste("sim.",name[i],sep=""), envir = environment()),
-                                  cl = cl,
-                                  FUN = NET.FUNC)
-      
-      #Insert network list
-      assign(paste("Semnet.",name[i],sep=""), newNet)
-      
-    }
+    bootlist$iter <- iter
     
-  }
-  
-  #Stop Cluster
-  parallel::stopCluster(cl)
-  
-  ##############################
-  #### COMPUTING STATISTICS ####
-  ##############################
-  
-  #Let user know network measures are being computed
-  message("Computing network measures...\n", appendLF = FALSE)
-  
-  #Parallel processing
-  cl <- parallel::makeCluster(cores)
-  
-  #Export datalist
-  parallel::clusterExport(cl = cl, varlist = c(),#paste("Semnet.",name[i],sep=""),
-                          envir = environment())
-  
-  for(i in 1:length(name)){
+    bootlist$type <- type
     
-    #Compute network measures
-    netMeas <- pbapply::pbsapply(X = get(paste("Semnet.",name[i],sep=""), envir = environment()),
-                                 cl = cl,
-                                 FUN = semnetmeas
-    )
+    class(bootlist) <- "bootSemNeT"
     
-    #Insert network measures list
-    assign(paste("meas.",name[i],sep=""),netMeas)
-    
-  }
-  
-  #Stop Cluster
-  parallel::stopCluster(cl)
-  
-  #Compute summary statistics
-  summ.table <- function (data, n){
-    
-    stats <- list()
-    stats$mean <- rowMeans(data, na.rm = TRUE)
-    stats$stdev <- apply(data, 1, sd, na.rm = TRUE)
-    stats$se <- stats$stdev/sqrt(n)
-    stats$lower <- stats$mean - (1.96 * stats$se)
-    stats$upper <- stats$mean + (1.96 * stats$se)
-    
-    return(stats)
-    
-  }
-  
-  #Initialize bootlist
-  bootlist <- list()
-  
-  #Insert results
-  for(i in 1:length(name)){
-    
-    bootlist[[paste(name[i],"Net",sep="")]] <- get(paste("Semnet.",name[i],sep=""), envir = environment())
-    bootlist[[paste(name[i],"Meas",sep="")]] <- get(paste("meas.",name[i],sep=""), envir = environment())
-    bootlist[[paste(name[i],"Summ",sep="")]] <- summ.table(get(paste("meas.",name[i],sep=""), envir = environment()), iter)
-    
-  }
-  
-  #Insert proportion remaining and iterations
-  if(type == "node"){
-    bootlist$prop <- prop
-  }
-  
-  bootlist$iter <- iter
-  
-  bootlist$type <- type
-  
-  bootlist$resampling <- full_rand
-  
-  if(length(covars) != 0){
-    bootlist$covariates <- full_covar
-  }
-  
-  class(bootlist) <- "bootSemNeT"
-  
-  return(bootlist)
-    
-    
-    
+    return(bootlist)
 }
 #----

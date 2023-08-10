@@ -4,15 +4,11 @@
 \alias{randnet.test}
 \title{Test Against Random Networks}
 \usage{
-randnet.test(..., input_list = NULL, iter, cores)
+randnet.test(..., iter, cores)
 }
 \arguments{
 \item{...}{Matrices or data frames.
 Semantic networks to be compared against random networks}
-
-\item{input_list}{List.
-Bypasses \code{...} argument in favor of using a list
-as an input}
 
 \item{iter}{Numeric.
 Number of iterations in bootstrap.

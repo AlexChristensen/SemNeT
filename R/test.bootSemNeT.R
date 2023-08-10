@@ -22,12 +22,6 @@
 #' and edges in the networks and includes adjusted means
 #' and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}}
 #' 
-#' @param covars Boolean.
-#' If covariates were included in \code{\link[SemNeT]{bootSemNeT}},
-#' should they be included in the ANCOVA?
-#' Defaults to \code{TRUE}.
-#' Set to \code{FALSE} to perform analysis without covariates
-#' 
 #' @param measures Character.
 #' Network measures to be tested.
 #' 
@@ -146,10 +140,9 @@
 #' 
 #' @export
 #Test: Bootstrapped Network Statistics----
-# Updated 06.10.2022
+# Updated 22.06.2021
 test.bootSemNeT <- function (...,
                              test = c("ANCOVA", "ANOVA", "t-test"),
-                             covars = TRUE,
                              measures = c("ASPL", "CC", "Q"),
                              formula = NULL, groups = NULL)
 {
@@ -172,41 +165,21 @@ test.bootSemNeT <- function (...,
     name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
     attr(name, "na.action") <- NULL
     
-    #Remove resampling and covariates
-    name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
-    attr(name, "na.action") <- NULL
-    
     #Check for groups
-    if(is.null(groups)){
-        groups <- name
-    }
+    if(is.null(groups))
+    {groups <- name}
     
-    if(!is.matrix(groups)){
-        groups <- as.matrix(groups)
-    }
-    
-    #Check for ANOVA and ANCOVA
-    if(test == "ANOVA" | test == "ANCOVA"){
-        groups <- unique(groups)
-    }
-    
-    #Check for groups names
-    if(is.null(colnames(groups))){
-      colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))
-    }
+    if(!is.matrix(groups))
+    {groups <- as.matrix(groups)}
     
     #Check for wrong test
     if(ncol(groups) > 1){
         if(test == "t-test"){
             stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
         }
-    }else if(nrow(unique(groups)) < 3){
+    }else if(nrow(groups) < 3){
         if(test == "ANOVA"){
-            stop("Number of groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
-        }
-    }else if(nrow(unique(groups)) > 2){
-        if(test == "t-test"){
-            stop("Number of groups not compatiable with t-tests.\n\nPlease use: 'test = \"ANOVA\"' OR 'test = \"ANCOVA\"'")
+            stop("Groups not compatiable with ANOVAs.\n\nPlease use: 'test = \"t-test\"'")
         }
     }
     
@@ -217,16 +190,9 @@ test.bootSemNeT <- function (...,
     type <- input[[1]]$type
     
     #Proportions
-    if(type == "node"){
-        props <- paste(
-            "Proportion (",
-            unlist(lapply(input, function(x){x$prop})),
-            "0)",
-            sep = ""
-        )
-    }else{
-        props <- "Case"
-    }
+    if(type == "node")
+    {props <- paste("Proportion (", unlist(lapply(input, function(x){x$prop})), "0)", sep = "")
+    }else{props <- "Case"}
     
     #Initialize result list
     res <- list()
@@ -234,18 +200,12 @@ test.bootSemNeT <- function (...,
     #Initialize temporary results list
     temp.res <- list()
     
-    for(i in 1:length(input)){
-        temp.res[[props[i]]] <- suppressPackageStartupMessages(
-            boot.one.test(
-                bootSemNeT.obj = input[[i]],
-                test = test,
-                covars = covars,
-                measures = measures,
-                formula = formula,
-                groups = groups
-            )
-        )
-    }
+    for(i in 1:length(input))
+    {temp.res[[props[i]]] <- suppressPackageStartupMessages(boot.one.test(input[[i]],
+                                                                          test = test,
+                                                                          measures = measures,
+                                                                          formula = formula,
+                                                                          groups = groups))}
     
     
     #Check for ANOVA
@@ -253,7 +213,7 @@ test.bootSemNeT <- function (...,
         
         temp.res <- lapply(temp.res, function(x){
             lapply(x, function(x){
-                names(x) <- c("ANOVA", "adjustedMeans", "HSD")
+                names(x) <- c("ANOVA", "Means", "HSD")
                 return(x)
             })
         })
@@ -269,17 +229,16 @@ test.bootSemNeT <- function (...,
         #Create tables of results
         ##Get ANCOVA values
         
-        if(ncol(groups) == 1){
-            
+        if(ncol(groups) == 1)
+        {
             acov.vals <- lapply(temp.res, function(x, extra){
                 lapply(x, function(x, extra){
-                    x$ANCOVA[which(x$ANCOVA$Term == colnames(groups)),]
+                    x$ANCOVA[which(x$ANCOVA$Term == "Group"),]
                 })
             })
-            
         }
         
-        ##Get Residual degrees of freedom
+        ##Get Residual degress of freedom
         res.df <- lapply(temp.res, function(x){
             lapply(x, function(x){
                 x$ANCOVA[which(x$ANCOVA$Term == "Residuals"),"df"]
@@ -287,43 +246,30 @@ test.bootSemNeT <- function (...,
         })
         
         ##Get adjusted mean values
-        if(ncol(groups) == 1){
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- as.vector(x$adjustedMeans[[colnames(groups)]]$fit)
-                    names(means) <- x$adjustedMeans$variables[[colnames(groups)]]$levels
-                    return(means)
-                })
-            }), recursive = FALSE)  
-            
-            
-            adj.vals <- t(simplify2array(adj.vals))
-            
-            if(length(row.names(adj.vals)) > length(measures)){
-                row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
-                colnames(adj.vals) <- paste("Group", 1:nrow(groups))
-            }else{
-                row.names(adj.vals) <- measures
-                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans[[colnames(groups)]]$variables[[colnames(groups)]]$levels
-            }
-            
-        }else{
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- x$adjustedMeans
-                    return(means[[length(means)]])
-                })
-            }), recursive = FALSE)   
-        }
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$adjustedMeans$fit)
+                names(means) <- x$adjustedMeans$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
+        
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
+        {
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
         
         #Insert adjusted means
         res$adjustedMeans <- adj.vals
         
-        if(ncol(groups) == 1){
-            
+        if(ncol(groups) == 1)
+        {
             ##Loop through to get tables
-            if(length(acov.vals) == 1){
-                
+            if(length(acov.vals) == 1)
+            {
                 #Get measures
                 meas.val <- unlist(acov.vals, recursive = FALSE)
                 #Table measures
@@ -331,13 +277,13 @@ test.bootSemNeT <- function (...,
                 #Adjusted means
                 tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.df), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.df), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
                 # Provided direction if two groups
-                if(length(name) == 2){
-                    
+                if(length(name) == 2)
+                {
                     #Add direction
                     Direction <- apply(tab.acov, 1, function(x, name){
                         p.num <- as.numeric(gsub("< ", "", x["p-value"]))
@@ -354,7 +300,7 @@ test.bootSemNeT <- function (...,
                 }
                 
                 #Change column name
-                colnames(tab.acov)[length(name)+1] <- "Residual df"
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
                 colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                 #Change row names
                 row.names(tab.acov) <- measures
@@ -364,8 +310,8 @@ test.bootSemNeT <- function (...,
                 
             }else{
                 
-                for(j in 1:length(measures)){
-                    
+                for(j in 1:length(measures))
+                {
                     #Get measures
                     meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
                     #Get residual degrees of freedom
@@ -375,7 +321,7 @@ test.bootSemNeT <- function (...,
                     #Adjusted means
                     tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
                     #Add residual degrees of freedom
-                    tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.val), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+2))], unlist(res.val), tab.acov[,(length(names)+3):ncol(tab.acov)]), stringsAsFactors = FALSE)
                     #Recheck names
                     name <- colnames(tab.acov)[1:length(name)]
                     
@@ -398,7 +344,7 @@ test.bootSemNeT <- function (...,
                     }
                     
                     #Change column name
-                    colnames(tab.acov)[length(name)+1] <- "Residual df"
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
                     colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
                     #Change row names
                     row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
@@ -419,7 +365,8 @@ test.bootSemNeT <- function (...,
         #Create tables of results
         ##Get ANOVA values
         
-        if(ncol(groups) == 1){
+        if(ncol(groups) == 1)
+        {
             acov.vals <- lapply(temp.res, function(x, extra){
                 lapply(x, function(x, extra){
                     x$ANOVA[which(x$ANOVA$Term == "Group"),]
@@ -435,58 +382,44 @@ test.bootSemNeT <- function (...,
         })
         
         ##Get adjusted mean values
-        if(ncol(groups) == 1){
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- as.vector(x$adjustedMeans$Group$fit)
-                    names(means) <- x$adjustedMeans$variables$Group$levels
-                    return(means)
-                })
-            }), recursive = FALSE)  
-            
-            
-            adj.vals <- t(simplify2array(adj.vals))
-            
-            if(length(row.names(adj.vals)) > length(measures)){
-                row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
-                colnames(adj.vals) <- paste("Group", 1:nrow(groups))
-            }else{
-                row.names(adj.vals) <- measures
-                colnames(adj.vals) <- temp.res[[1]][[1]]$adjustedMeans$Group$variables$Group$levels
-            }
-            
-        }else{
-            adj.vals <- unlist(lapply(temp.res, function(x){
-                lapply(x, function(x){
-                    means <- x$adjustedMeans
-                    return(means[[length(means)]])
-                })
-            }), recursive = FALSE)   
-        }
+        adj.vals <- unlist(lapply(temp.res, function(x){
+            lapply(x, function(x){
+                means <- as.vector(x$Means$fit)
+                names(means) <- x$Means$variables$Group$levels
+                means
+            })
+        }), recursive = FALSE)
         
- 
+        adj.vals <- t(simplify2array(adj.vals))
+        
+        if(length(row.names(adj.vals)) > length(measures))
+        {
+            row.names(adj.vals) <- paste(rep(gsub("\\)", "", gsub("Proportion \\(", "", props)), each = length(measures)), measures)
+            colnames(adj.vals) <- paste("Group", 1:nrow(groups))
+        }else{row.names(adj.vals) <- measures}
+        
         #Insert adjusted means
-        res$adjustedMeans <- adj.vals
+        res$Means <- adj.vals
         
-        if(ncol(groups) == 1){
-            
+        if(ncol(groups) == 1)
+        {
             ##Loop through to get tables
-            if(length(acov.vals) == 1){
-                
+            if(length(acov.vals) == 1)
+            {
                 #Get measures
                 meas.val <- unlist(acov.vals, recursive = FALSE)
                 #Table measures
-                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+                tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
                 #Adjusted means
                 tab.acov <- cbind(round(adj.vals, 3), tab.acov)
                 #Add residual degrees of freedom
-                tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.df), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.df), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
                 #Recheck names
                 name <- colnames(tab.acov)[1:length(name)]
                 
                 # Provided direction if two groups
-                if(length(name) == 2){
-                    
+                if(length(name) == 2)
+                {
                     #Add direction
                     Direction <- apply(tab.acov, 1, function(x, name){
                         p.num <- as.numeric(gsub("< ", "", x["p-value"]))
@@ -503,8 +436,8 @@ test.bootSemNeT <- function (...,
                 }
                 
                 #Change column name
-                colnames(tab.acov)[length(name)+1] <- "Residual df"
-                colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+                colnames(tab.acov)[length(name)+2] <- "Residual df"
+                colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
                 #Change row names
                 row.names(tab.acov) <- measures
                 
@@ -513,18 +446,18 @@ test.bootSemNeT <- function (...,
                 
             }else{
                 
-                for(j in 1:length(measures)){
-                    
+                for(j in 1:length(measures))
+                {
                     #Get measures
                     meas.val <- lapply(acov.vals, function(x){x[[measures[j]]]})
                     #Get residual degrees of freedom
                     res.val <- lapply(res.df, function(x){x[[measures[j]]]})
                     #Table measures
-                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1:2)]
+                    tab.acov <- t(simplify2array(meas.val, higher = FALSE))[,-c(1)]
                     #Adjusted means
                     tab.acov <- cbind(round(adj.vals[grep(measures[[j]], row.names(adj.vals)),], 3), tab.acov)
                     #Add residual degrees of freedom
-                    tab.acov <- as.data.frame(cbind(tab.acov[,1:length(name)], unlist(res.val), tab.acov[,(length(name)+2):ncol(tab.acov)]), stringsAsFactors = FALSE)
+                    tab.acov <- as.data.frame(cbind(tab.acov[,c(1:(length(names)+3))], unlist(res.val), tab.acov[,(length(names)+4):ncol(tab.acov)]), stringsAsFactors = FALSE)
                     #Recheck names
                     name <- colnames(tab.acov)[1:length(name)]
                     
@@ -547,8 +480,8 @@ test.bootSemNeT <- function (...,
                     }
                     
                     #Change column name
-                    colnames(tab.acov)[length(name)+1] <- "Residual df"
-                    colnames(tab.acov)[1:length(name)] <- paste("Adj. M.", name)
+                    colnames(tab.acov)[length(name)+2] <- "Residual df"
+                    colnames(tab.acov)[1:length(name)] <- paste("Mean", name)
                     #Change row names
                     row.names(tab.acov) <- gsub(paste(" ", measures[[j]], sep = ""), "", row.names(tab.acov))
                     

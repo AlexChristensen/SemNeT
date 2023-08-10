@@ -1,16 +1,8 @@
 Changes in version 1.4.4
 
-o UPDATE: citation for SemNA pipeline (in Shiny app)
+o FIX: minor fix to get back on CRAN
 
-o UPDATE: functionality for free association tasks from *SemNetCleaner*'s `textcleaner`
-
-o ADD: Forward Flow for free association and verbal fluency data can be computed (see `?forward_flow`)
-
-o CHANGE: plotting from *qgraph* to *GGally*
-
-o CHANGE: semantic space downloads from *googledrive* rather than *osfr* (some issues kept popping up with OSF)
-
-o UPDATE: `forward_flow` now outputs mean flow, individual flow (by response/cue), and mean cue flow (`"free"` only) 
+o TODO: major refactor for the entire package to increase future reliability
 
 
 Changes in version 1.4.3

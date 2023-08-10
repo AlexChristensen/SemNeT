@@ -2,65 +2,6 @@
 #### MANY FUNCTIONS ####
 #%%%%%%%%%%%%%%%%%%%%%%#
 
-#' Obtains minimum and maximum of number sequences in a single vector
-#' @noRd
-#
-# Minimums and maximums of a sequence
-# Updated 06.04.2022
-seq_min_max <- function(sequence)
-{
-  # Determine sequences
-  ## Obtain differences between values
-  value_differences <- diff(sequence)
-  
-  ## Identify differences equal to one
-  if(all(value_differences == 1)){
-    
-    # Obtain minimum and maximum
-    minimum <- min(sequence, na.rm = TRUE)
-    maximum <- max(sequence, na.rm = TRUE)
-    
-  }else{
-    
-    ## Determine breaks in sequences
-    breaks <- which(value_differences != 1)
-    
-    ## Add end of sequence
-    breaks <- c(breaks, length(sequence))
-    
-    ## Set up start of breaks
-    starts <- (breaks + 1) - c(breaks[1], diff(breaks))
-    
-    ## Obtain sequences
-    split_sequences <- lapply(1:length(breaks), function(i){
-      return(sequence[starts[i]:breaks[i]])
-    })
-    
-    ## Obtain lengths
-    lengths <- unlist(lapply(split_sequences, length))
-    
-    ## Obtain minimums
-    minimum <- unlist(lapply(split_sequences, min, na.rm = TRUE))
-    
-    ## Obtain maximums
-    maximum <- unlist(lapply(split_sequences, max, na.rm = TRUE))
-    
-  }
-  
-  # Return list
-  res <- list()
-  res$min <- minimum
-  res$max <- maximum
-  if(exists("breaks", envir = environment())){
-    res$breaks  <- breaks
-    res$starts <- starts
-    res$lengths <- lengths
-  }
-  
-  return(res)
-  
-}
-
 #' @noRd
 # Partial eta squared
 # Updated 02.09.2020
@@ -68,15 +9,10 @@ partial.eta.sq <- function(ESS, RSS)
 {ESS / (ESS + RSS)}
 
 #' @noRd
-#' @importFrom stats var
 # Cohen's d
-# Updated 01.08.2021
+# Updated 18.04.2021
 d <- function(samp1, samp2)
 {
-  # Remove NAs
-  samp1 <- samp1[!is.na(samp1)]
-  samp2 <- samp2[!is.na(samp2)]
-  
   # Means
   m1 <- mean(samp1, na.rm = TRUE)
   m2 <- mean(samp2, na.rm = TRUE)
@@ -84,17 +20,13 @@ d <- function(samp1, samp2)
   # Numerator
   num <- m1 - m2
   
-  # Degrees of freedom
-  df1 <- length(samp1) - 1
-  df2 <- length(samp2) - 1
-  
-  # Variance
-  var1 <- var(samp1, na.rm = TRUE)
-  var2 <- var(samp2, na.rm = TRUE)
+  # Standard deviations
+  sd1 <- sd(samp1, na.rm = TRUE)
+  sd2 <- sd(samp2, na.rm = TRUE)
   
   # Denominator
   denom <- sqrt(
-    ((df1 * var1) + (df2 * var2)) / (df1 + df2)
+    (sd1^2 + sd2^2) / 2
   )
   
   return(abs(num / denom))
@@ -452,90 +384,9 @@ binarize <- function (A)
   return(bin)
 }
 
-#' Convert Network(s) to igraph's Format
-#' @description Converts single or multiple networks into \code{\link{igraph}}'s format for network analysis
-#' 
-#' @param A Adjacency matrix (network matrix) or brain connectivity array
-#' (from \code{\link[NetworkToolbox]{convertConnBrainMat}})
-#' 
-#' @param neural Is input a brain connectivity array (i.e., m x m x n)?
-#' Defaults to \code{FALSE}.
-#' Set to \code{TRUE} to convert each brain connectivity matrix
-#' 
-#' @return Returns a network matrix in \code{\link{igraph}}'s format or
-#' returns a list of brain connectivity matrices each of which have been
-#' convert to \code{\link{igraph}}'s format
-#' 
-#' @examples
-#' # Pearson's correlation only for CRAN checks
-#' A <- TMFG(neoOpen, normal = FALSE)$A
-#' 
-#' igraphNetwork <- convert2igraph(A)
-#' 
-#' \dontrun{ 
-#' neuralarray <- convertConnBrainMat()
-#' 
-#' igraphNeuralList <- convert2igraph(neuralarray, neural = TRUE)
-#' }
-#' 
-#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
-#' 
-#' @noRd
-# Convert matrices to igraph format (from NetworkToolbox)
-# Updated 02.09.2020
-convert2igraph <- function (A, neural = FALSE)
-{
-  if(!neural)
-  {
-    net <- igraph::as.igraph(qgraph::qgraph(A,DoNotPlot=TRUE))
-    return(net)
-  }else if(neural)
-  {
-    netlist <- list()
-    
-    n<-length(A)/nrow(A)/ncol(A)
-    
-    pb <- txtProgressBar(max=n, style = 3)
-    
-    for(i in 1:n)
-    {
-      netlist[[i]] <- igraph::as.igraph(qgraph::qgraph(A[,,i],DoNotPlot=TRUE))
-      setTxtProgressBar(pb, i)
-    }
-    close(pb)
-    
-    return(netlist)
-  }
-}
-
 #%%%%%%%%%%%%%#
 #### PLOTS ####
 #%%%%%%%%%%%%%#
-
-#' @noRd
-# Rescale edges for GGally
-# For plots
-# Updated 17.01.2021
-rescale.edges <- function (network, size)
-{
-  # Set rescaling
-  scaling <- seq(0, 1, .000001) * size
-  names(scaling) <- seq(0, 1, .000001)
-  
-  # Vectorize edges
-  edges <- round(as.vector(as.matrix(network)), 5)
-  
-  # Get absolute edges
-  abs.edges <- abs(edges)
-  
-  # Get edge signs
-  signs.edges <- sign(edges)
-  
-  # Rescale edges
-  rescaled.edges <- unname(scaling[as.character(abs.edges)])
-  
-  return(rescaled.edges)
-}
 
 #' Organization function for \link[SemNeT]{plot.bootSemNeT}
 #' 
@@ -914,470 +765,6 @@ org.plot <- function (input, len, measures, name, groups, netmeas)
   return(pl)
 }
 
-#%%%%%%%%%%%%%%%%%%%%#
-#### FORWARD FLOW ####
-#%%%%%%%%%%%%%%%%%%%%#
-
-#' @noRd
-# Function for forward flow
-# Updated 26.01.2023
-ff_function <- function(
-  response_matrix,
-  semantic_space,
-  min_cue,
-  min_response,
-  max_response,
-  task,
-  cores
-)
-{
-
-  # Determine whether semantic space is pre-defined
-  predefined <- is(semantic_space, "character")
-  
-  # Check if semantic space is pre-defined
-  if(isTRUE(predefined)){
-    
-    # Identify Google Drive link
-    drive_link <- switch(
-      semantic_space,
-      "baroni" = "1bsDJDs11sBJxc3g2jIcHx7CRZLCPp0or",
-      "cbow" = "16XV3wkSG9Gkki35kGTDz8ulwKZgVMi90",
-      "cbow_ukwac" = "1kQBIkpJS0wHU3l_N-R8K4nFVWDFeCvYt",
-      "en100" = "1Ii98-iBgd_bscXJNxX1QRI18Y11QUMYn",
-      "glove" = "1FMqS0GiIL1KXG5HQFns62IUeYtcP1bKC",
-      "tasa" = "16ISxg7IiQk1LGX6dZkVMbM_cxG9CP1DS"
-    )
-    
-    # Check if semantic space exists
-    if(
-      # not sure why ".RData" is no longer needed (22.09.2022)
-      # !paste(semantic_space, "rdata", sep = ".") %in%
-      # tolower(list.files(tempdir())) &
-      !semantic_space %in% tolower(list.files(tempdir()))
-    ){
-      
-      # Authorize Google Drive
-      googledrive::drive_auth()
-      
-      # Let user know semantic space is downloading
-      message("Downloading semantic space...", appendLF = FALSE)
-      
-      # Download semantic space
-      space_file <- suppressMessages(
-        googledrive::drive_download(
-          googledrive::as_id(drive_link),
-          path = paste(tempdir(), semantic_space, sep = "\\"),
-          overwrite = TRUE
-        )
-      )
-      
-      # Let user know downloading is finished
-      message("done")
-      
-    }else{
-      
-      # Create dummy space file list
-      space_file <- list()
-      space_file$local_path <- paste(
-        tempdir(), "\\",
-        semantic_space,
-        # not sure why ".RData" is no longer needed (22.09.2022)
-        # ".RData",
-        sep = ""
-      )
-      
-    }
-    
-    # Let user know semantic space is loading
-    message("Loading semantic space...", appendLF = FALSE)
-    
-    # Load semantic space
-    load(space_file$local_path)
-    
-    # Let user know loading is finished
-    message("done")
-    
-    # Set semantic space to generic name
-    space <- get(semantic_space)
-    
-  }else{
-    
-    # Set semantic space to generic name
-    space <- semantic_space
-    
-  }
-  
-  # Clear memory
-  sink <- capture.output(gc())
-  
-  # Check for task type
-  if(task == "fluency"){
-    
-    # Create list to parallelize
-    response_list <- lapply(
-      seq_len(nrow(response_matrix)),
-      function(i){
-        # Ensure responses are in a vector
-        na.omit(as.vector(as.matrix(response_matrix[i,])))
-      }
-    )
-    
-    # Shrink semantic space to only unique words
-    ## Obtain unique words
-    unique_words <- unique(unlist(response_list))
-    ## Obtain words that exist in space
-    space_index <- na.omit(match(
-      unique_words, row.names(space)
-    ))
-    
-    ## Shrink space
-    shrink_space <- space[space_index,]
-    
-    # Remove space
-    rm(space)
-    
-    # Clear memory
-    sink <- capture.output(gc())
-    
-    # Let user know forward flow is being computed
-    message("Computing forward flow...")
-    
-    # Parallel processing
-    cl <- parallel::makeCluster(cores)
-    
-    # Run parallelized forward flow
-    results <- pbapply::pblapply(
-      X = response_list,
-      cl = cl,
-      FUN = ff,
-      space = shrink_space
-    )
-    
-    # Organize results
-    results <- list(
-      mean_flow = unlist(lapply(results, function(x){x$mean_flow})),
-      response_flow = lapply(results, function(x){x$flow})
-      
-    )
-    
-    # Stop cluster
-    parallel::stopCluster(cl)
-    
-  }else if(task == "free"){
-    
-    # Obtain response list
-    response_list <- free_response_list(
-      response_matrix,
-      min_response,
-      max_response
-    )
-    
-    # Check for whether response list matches
-    # the number of IDs
-    if(
-      length(response_list) ==
-      length(unique(response_matrix[,"ID"]))
-    ){
-      
-      # Words split in response list
-      split_list <- lapply(
-        unlist(response_list, recursive = FALSE),
-        strsplit, split = " "
-      )
-      
-    }else{
-      # Words split in response list
-      split_list <- lapply(response_list, strsplit, split = " ")
-    }
-
-    # Shrink semantic space to only unique words
-    ## Obtain unique words
-    unique_words <- unique(unlist(split_list))
-    ## Obtain words that exist in space
-    space_index <- na.omit(match(
-      unique_words, row.names(space)
-    ))
-    ## Shrink space
-    shrink_space <- space[space_index,]
-    
-    # Remove space
-    rm(space)
-    
-    # Clear memory
-    sink <- capture.output(gc())
-    
-    # Initialize results list
-    results_list <- vector("list", length(response_list))
-    names(results_list) <- names(response_list)
-    
-    # Parallel processing
-    cl <- parallel::makeCluster(cores)
-    
-    # Loop through participants
-    for(i in seq_along(response_list)){
-      
-      message(
-        paste(
-          "Computing forward flow for ID = ",
-          names(response_list)[i],
-          "...", sep = ""
-        )
-      )
-      
-      # Run parallelized forward flow
-      result <- pbapply::pblapply(
-        X = response_list[[i]],
-        cl = cl,
-        FUN = ff,
-        space = shrink_space
-      )
-      
-      # Define NULL result
-      if(is.null(result)){
-        
-        # Create dummy data frame of mean flow
-        mean_df <- as.matrix(data.frame(
-          ID = names(response_list)[i],
-          FF = NA
-        ))
-        row.names(mean_df) <- NULL
-        
-        # Create dummy data frame of response flow
-        response_df <- as.matrix(data.frame(
-          ID = names(response_list)[i],
-          Cue = NA,
-          FF = NA
-        ))
-        row.names(response_df) <- NULL
-        
-        # Create dummy list of response flow
-        response_flow <- NULL
-        
-      }else{
-        
-        # Create data frame of mean flow
-        mean_df <- as.matrix(data.frame(
-          ID = names(response_list)[i],
-          FF = mean(unlist(lapply(result, function(x){x$flow})), na.rm = TRUE)
-        ))
-        row.names(mean_df) <- NULL
-        
-        # Create data frame of response flow
-        response_df <- as.matrix(data.frame(
-          ID = names(response_list)[i],
-          Cue = names(result),
-          FF = unlist(lapply(result, function(x){x$mean_flow}))
-        ))
-        row.names(response_df) <- NULL
-        
-        # Response flow
-        response_flow <- lapply(result, function(x){x$flow})
-        
-      }
-      
-      
-      # Populate results list
-      results_list[[i]]$mean_flow <- mean_df
-      results_list[[i]]$mean_response_flow <- response_df
-      results_list[[i]]$response_flow <- response_flow
-      
-    }
-    
-    # Stop cluster
-    parallel::stopCluster(cl)
-    
-    # Create long mean results
-    long_mean <- long_results(lapply(results_list, function(x){x$mean_flow}))
-    
-    # Convert to data frame
-    long_mean <- as.data.frame(long_mean)
-    long_mean$ID <- as.character(long_mean$ID)
-    long_mean$FF <- as.numeric(long_mean$FF)
-    
-    # Create long mean response results
-    long_response <- long_results(
-      lapply(results_list, function(x){x$mean_response_flow})
-    )
-    
-    # Convert to data frame
-    long_response <- as.data.frame(long_response)
-    long_response$ID <- as.character(long_response$ID)
-    long_response$Cue <- as.character(long_response$Cue)
-    long_response$FF <- as.numeric(long_response$FF)
-    
-    # Response results
-    response_results <- lapply(results_list, function(x){x$response_flow})
-    
-    # Set final results
-    results <- list(
-      mean_flow = long_mean,
-      mean_response_flow = long_response,
-      response_flow = response_results
-    )
-    
-  }
-  
-  return(results)
-}
-
-
-#' @noRd
-# Function for forward flow
-# Updated 22.09.2022
-ff <- function(responses, space){
-  
-  # Check for responses
-  if(length(responses) <= 1){
-    return(NA)
-  }
-  
-  # Make responses lowercase
-  responses <- tolower(responses)
-  
-  # Initialize response vectors
-  response_vectors <- lapply(1:(length(responses) - 1), seq_len)
-  
-  # Initialize forward flow values
-  instant_FF <- numeric(length(responses) - 1)
-  
-  # Loop through responses
-  for(i in 2:length(responses)){
-    
-    # Calculate forward flow by calculating semantic distance to all preceding words
-    cur_val <- mean(
-      1 - LSAfun::multicostring(
-        x = responses[i], # Current word
-        y = responses[response_vectors[[i - 1]]], # Preceding responses
-        tvectors = space # Semantic space
-      )
-    )
-    
-    # Insert into forward flow vector
-    instant_FF[i - 1] <- cur_val
-    
-  }
-  
-  # Set up results list
-  results <- list(
-    flow = instant_FF,
-    mean_flow = mean(instant_FF, na.rm = TRUE)
-  )
-  
-  return(results)
-  
-}
-
-#' @noRd
-# Function to organize free association response list
-# Updated 23.12.2021
-free_response_list <- function(response_matrix, min_response, max_response){
-  
-  # Obtain IDs
-  IDs <- unique(response_matrix[,"ID"])
-  
-  # Initialize response list
-  response_list <- vector("list", length(IDs))
-  names(response_list) <- IDs
-  
-  # Create list to parallelize
-  for(i in seq_along(IDs)){
-    
-    # Target responses
-    target_responses <- response_matrix[response_matrix[,"ID"]== IDs[i],]
-    
-    # Obtain cues
-    cues <- unique(target_responses[,"Cue"])
-    
-    # Loop through cues
-    cue_list <- lapply(seq_along(cues), function(j){
-      
-      # Target responses for cue
-      cue_resposnes <- target_responses[
-        target_responses[,"Cue"] == cues[j], "Response"
-      ]
-      
-    })
-    
-    names(cue_list) <- cues
-    
-    # Obtain lengths
-    response_lengths <- unlist(lapply(cue_list, length))
-    
-    # Check for minimum responses
-    if(!is.null(min_response)){
-      
-      # Meets minimum criterion
-      meets_min <- which(response_lengths >= min_response)
-      
-      # Refresh cue list
-      cue_list <- cue_list[meets_min]
-      
-    }
-    
-    # Update lengths
-    response_lengths <- unlist(lapply(cue_list, length))
-    
-    # Check for maximum responses
-    if(!is.null(max_response)){
-      
-      # Exceeds maximum criterion
-      exceeds_max <- which(response_lengths > max_response)
-      
-      # Obtain constrained responses
-      constrained_list <- lapply(exceeds_max, function(j){
-        
-        # Target cue
-        target_cue <- cue_list[[j]]
-        
-        # Up to maximum responses only
-        target_cue <- target_cue[1:max_response]
-        
-        return(target_cue)
-        
-      })
-      
-      # Refresh cue list
-      cue_list[exceeds_max] <- constrained_list
-      
-    }
-    
-    
-    # Insert cue list into response list
-    response_list[[i]] <- cue_list
-    
-  }
-  
-  return(response_list)
-  
-}
-
-#' @noRd
-# Function to create long results from list
-# Updated 23.12.2021
-long_results <- function(results_list){
-  
-  # Create long results
-  rows <- unlist(lapply(results_list, nrow))
-  end <- cumsum(rows)
-  start <- (end + 1) - rows
-  
-  # Initialize matrix
-  res_long <- matrix(
-    ncol = ncol(results_list[[1]]),
-    nrow = max(end)
-  )
-  colnames(res_long) <- colnames(results_list[[1]])
-  
-  # Loop through to populate
-  for(i in seq_along(results_list)){
-    res_long[start[i]:end[i],] <- as.matrix(results_list[[i]])
-  }
-  
-  return(res_long)
-  
-}
-
 #%%%%%%%%%%%%%%%%%%%%%%#
 #### RANDOM NETWORK ####
 #%%%%%%%%%%%%%%%%%%%%%%#
@@ -1596,17 +983,20 @@ rep.rows <- function (mat, times)
 #' 
 #' @noRd
 # Test: Bootstrapped Network Statistics
-# Updated 25.07.2022
+# Updated 16.08.2021
 boot.one.test <- function (bootSemNeT.obj,
                            test = c("ANCOVA", "ANOVA", "t-test"),
-                           covars = TRUE,
                            measures = c("ASPL", "CC", "Q"),
                            formula = NULL,
                            groups = NULL)
 {
-
+  #Check for 'bootSemNeT' object
+  if(!is(bootSemNeT.obj, "bootSemNeT")){
+    stop("Object input into 'bootSemNeT.obj' is not a 'bootSemNeT' object")}
+  
   #Check for data if formula is not NULL
-  if(!is.null(formula)){
+  if(!is.null(formula))
+  {
     if(!exists("groups"))
     {stop("'groups' argument is NULL when 'formula' argument is not. Please input groups.")}
   }
@@ -1618,48 +1008,26 @@ boot.one.test <- function (bootSemNeT.obj,
   name <- na.omit(gsub("type",NA,gsub("iter",NA,gsub("prop",NA,name))))
   attr(name, "na.action") <- NULL
   
-  #Remove resampling and covariates
-  name <- na.omit(gsub("resampling",NA,gsub("covariates",NA,name)))
-  attr(name, "na.action") <- NULL
-  
   #Number of input
   len <- length(name)
   
   #Error there are no paired samples
-  if(len < 2){
-    stop("Single samples cannot be tested. Use 'randnet.test' for single samples")
-  }
+  if(len < 2)
+  {stop("Single samples cannot be tested. Use 'randnet.test' for single samples")}
   
   #Handle groups
-  if(is.null(groups)){
-    groups <- name
-  }
+  if(is.null(groups))
+  {groups <- name}
   
   #Enforce matrix
   groups <- as.matrix(groups)
   
+  #Check for groups names
+  if(is.null(colnames(groups)))
+  {colnames(groups) <- ifelse(ncol(groups) == 1, "Group", paste("Group", 1:ncol(groups), sep = ""))}
+  
   #Identify iterations
   iter <- bootSemNeT.obj$iter
-  
-  #Check for covariates
-  if(!"covariates" %in% names(bootSemNeT.obj)){
-    covars <- FALSE
-  }
-  
-  #Check for covars
-  if(isTRUE(covars)){
-    
-    if(test == "ANCOVA"){
-      
-      #Obtain number of covariates
-      covar_num <- ncol(bootSemNeT.obj$covariates[[1]][[1]])
-      
-    }
-    
-  }
-  
-  #Original formula
-  orig.formula <- formula
   
   #%%%%%%%%%%%%%%%%%%%%#
   # SIGNIFICANCE TESTS #
@@ -1672,32 +1040,13 @@ boot.one.test <- function (bootSemNeT.obj,
   if(test == "ANCOVA" | test == "ANOVA"){##ANCOVA or ANOVA
     
     #Loop through measures
-    for(i in 1:length(measures)){
-      
-      #Return to original formula
-      formula <- orig.formula
-      
+    for(i in 1:length(measures))
+    {
       #Create ANCOVA data frame
-      for(j in 1:len){
-        
+      for(j in 1:len)
+      {
         #Insert measure values
         meas <- bootSemNeT.obj[[paste(name[j],"Meas",sep="")]][measures[i],]
-        
-        #Covariates
-        if(isTRUE(covars)){
-          
-          #Obtain mean of covariates for bootstrap group
-          covar <- lapply(bootSemNeT.obj$covariates[[name[j]]], colMeans, na.rm = TRUE)
-          
-          #Simplify to matrix
-          covar <- t(simplify2array(covar))
-          
-          #Check for one covariate
-          if(nrow(covar) == 1 | ncol(covar) == 1){
-            covar <- as.vector(covar)
-          }
-
-        }
         
         # Nodes
         #nodes <- unlist(lapply(bootSemNeT.obj[[paste(name[j],"Net",sep="")]], function(x){ncol(x)}))
@@ -1710,54 +1059,33 @@ boot.one.test <- function (bootSemNeT.obj,
         }))
         
         #Initialize matrix
-        if(isTRUE(covars)){
-          mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
-                       edges, covar)
-        }else{
-          mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
-                       edges) 
-        }
+        mat <- cbind(rep(name[j], length(meas)), meas, #nodes,
+                     edges)
         
-        if(j != 1){
-          new.mat <- rbind(new.mat, mat)
-        }else{
-          new.mat <- mat
-        }
+        if(j != 1)
+        {new.mat <- rbind(new.mat, mat)
+        }else{new.mat <- mat}
       }
       
       #Convert to data frame
       aov.obj <- as.data.frame(new.mat, stringsAsFactors = FALSE)
-      colnames(aov.obj)[1:3] <- c("Name", "Measure", "Edges")
+      colnames(aov.obj) <- c("Name", "Measure", #"Nodes",
+                             "Edges")
       aov.obj$Name <- factor(as.character(aov.obj$Name))
-      aov.obj[,2:ncol(aov.obj)] <- apply(
-        aov.obj[,2:ncol(aov.obj)],
-        2,
-        function(x){as.numeric(as.character(x))}
-      )
+      aov.obj[,2:3] <- apply(aov.obj[,2:3], 2, function(x){as.numeric(as.character(x))})
+      
       #Organize groups
-      aov.obj <- suppressWarnings(
-        as.data.frame(
-          cbind(aov.obj, rep.rows(groups, iter)),
-          stringsAsFactors = FALSE
-        ) 
-      )
+      aov.obj <- as.data.frame(cbind(aov.obj, rep.rows(groups, iter)), stringsAsFactors = FALSE)
       
       #Get column before groups
       edge.col <- which(colnames(aov.obj) == "Edges")
       
-      #Check for covariates
-      if(isTRUE(covars)){
-        edge.col <- edge.col + covar_num
-      }
-      
       #Convert groups to factors
-      for(g in 1:ncol(groups)){
-        aov.obj[,(edge.col+g)] <- as.factor(as.character(aov.obj[,(edge.col+g)]))
-      }
+      for(g in 1:ncol(groups))
+      {aov.obj[,(edge.col+g)] <- as.factor(as.character(aov.obj[,(edge.col+g)]))}
       
       #Remove variables that are all equal
-      keep.vars <- apply(aov.obj[,1:ncol(aov.obj)], 2,
-                         function(x){length(unique(x)) != 1})
+      keep.vars <- apply(aov.obj[,1:ncol(aov.obj)], 2, function(x){length(unique(x)) != 1})
       aov.obj <- aov.obj[,keep.vars]
       
       #Group mean center
@@ -1777,8 +1105,8 @@ boot.one.test <- function (bootSemNeT.obj,
       #  }
       #}
       
-      if("Edges" %in% names(aov.obj)){
-        
+      if("Edges" %in% names(aov.obj))
+      {
         for(g in 1:nrow(groups))
         {
           if(length(unique((aov.obj$Edges[which(aov.obj$Group == groups[g,])]))) == 1){
@@ -1787,23 +1115,25 @@ boot.one.test <- function (bootSemNeT.obj,
             aov.obj$Edges[which(aov.obj$Group == groups[g,])] <- scale(aov.obj$Edges[which(aov.obj$Group == groups[g,])])
           }
         }
-        
       }
       
       #ANOVA
       if(test == "ANOVA"){
+        
         if("Edges" %in% names(aov.obj)){
+          
           aov.obj$Edges <- NULL
+          
         }
+        
       }
       
       #Formula
-      if(is.null(formula)){
-        formula <- paste("y ~", paste(colnames(groups), collapse = " + "))
-      }
+      if(is.null(formula))
+      {formula <- paste("y ~", paste(colnames(groups), collapse = " + "))}
       
       #Replace 'y' with 'Measure'
-      formula <- sub("y", "Measure", formula)
+      formula <- gsub("y", "Measure", formula)
       
       #Split formula to add 'Nodes' and 'Edges'
       split.formula <- unlist(strsplit(formula, split = "~"))
@@ -1816,17 +1146,7 @@ boot.one.test <- function (bootSemNeT.obj,
       #}
       
       if(test == "ANCOVA"){
-        
-        if(isTRUE(covars)){
-          aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3:(3+covar_num)][keep.vars[3:(3+covar_num)]],
-                                                             collapse = " + "), " +",
-                               split.formula[2], sep = "")
-        }else{
-          aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]],
-                                                             collapse = " + "), " +",
-                               split.formula[2], sep = "")
-        }
-  
+        aov.formula <- paste(split.formula[1], "~ ", paste(names(keep.vars)[3][keep.vars[3]], collapse = " + "), " +", split.formula[2], sep = "")
       }else if(test == "ANOVA"){
         aov.formula <- paste(split.formula[1], "~ ", split.formula[2], sep = "")
       }
@@ -1844,61 +1164,12 @@ boot.one.test <- function (bootSemNeT.obj,
       #Tidy ANCOVA
       tidy.acov <- as.data.frame(broom::tidy(acov.test), stringsAsFactors = FALSE)
       tidy.acov[,-1] <- round(apply(tidy.acov[,-1], 2, as.numeric), 3)
-    
+      
       #Get partial etas
-      if(test == "ANCOVA"){
-        
-        if(isTRUE(covars)){
-          
-          etas <- round(
-            unlist(
-              lapply(
-                acov.test$`Sum Sq`, # Sum of squares
-                partial.eta.sq, # Partial eta squared function
-                sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-              )
-            )[-c(length(acov.test$`Sum Sq`))], # Removes intercept and RSS
-            3
-          )
-          
-          #Attach etas to tidy ANCOVA
-          tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
-          
-        }else{
-          
-          etas <- round(
-            unlist(
-              lapply(
-                acov.test$`Sum Sq`, # Sum of squares
-                partial.eta.sq, # Partial eta squared function
-                sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-              )
-            )[-c(length(acov.test$`Sum Sq`))], # Removes intercept and RSS
-            3
-          )
-          
-          #Attach etas to tidy ANCOVA
-          tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
-          
-        }
-        
-      }else if(test == "ANOVA"){
-        
-        etas <- round(
-          unlist(
-            lapply(
-              acov.test$`Sum Sq`, # Sum of squares
-              partial.eta.sq, # Partial eta squared function
-              sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)]) # Residual sum of squares (RSS)
-            )
-          )[-length(acov.test$`Sum Sq`)], # Removes intercept and RSS
-          3
-        )
-        
-        #Attach etas to tidy ANCOVA
-        tidy.acov <- as.data.frame(cbind(tidy.acov, c(etas, NA)), stringsAsFactors = FALSE)
-        
-      }
+      etas <- round(unlist(lapply(acov.test$`Sum Sq`, partial.eta.sq, sum(acov.test$`Sum Sq`[length(acov.test$`Sum Sq`)])))[-c(1,length(acov.test$`Sum Sq`))], 3)
+      
+      #Attach etas to tidy ANCOVA
+      tidy.acov <- as.data.frame(cbind(tidy.acov, c(NA, etas, NA)), stringsAsFactors = FALSE)
       
       #Change column names
       colnames(tidy.acov) <- c("Term", "Sum of Squares", "df", "F-statistic", "p-value", "Partial Eta Squared")
@@ -1916,121 +1187,20 @@ boot.one.test <- function (bootSemNeT.obj,
       tests[[paste(measures[i])]]$ANCOVA <- tidy.acov
       
       #Insert adjusted means
-      tests[[paste(measures[i])]]$adjustedMeans <- adj.means
+      tests[[paste(measures[i])]]$adjustedMeans <- adj.means[[which(names(adj.means) != "Nodes" & names(adj.means) != "Edges")]]
       
       #Get pairwise comparisons
       if(nrow(groups) > 2){
         
         if(ncol(groups) == 1){
-          HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
+          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))$Group
         }else{
-          HSD <- suppressWarnings(TukeyHSD(aov.test))
-          
-          # Keep names
-          HSD_names <- names(HSD)
+          tests[[paste(measures[i])]]$HSD <- suppressWarnings(TukeyHSD(aov.test))
         }
-        
-        #Split row names
-        if(is.list(HSD)){
-          
-          HSD <- lapply(seq_along(HSD), function(i){
-            
-            # Target output
-            target <- HSD[[i]]
-            
-            # Target name
-            target_name <- names(HSD)[i]
-            
-            # Split row names
-            group_split <- strsplit(row.names(target), split = "-")
-            
-            # Check for interaction
-            interaction <- grep(":", target_name)
-            
-            # Organize for Cohen's d
-            if(length(interaction) == 0){
-              
-              ds <- unlist(
-                lapply(group_split, function(x){
-                  
-                  d(
-                    aov.obj$Measure[aov.obj[target_name] == x[1]],
-                    aov.obj$Measure[aov.obj[target_name] == x[2]]
-                  )
-                  
-                })
-              )
-
-            }else{
-              
-              # Adjust target names
-              target_name <- unlist(strsplit(target_name, split = ":"))
-              
-              ds <- unlist(
-                lapply(group_split, function(x){
-                  
-                  # Interaction
-                  int1 <- unlist(strsplit(x[1], split = ":"))
-                  int2 <- unlist(strsplit(x[2], split = ":"))
-                  
-                  d(
-                    aov.obj$Measure[
-                      aov.obj[target_name[1]] == int1[1] &
-                        aov.obj[target_name[2]] == int1[2]
-                    ],
-                    aov.obj$Measure[
-                      aov.obj[target_name[1]] == int2[1] &
-                        aov.obj[target_name[2]] == int2[2]
-                    ]
-                  )
-                  
-                })
-              )
-              
-            }
-            
-            # Insert Cohen's d
-            HSD[[i]] <- cbind(HSD[[i]], ds)
-            colnames(HSD[[i]])[ncol(HSD[[i]])] <- "d"
-            
-            return(HSD[[i]])
-          
-            
-          })
-          
-          # Rename HSD
-          names(HSD) <- HSD_names
-          
-        }else{
-          
-          group_split <- strsplit(row.names(HSD), split = "-")
-          
-          # Obtain Cohen's d
-          ds <- unlist(
-            lapply(group_split, function(x){
-              
-              d(
-                aov.obj$Measure[aov.obj$Name == x[1]],
-                aov.obj$Measure[aov.obj$Name == x[2]]
-              )
-              
-            })
-          )
-          
-          # Insert Cohen's d
-          HSD <- cbind(HSD, ds)
-          colnames(HSD)[ncol(HSD)] <- "d"
-          
-        }
-        
-        #Insert HSD
-        tests[[paste(measures[i])]]$HSD <- HSD
         
       }
-        
     }
-        
-  
+    
   }else if(test == "t-test"){##t-test
     
     #Loop through measures

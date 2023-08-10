@@ -6,8 +6,6 @@
 \usage{
 bootSemNeT(
   ...,
-  input_list = NULL,
-  covars = list(),
   method = c("CN", "NRW", "PF", "TMFG"),
   methodArgs = list(),
   type = c("case", "node"),
@@ -23,15 +21,6 @@ bootSemNeT(
 Cleaned response matrices (e.g., \code{responses$clean} from
 \code{\link[SemNetCleaner]{textcleaner}}) or  binary response matrices
 (e.g., \code{binary} output from \code{\link[SemNetCleaner]{textcleaner}})}
-
-\item{input_list}{List.
-Bypasses \code{...} argument in favor of using a list
-as an input}
-
-\item{covars}{List.
-Covariates to be included in the ANCOVA.
-Assumes indices to correspond to the data input.
-Names \strong{must} match input names}
 
 \item{method}{Character.
 Network estimation method to use.
@@ -110,11 +99,15 @@ network input in the \code{data} argument}
 \item{iter}{Outputs the number of bootstrapped samples
 used from the \code{iter} argument}
 
-\item{resampling}{A list containing the resampling indices for each bootstrap for either
-nodes (\code{type = "node"}) or cases (\code{type = "case"})}
+If a \code{paired} network is input, then also returns:
 
-\item{covariates}{A list containing the covariates corresponding to the
-resampled indices from each boostrap}
+\item{pairedMeas}{A matrix for the network input in the \code{paired}
+argument, where columns are the semantic network measures
+from \code{\link[SemNeT]{semnetmeas}} and rows are their values from each
+bootstrapped sample (results in a matrix with the dimensions \code{iter} by 3)}
+
+\item{pairedSumm}{Summary statistics across the bootrapped samples for the
+network input in the \code{paired} argument}
 }
 \description{
 Bootstrap techniques to generate

@@ -21,6 +21,7 @@
 #' @author Alexander P. Christensen <alexpaulchristensen@gmail.com> & Yoed N. Kenett <yoedkenett@gmail.com>
 #' 
 #' @importFrom utils packageDescription
+#' @importFrom methods is
 #' 
 "_PACKAGE"
 #> [1] "_PACKAGE"

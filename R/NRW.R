@@ -53,7 +53,7 @@
 #' @export
 #' 
 # Naive Random Walk Network----
-# Updated 21.04.2022
+# Updated 05.12.2020
 NRW <- function(data, type = c("num", "prop"), threshold = 0)
 {
   # Check for type
@@ -144,9 +144,6 @@ NRW <- function(data, type = c("num", "prop"), threshold = 0)
   }else{
     bin.mat[bin.mat != 0] <- 1
   }
-  
-  # Set class
-  class(bin.mat) <- c(class(bin.mat), "SemNeT")
   
   return(bin.mat)
 }

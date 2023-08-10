@@ -5,19 +5,18 @@ server <- function(input, output, session)
   prev.env <<- ls(envir = globalenv())
   
   # Check if anything exists in previous environment
-  if(length(prev.env) != 0){
-    
+  if(length(prev.env) != 0)
+  {
     # Initialize textcleaner objects variable
     tc.object <<- vector(length = length(prev.env))
     
     # Check for textcleaner objects
-    for(i in 1:length(prev.env)){
-      tc.object[i] <- "textcleaner" %in% class(get(prev.env[i], envir = globalenv()))
-    }
+    for(i in 1:length(prev.env))
+    {tc.object[i] <- class(get(prev.env[i], envir = globalenv())) == "textcleaner"}
     
     # Set up environment objects
-    if(sum(tc.object) != 0){
-      
+    if(sum(tc.object) != 0)
+    {
       output$clean_ui <- renderUI({
         
         tagList(
@@ -38,7 +37,6 @@ server <- function(input, output, session)
         )
         
       })
-      
     }
     
     if(exists("group"))
@@ -74,7 +72,7 @@ server <- function(input, output, session)
     HTML(
       
       paste('<b>Please cite:</b><br>
-      Christensen, A. P., & Kenett, Y. N. (2021). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. <em>Psychological Methods</em>. <a href="https://doi.org/10.31234/osf.io/eht87">https://doi.org/10.31234/osf.io/eht87</a>
+      Christensen, A. P., & Kenett, Y. N. (2019). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. <em>PsyArXiv</em>. <a href="https://doi.org/10.31234/osf.io/eht87">https://doi.org/10.31234/osf.io/eht87</a>
       ')
     )
     
@@ -111,14 +109,14 @@ server <- function(input, output, session)
   observeEvent(input$data_example,
                {
                  output$example_data_response <- renderTable({head(SemNeT::open.clean)},
-                                                             rownames = FALSE,
+                                                             rownames = TRUE,
                                                              caption = "Response Matrix (participants by typed responses)",
                                                              caption.placement = getOption("xtable.caption.placement", "top")
                  )
                  
                  output$example_data_binary <- renderTable({head(SemNeT::open.binary)},
                                                            digits = 0,
-                                                           rownames = FALSE,
+                                                           rownames = TRUE,
                                                            caption = "Binary Matrix (participants by alphabetical responses)",
                                                            caption.placement = getOption("xtable.caption.placement", "top")
                  )
@@ -133,7 +131,7 @@ server <- function(input, output, session)
                    colnames(group_example) <- "Group"
                    return(group_example)
                  },
-                 rownames = FALSE,
+                 rownames = TRUE,
                  caption = "Group Vector (ordered by participant)",
                  caption.placement = getOption("xtable.caption.placement", "top"),
                  width = 250
@@ -151,7 +149,8 @@ server <- function(input, output, session)
                  # Let user know
                  showNotification("Loading data...")
                  
-                 if(!is.null(input$clean_envir) || !is.null(input$group_envir)){
+                 if(!is.null(input$clean_envir) || !is.null(input$group_envir))
+                 {
                    
                    # Load data from R environment
                    if(!is.null(input$clean_envir)){
@@ -174,25 +173,23 @@ server <- function(input, output, session)
                  }
                  
                  # Load preprocessed data
-                 if(!is.null(input$data)){
-                   dat <<- suppressWarnings(SemNeT:::read.data(input$data$datapath))
-                 }
+                 if(!is.null(input$data))
+                 {dat <<- suppressWarnings(SemNeT:::read.data(input$data$datapath))}
                  
                  # Load group data
-                 if(!is.null(input$group)){
-                   group <<- suppressWarnings(SemNeT:::read.data(input$group$datapath))
-                 }
+                 if(!is.null(input$group))
+                 {group <<- suppressWarnings(SemNeT:::read.data(input$group$datapath))}
                  
                  # Load data from SemNeT package
-                 if(!exists("dat")){
+                 if(!exists("dat"))
+                 {
                    dat <<- SemNeT::open.clean
                    group <<- SemNeT::open.group
                  }
                  
                  # Load group data from SemNeT package
-                 if(!exists("group")){
-                   group <<- rep(1, nrow(dat))
-                 }
+                 if(!exists("group"))
+                 {group <<- rep(1, nrow(dat))}
                  
                  # Organize group data
                  group <<- unlist(group)
@@ -433,37 +430,32 @@ server <- function(input, output, session)
                  )
                  
                  ## Change responses to binary matrix
-                 if(network == "TMFG"){
-                   
-                   if(is.character(unlist(dat))){
-                     bin_dat <<- SemNeT:::resp2bin(dat)$binary
-                   }else{
-                      bin_dat <<- dat
-                   }
+                 if(network == "TMFG")
+                 {
+                   if(is.character(unlist(dat)))
+                   {bin_dat <<- SemNeT:::resp2bin(dat)$binary}
                    
                    ## Create new data
-                   for(i in 1:length(uniq)){
-                     
+                   for(i in 1:length(uniq))
+                   {
                      assign(paste(uniq[i]),
                             bin_dat[which(group == uniq[i]),],
                             envir = globalenv())
                    }
                    
                  }else{
-                   
                    ## Create new data
-                   for(i in 1:length(uniq)){
-                     
+                   for(i in 1:length(uniq))
+                   {
                      assign(paste(uniq[i]),
                             dat[which(group == uniq[i]),],
                             envir = globalenv())
                    }
-                   
                  }
                  
                  ## Estimate networks
-                 if(network == "CN"){
-                   
+                 if(network == "CN")
+                 {
                    window_size <<- input$window
                    sig_alpha <<- as.numeric(input$alpha)
                    enrichment <<- as.logical(input$enrich)
@@ -484,7 +476,8 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "NRW"){
+                 }else if(network == "NRW")
+                 {
                    
                    nrw_type <<- switch(input$NRW_type,
                                        "Number" = "num",
@@ -509,8 +502,8 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "PF"){
-                   
+                 }else if(network == "PF")
+                 {
                    ## Estimate networks
                    nets <<- lapply(mget(paste(uniq), envir = globalenv()),
                                    function(x){PF(x)})
@@ -531,8 +524,8 @@ server <- function(input, output, session)
                      
                    })
                    
-                 }else if(network == "TMFG"){
-                   
+                 }else if(network == "TMFG")
+                 {
                    ## Store binary groups
                    minCase <<- as.numeric(input$minCase)
                    
@@ -585,12 +578,29 @@ server <- function(input, output, session)
                  ## Organized output
                  meas.mat <<- sapply(meas, c)
                  
+                 ## Generate plot
+                 plots <<- SemNeT:::compare_netShiny(nets, config = "spring", weighted = FALSE)
+                 
                  ## Render semantic networks plot
                  output$viz <- renderPlot({
-                   plots <<- compare_nets(
-                     input_list = nets, weighted = FALSE, plot.args = list(node_size = 4)
-                   )
-                   plots
+                   
+                   ### Manipulate Shiny plot window
+                   if(length(plots$datalist) == 2)
+                   {layout(t(1:2))
+                   }else if(length(plots$datalist) > 2)
+                   {
+                     #Find square root
+                     len <<- floor(sqrt(length(plots$datalist)))
+                     
+                     #Remainder
+                     remain <<- length(plots$datalist)%%len
+                     
+                     #Change layout accordingly
+                     layout(t(matrix(1:(length(plots$datalist)+remain),ncol=len)))
+                   }
+                   
+                   ### Generate plot
+                   SemNeT:::plot.compareShiny(plots)
                  })
                  
                  ## Render network measures table
@@ -710,7 +720,7 @@ server <- function(input, output, session)
                              ')
                          )
                          
-                       }else if(input$test == "ANCOVA" | input$test == "ANOVA"){
+                       }else if(input$test == "ANCOVA"){
                          
                          HTML(
                            
@@ -987,14 +997,11 @@ server <- function(input, output, session)
                  # Render Tables
                  res_boot <<- boot()
                  
+                 # Reset Table
+                 output$tab <- renderTable({})
+                 
                  observeEvent(input$test,
                  {
-                   
-                   # Reset Table
-                   output$tab <- renderTable({})
-                   output$aspl <- renderTable({})
-                   output$cc <- renderTable({})
-                   output$q <- renderTable({})
                    
                    if(input$test == "ANCOVA"){
                      
@@ -1012,33 +1019,10 @@ server <- function(input, output, session)
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
-                       # HSD
-                       ## ASPL
-                       output$aspl <- renderTable({
-                         bootTest$fullResults[[1]]$ASPL$HSD
-                       }, rownames = TRUE,
-                       caption = "Average Shortest Path Length (ASPL) HSD",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       ## CC
-                       output$cc <- renderTable({
-                         bootTest$fullResults[[1]]$CC$HSD
-                       }, rownames = TRUE,
-                       caption = "Clustering Coefficient (CC) HSD",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       ## Q
-                       output$q <- renderTable({
-                         bootTest$fullResults[[1]]$Q$HSD
-                       }, rownames = TRUE,
-                       caption = "Modularity (Q) HSD",
-                       caption.placement = getOption("xtable.caption.placement", "top")
-                       )
-                       
-                       
                      }else{
+                       
+                       ## Reset original table
+                       output$tab <- renderTable({})
                        
                        bootTest <<- list()
                        full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
@@ -1064,7 +1048,7 @@ server <- function(input, output, session)
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$ANCOVA$Q; bootTest$Q
                        }, rownames = TRUE,
-                       caption = "Modularity (Q)",
+                       caption = "Modularity",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
@@ -1076,7 +1060,7 @@ server <- function(input, output, session)
                      if(length(percents) == 1)
                      {
                        
-                         output$tab <- renderTable({
+                       output$tab <- renderTable({
                          bootTest <<- list()
                          
                          bootTest <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
@@ -1085,33 +1069,11 @@ server <- function(input, output, session)
                        caption = "Bootstrap Network Results",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
-                         
-                         # HSD
-                         ## ASPL
-                         output$aspl <- renderTable({
-                           bootTest$fullResults[[1]]$ASPL$HSD
-                         }, rownames = TRUE,
-                         caption = "Average Shortest Path Length (ASPL) HSD",
-                         caption.placement = getOption("xtable.caption.placement", "top")
-                         )
-                         
-                         ## CC
-                         output$cc <- renderTable({
-                           bootTest$fullResults[[1]]$CC$HSD
-                         }, rownames = TRUE,
-                         caption = "Clustering Coefficient (CC) HSD",
-                         caption.placement = getOption("xtable.caption.placement", "top")
-                         )
-                         
-                         ## Q
-                         output$q <- renderTable({
-                           bootTest$fullResults[[1]]$Q$HSD
-                         }, rownames = TRUE,
-                         caption = "Modularity (Q) HSD",
-                         caption.placement = getOption("xtable.caption.placement", "top")
-                         )
                        
                      }else{
+                       
+                       ## Reset original table
+                       output$tab <- renderTable({})
                        
                        bootTest <<- list()
                        full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
@@ -1137,7 +1099,7 @@ server <- function(input, output, session)
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$ANOVA$Q; bootTest$Q
                        }, rownames = TRUE,
-                       caption = "Modularity (Q)",
+                       caption = "Modularity",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
@@ -1158,7 +1120,10 @@ server <- function(input, output, session)
                        )
                        
                      }else{
-                      
+                       
+                       ## Reset original table
+                       output$tab <- renderTable({})
+                       
                        bootTest <<- list()
                        full_res <<- SemNeT:::test.bootSemNeTShiny(unlist(res_boot, recursive = FALSE),
                                                                   test = input$test)
@@ -1183,7 +1148,7 @@ server <- function(input, output, session)
                        output$q <- renderTable({
                          bootTest$Q <<- full_res$Q; bootTest$Q
                        }, rownames = TRUE,
-                       caption = "Modularity (Q)",
+                       caption = "Modularity",
                        caption.placement = getOption("xtable.caption.placement", "top")
                        )
                        
@@ -2332,7 +2297,7 @@ server <- function(input, output, session)
                })
   
   
-  # ON STOP ----
+  
   onStop(function(x)
   {
     # Save results into condensed list

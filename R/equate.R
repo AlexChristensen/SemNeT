@@ -6,10 +6,6 @@
 #' @param ... Matrices, data frames or a list of matrices and data frames.
 #' Binary response matrices to be equated
 #' 
-#' @param input_list List.
-#' Bypasses \code{...} argument in favor of using a list
-#' as an input
-#' 
 #' @return This function returns a list containing the
 #' equated binary response matrices in the order they were input.
 #' The response matrices are labeled as the object name they were
@@ -36,8 +32,8 @@
 #' 
 #' @export
 # Equate matrices function
-# Updated 21.01.2022
-equate <- function(..., input_list = NULL)
+# Updated 03.09.2020
+equate <- function(...)
 {
     # Equate function
     equat <- function (rmatA, rmatB)
@@ -55,51 +51,31 @@ equate <- function(..., input_list = NULL)
         return(list(rmatA=rmatA,rmatB=rmatB))
     }
     
-    if(is.null(input_list)){
-        
-        name <- as.character(substitute(list(...)))
-        name <- name[-which(name=="list")]
-        
-        datalist <- list(...)
-        
-    }else{
-        
-        # Obtain list names
-        name <- names(input_list)
-        
-        # Check if list names are NULL
-        if(is.null(name)){
-            name <- 1:length(input_list)
-        }
-        
-        # Assign input list to data list
-        datalist <- input_list
-        
-    }
+    name <- as.character(substitute(list(...)))
+    name <- name[-which(name=="list")]
+    
+    datalist <- list(...)
     
     len <- length(datalist)
     
-    if(len > 2){
-        
+    if(len>2)
+    {
         first <- datalist[[1]]
         eq <- equat(first,datalist[[2]])$rmatA
         
-        for(i in 2:(len-1)){
-            eq <- equat(eq,datalist[[(i+1)]])$rmatA
-        }
+        for(i in 2:(len-1))
+        {eq <- equat(eq,datalist[[(i+1)]])$rmatA}
         
         finlist <- list()
         
-        for(j in 1:len){
-            finlist[[name[j]]] <- equat(eq,datalist[[j]])$rmatB
-        }
-
+        for(j in 1:len)
+        {finlist[[name[j]]] <- equat(eq,datalist[[j]])$rmatB}
         
-    }else if(len == 2){
-        
-        finlist <- equat(datalist[[1]], datalist[[2]])
+    }else if(len==2)
+    {
+        finlist <- equat(datalist[[1]],datalist[[2]])
         names(finlist) <- name
-    }
+    }else{stop("Must be at least two datasets as input")}
     
     return(finlist)
 }

@@ -6,10 +6,6 @@
 #' @param ... Matrices or data frames.
 #' Semantic networks to be compared against random networks
 #' 
-#' @param input_list List.
-#' Bypasses \code{...} argument in favor of using a list
-#' as an input
-#' 
 #' @param iter Numeric.
 #' Number of iterations in bootstrap.
 #' Defaults to \code{1000}
@@ -50,7 +46,7 @@
 #' @export
 # Random network test----
 # Updated 05.12.2020
-randnet.test <- function (..., input_list = NULL, iter, cores)
+randnet.test <- function (..., iter, cores)
 {
     #Missing arguments
     if(missing(cores))
@@ -61,37 +57,19 @@ randnet.test <- function (..., input_list = NULL, iter, cores)
     {iter <- 1000
     }else{iter <- iter}
     
-    # Check for input list
-    if(is.null(input_list)){
-        
-        #Get names of networks
-        name <- as.character(substitute(list(...)))
-        name <- name[-which(name=="list")]
-        
-        #Create list of input
-        datalist <- list(...)
-        
-    }else{
-        
-        # Obtain list names
-        name <- names(input_list)
-        
-        # Check if list names are NULL
-        if(is.null(name)){
-            name <- 1:length(input_list)
-        }
-        
-        # Assign input list to data list
-        datalist <- input_list
-        
-    }
+    #Get names of networks
+    name <- as.character(substitute(list(...)))
+    name <- name[-which(name=="list")]
+    
+    #Create list of input
+    listdata <- list(...)
     
     #Initialize data list
     data.list <- vector("list", length = length(name))
     
     for(i in 1:length(name))
         for(j in 1:iter)
-            {data.list[[i]][[j]] <- datalist[[i]]}
+            {data.list[[i]][[j]] <- listdata[[i]]}
     
     #Initialize random networks list
     rand.list <- vector("list", length = length(name))
@@ -109,7 +87,11 @@ randnet.test <- function (..., input_list = NULL, iter, cores)
     
     #Compute random networks
     for(i in 1:length(data.list))
-    {rand.list[[i]] <- pbapply::pblapply(X = data.list[[i]], FUN = function(X){randnet(A = X)}, cl = cl)}
+    {rand.list[[i]] <- pbapply::pblapply(
+      X = data.list[[i]], FUN = function(X){
+        randnet(nodes = ncol(X), edges = floor(sum(X) / 2))
+      }, cl = cl)
+    }
     
     #Stop parallel processing
     parallel::stopCluster(cl)
@@ -151,7 +133,7 @@ randnet.test <- function (..., input_list = NULL, iter, cores)
         sig.mat[,"SD.rand"] <- round(apply(net.meas[[i]],1,sd),4)
         
         #Compute semantic network measures for network
-        meas <- semnetmeas(datalist[[i]])
+        meas <- semnetmeas(listdata[[i]])
         
         ##ASPL
         z.aspl <- (meas["ASPL"] - sig.mat["ASPL","M.rand"]) / sig.mat["ASPL","SD.rand"]
