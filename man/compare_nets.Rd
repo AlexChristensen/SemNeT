@@ -28,11 +28,11 @@ How should nodes be placed when comparing groups?
 Defaults to \code{"default"}
 
 \itemize{
-\item{\code{"match"}}
-{places nodes in the same position for all networks}
 
-\item{\code{"default"}}
-{places nodes in the default \code{config} positions} 
+\item \code{"match"} --- places nodes in the same position for all networks
+
+\item \code{"default"} --- places nodes in the default \code{config} positions
+
 }}
 
 \item{weighted}{Boolean.
@@ -53,17 +53,19 @@ Plots networks using \code{\link[qgraph]{qgraph}}
 \description{
 Uses \code{\link[qgraph]{qgraph}} to plot networks.
 Accepts any number of networks and will organize the plots
-in the number of side-by-side columns using the heuristic of taking the square root of the number of 
+in the number of side-by-side columns using the heuristic of taking the square root of the number of
 input and rounding down to the nearest integer (i.e., \code{floor(sqrt(length(input)))}).
 
 \strong{Examples}
+
 \itemize{
-\item{3 networks:}
-{1 x 3}
-\item{6 networks:}
-{2 x 3}
-\item{9 networks:}
-{3 x 3}
+
+\item 3 networks: 1 x 3
+
+\item 6 networks: 2 x 3
+
+\item 9 networks: 3 x 3
+
 }
 }
 \examples{

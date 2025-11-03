@@ -13,10 +13,10 @@ convert2igraph(A, neural = FALSE)
 \item{neural}{Defunct.}
 }
 \value{
-Returns a network matrix in \code{\link{igraph}}'s format
+Returns a network matrix in \code{igraph}'s format
 }
 \description{
-Converts single or multiple networks into \code{\link{igraph}}'s format for network analysis
+Converts single or multiple networks into \code{igraph}'s format for network analysis
 }
 \examples{
 # Pearson's correlation only for CRAN checks

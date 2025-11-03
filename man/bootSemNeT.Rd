@@ -27,17 +27,14 @@ Network estimation method to use.
 Current options include:
 
 \itemize{
-\item{\code{\link[NetworkToolbox]{TMFG}}}
-{Triangulated Maximally Filtered Graph}
 
-\item{\code{\link[SemNeT]{CN}}}
-{Community Network}
+\item \code{\link[NetworkToolbox]{TMFG}} --- Triangulated Maximally Filtered Graph
 
-\item{\code{\link[SemNeT]{NRW}}}
-{Naive Random Walk}
+\item \code{\link[SemNeT]{CN}} --- Community Network
 
-\item{\code{\link[SemNeT]{PF}}}
-{Pathfinder}
+\item \code{\link[SemNeT]{NRW}} --- Naive Random Walk
+
+\item \code{\link[SemNeT]{PF}} --- Pathfinder
 
 }}
 
@@ -49,13 +46,13 @@ See links in argument \code{method} for additional arguments (see also Examples)
 Type of bootstrap to perform
 
 \itemize{
-\item{\code{node}}
-{Generates partial networks based on dropping a certain
-proportion of nodes (see argument \code{prop})}
 
-\item{\code{case}}
-{Samples with replacement the same number of participants
-as in the original dataset}
+\item \code{node} --- Generates partial networks based on dropping a certain
+proportion of nodes (see argument \code{prop})
+
+\item \code{case} ---Samples with replacement the same number of participants
+as in the original dataset
+
 }}
 
 \item{prop}{Numeric.

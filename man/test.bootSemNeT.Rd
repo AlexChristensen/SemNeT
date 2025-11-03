@@ -20,31 +20,25 @@ Type of statistical test to be used.
 
 \itemize{
 
-\item{\code{"t-test"}}
-{Computes t-tests for all measures}
+\item \code{"t-test"} --- Computes t-tests for all measures
 
-\item{\code{"ANOVA"}}
-{Computes ANOVAs and includes
-Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}
+\item \code{"ANOVA"} --- Computes ANOVAs and includes Tukey's HSD for pairwise
+comparisons (\code{\link{TukeyHSD}})
 
-\item{\code{"ANCOVA"}}
-{Computes ANCOVAs that control for the number of nodes
-and edges in the networks and includes adjusted means
-and Tukey's HSD for pairwise comparisons (\code{\link{TukeyHSD}})}}}
+\item \code{"ANCOVA"} --- Computes ANCOVAs that control for the number of nodes
+and edges in the networks and includes adjusted means and Tukey's HSD for
+pairwise comparisons (\code{\link{TukeyHSD}})}}
 
 \item{measures}{Character.
 Network measures to be tested.
 
 \itemize{
 
-\item{\code{\link[SemNeT]{ASPL}}}
-{Average shortest path length}
+\item \code{\link[SemNeT]{ASPL}} --- Average shortest path length
 
-\item{\code{\link[SemNeT]{CC}}}
-{Clustering coefficient}
+\item \code{\link[SemNeT]{CC}} --- Clustering coefficient
 
-\item{\code{\link[SemNeT]{Q}}}
-{Modularity statistic}
+\item \code{\link[SemNeT]{Q}} --- Modularity statistic
 
 }}
 

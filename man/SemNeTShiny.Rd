@@ -40,7 +40,7 @@ during \code{\link[SemNeT]{SemNeTShiny}}}
 (see \code{\link[SemNeT]{randwalk}})}
 
 \item{bootstrapPlot}{Results from the Spreading Activation Analysis
-(see \code{\link[spreadr]{spreadr}})}
+(see \code{spreadr})}
 }
 \description{
 An interactive Shiny application for running \code{\link{SemNeT}} analysis.

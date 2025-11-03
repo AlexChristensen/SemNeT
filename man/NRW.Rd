@@ -16,11 +16,9 @@ responses}
 Type of \code{threshold} to apply.
 \itemize{
 
-\item{\code{"num"}}
-{Minimum number of co-occurrences}
+\item \code{"num"} --- Minimum number of co-occurrences
 
-\item{\code{"prop"}}
-{Minimum proportion of co-occurrences}
+\item \code{"prop"} --- Minimum proportion of co-occurrences
 
 }
 Defaults to \code{"num"}}
