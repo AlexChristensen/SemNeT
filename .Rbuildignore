@@ -1,4 +1,6 @@
 ^\.github$
 ^LICENSE$
 ^Readme\.md$
-
+^REFACTOR_PLAN\.md$
+^SHINY_PLAN\.md$
+^\.claude$

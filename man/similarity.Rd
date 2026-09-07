@@ -6,7 +6,7 @@
 \usage{
 similarity(
   data,
-  method = c("angular", "cor", "cosine", "euclid", "faith", "jaccard", "phi", "rr")
+  method = c("cosine", "angular", "cor", "euclid", "faith", "jaccard", "phi", "rr")
 )
 }
 \arguments{
@@ -14,54 +14,23 @@ similarity(
 A binarized dataset of verbal fluency or linguistic data}
 
 \item{method}{Character.
-Type of similarity measure to compute.
-
-Below are the definitions for each bin:
-
-\tabular{ccccc}{
-\tab 1 \tab 0 \tab \tab \cr
-1 \tab a \tab b \tab a+b \tab (R1)\cr
-0 \tab c \tab d  \tab c+d \tab (R2)\cr
-\tab a+c \tab b+d \tab a+b+c+d \tab (N) \cr
-\tab (C1) \tab (C2) \tab (N) \tab \cr
-}
-    
-Options include:
-
-\itemize{
-
-\item{\code{"angular"} =}
-{\eqn{1 - (2 * acos(cosine similarity) / \pi)}}
-
-\item{\code{"cosine"} =}
-{\eqn{a / \sqrt{(a + b)(a + c)}}}
-
-\item{\code{"faith"} =}
-{\eqn{a + 0.5d / a + b + c + d}}
-
-\item{\code{"jaccard"} =}
-{\eqn{a / a + b + c}}
-
-\item{\code{"phi"} and \code{"cor"} =}
-{\eqn{ad - bc / \sqrt(R1 x R2 x C1 x C2)}}
-
-\item{\code{"rr"} =}
-{\eqn{a / a + b + c + d}}
-
-}}
+Type of similarity measure to compute. One of \code{"cosine"} (default),
+\code{"angular"}, \code{"cor"}, \code{"euclid"}, \code{"faith"},
+\code{"jaccard"}, \code{"phi"}, or \code{"rr"}. Defaults to \code{"cosine"}}
 }
 \value{
 A symmetric similarity matrix
 }
 \description{
-Computes several measures of similarity
-(see Choi, Cha, & Tappert, 2010 for additional measures)
+Computes a similarity matrix between the columns of a
+binarized verbal fluency or linguistic dataset (see Choi, Cha, & Tappert,
+2010 for additional measures)
 }
 \examples{
-# Simulate Datasets
-one <- sim.fluency(10)
+# Simulate a toy binarized dataset
+one <- matrix(sample(0:1, 100, replace = TRUE), nrow = 10, ncol = 10)
 
-# Compute similarity matrix
+# Compute a cosine similarity matrix
 cos <- similarity(one, method = "cosine")
 
 }

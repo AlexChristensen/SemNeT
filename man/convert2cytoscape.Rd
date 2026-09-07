@@ -2,32 +2,33 @@
 % Please edit documentation in R/convert2cytoscape.R
 \name{convert2cytoscape}
 \alias{convert2cytoscape}
-\title{Convert Adjacency Matrix to Cytoscape Format}
+\title{Convert an Adjacency Matrix to Cytoscape Format}
 \usage{
 convert2cytoscape(A)
 }
 \arguments{
 \item{A}{Matrix or data frame.
-A cleaned, finalized response matrix ready to be visualized}
+A cleaned, finalized network matrix ready to be visualized}
 }
 \value{
-A sparse matrix formatted for Cytoscape
+A sparse matrix formatted for Cytoscape, with columns
+\code{nodeTO}, \code{nodeFROM}, and \code{nodeWEIGHT}
 }
 \description{
-Converts an adjacency matrix to Cytoscape's sparse matrix format
+Converts an adjacency matrix to Cytoscape's sparse edge-list format
 }
 \examples{
-# Simulate Datasets
-one <- sim.fluency(10)
-two <- sim.fluency(10)
+# Simulate toy binarized datasets
+one <- matrix(sample(0:1, 100, replace = TRUE), nrow = 10, ncol = 10)
+two <- matrix(sample(0:1, 100, replace = TRUE), nrow = 10, ncol = 10)
 
-# Compute similarity matrix
+# Compute similarity matrices
 cos1 <- similarity(one, method = "cosine")
 cos2 <- similarity(two, method = "cosine")
 
 # Compute networks
-net1 <- TMFG(cos1)
-net2 <- TMFG(cos2)
+net1 <- suppressWarnings(tmfg(cos1))
+net2 <- suppressWarnings(tmfg(cos2))
 
 # Convert to Cytoscape format
 cyto1 <- convert2cytoscape(net1)

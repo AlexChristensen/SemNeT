@@ -7,36 +7,31 @@
 equate(...)
 }
 \arguments{
-\item{...}{Matrices, data frames or a list of matrices and data frames.
-Binary response matrices to be equated}
+\item{...}{Named binary response matrices or data frames.
+At least two, e.g. \code{equate(low = low_data, high = high_data)}}
 }
 \value{
-This function returns a list containing the
-equated binary response matrices in the order they were input.
-The response matrices are labeled as the object name they were
-entered with
+A named list of the equated binary response matrices, one per
+input, each containing the same responses (columns) in the same order
 }
 \description{
-A function to "equate" multiple response matrices to one another.
-\emph{N} number of groups are matched based on their responses so
-that every group has the same responses in their data
+Equates multiple binary response matrices to one another, so
+that every group retains exactly the responses common to \emph{all} of them
 }
 \examples{
 # Obtain binary data
 bin <- open.binary
 
-# Finalize mat1
-mat1 <- finalize(bin[c(1:5),])
+# Finalize each group
+mat1 <- finalize(bin[c(1:5), ])
+mat2 <- finalize(bin[c(6:10), ])
 
-# Finalize mat2
-mat2 <- finalize(bin[c(6:10),])
-
-# Equate mat1 and mat1
-eq <- equate(mat1, mat2)
+# Equate the groups
+eq <- equate(mat1 = mat1, mat2 = mat2)
 
 # Obtain respective equated response matrices
-eq.mat1 <- eq$mat1 # list objects are named with the names
-eq.mat2 <- eq$mat2 # they were entered with
+eq_mat1 <- eq$mat1
+eq_mat2 <- eq$mat2
 
 }
 \author{

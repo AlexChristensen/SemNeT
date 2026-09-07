@@ -1,6 +1,6 @@
-### CRAN 1.4.3 | GitHub 1.4.4
+### SemNeT 2.0.0
 
-[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)[![Downloads Total](https://cranlogs.r-pkg.org/badges/grand-total/SemNeT?color=brightgreen)](https://cran.r-project.org/package=SemNeT) [![Downloads per month](http://cranlogs.r-pkg.org/badges/SemNeT?color=brightgreen)](https://cran.r-project.org/package=SemNeT) 
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 # How To Install
 ```
@@ -16,6 +16,36 @@ Christensen, A. P., & Kenett, Y. N. (in press). Semantic network analysis (SemNA
 
 # SemNeT
 SemNeT offers researchers several tools for the analysis of their semantic network data. As a part of a module of semantic network packages, SemNeT is the most general, providing statistical analyses for all types of semantic networks.
+
+## Version 2.0.0: A Rebuilt Package
+
+Version 2.0.0 is a from-scratch rebuild of the package's internals, aimed at
+long-term reliability rather than new features. Highlights:
+
+* **One function, one file.** Every exported function (e.g. `tmfg()`,
+  `bootstrap_SemNeT()`) now lives in its own file alongside its own input
+  validation, instead of being scattered across large, multi-purpose scripts.
+* **Real bugs fixed.** Several silent correctness issues in the pre-2.0.0
+  codebase are fixed in this version -- inconsistent equating logic, a few
+  reversed/dropped loop ranges on degenerate inputs, a signed-weight `NaN` in
+  weighted clustering coefficient, duplicate-name handling across every
+  function that takes named `...` groups, and more. See `NEWS.md` for the
+  full list.
+* **Old code keeps working.** Every pre-2.0.0 exported name and call style
+  (e.g. `bootSemNeT()`, `TMFG()`, `test.bootSemNeT()`) still works, as a thin
+  wrapper around its new-named replacement (e.g. `bootstrap_SemNeT()`,
+  `tmfg()`, `bootstrap_test_SemNeT()`). Existing scripts do not need to
+  change.
+* **Fewer dependencies.** Plotting and parallelism no longer pull in
+  `ggplot2`/`dplyr`/`plyr`/`magrittr`/`pbapply`/`philentropy`; network
+  plotting now goes through base graphics and `future`/`future.apply` handles
+  parallel bootstrapping with guaranteed cleanup.
+* **Permutation testing, exported for the first time.** `permutation_SemNeT()`
+  (formerly an internal, undocumented `permSemNeT()`) is now a fully
+  validated, documented, exported function.
+
+The Shiny app (`SemNeTShiny()`) is **not yet part of this rebuild** and
+remains on the pre-2.0.0 code path for now.
 
 ## Forward Flow
 Implements the forward flow measure introduced by Gray et al. (2019) and semantic spaces from Beaty et al. (2021).

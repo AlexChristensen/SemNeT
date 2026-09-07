@@ -2,31 +2,33 @@
 % Please edit documentation in R/finalize.R
 \name{finalize}
 \alias{finalize}
-\title{Finalize Response Matrix}
+\title{Finalize a Response Matrix}
 \usage{
-finalize(rmat, minCase = 2)
+finalize(data, minimum_cases = 2)
 }
 \arguments{
-\item{rmat}{Binary matrix.
-A \link[SemNetCleaner]{textcleaner} filtered response matrix}
+\item{data}{Matrix or data frame.
+A binary response matrix (participants x responses)}
 
-\item{minCase}{Numeric.
-Minimum number of cases to produce a response}
+\item{minimum_cases}{Numeric.
+Minimum number of participants required to have given a response for that
+response to be kept.
+Defaults to \code{2}}
 }
 \value{
-A binary response matrix with responses
-given by at least \code{minCase} people
+A binary response matrix containing only responses given by at
+least \code{minimum_cases} participants
 }
 \description{
-Finalizes the response matrix by keeping
-responses that are given by a certain number of people
+Finalizes a binary response matrix by keeping only responses
+given by at least a minimum number of participants
 }
 \examples{
 # Obtain binary data
 bin <- open.binary
 
-# Finalize mat1
-mat1 <- finalize(bin)
+# Finalize
+final <- finalize(bin)
 
 }
 \author{

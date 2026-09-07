@@ -2,27 +2,26 @@
 % Please edit documentation in R/convert2igraph.R
 \name{convert2igraph}
 \alias{convert2igraph}
-\title{Convert Network(s) to igraph's Format}
+\title{Convert a Network to igraph's Format}
 \usage{
-convert2igraph(A, neural = FALSE)
+convert2igraph(A)
 }
 \arguments{
-\item{A}{Adjacency matrix (network matrix) or brain connectivity array
-(from \code{convertConnBrainMat})}
-
-\item{neural}{Defunct.}
+\item{A}{Matrix or data frame.
+An adjacency (network) matrix}
 }
 \value{
-Returns a network matrix in \code{igraph}'s format
+Returns a network in \code{igraph}'s format
 }
 \description{
-Converts single or multiple networks into \code{igraph}'s format for network analysis
+Converts an adjacency matrix into \code{igraph}'s network format
 }
 \examples{
 # Pearson's correlation only for CRAN checks
-A <- TMFG(similarity(sim.fluency(50), method = "cor"))
+fluency_data <- matrix(sample(0:1, 500, replace = TRUE), nrow = 50, ncol = 10)
+A <- suppressWarnings(tmfg(similarity(fluency_data, method = "cor")))
 
-igraphNetwork <- convert2igraph(A)
+igraph_network <- convert2igraph(A)
 
 }
 \author{
