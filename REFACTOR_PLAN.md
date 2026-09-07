@@ -685,3 +685,54 @@ participants. Also removed a redundant `as.matrix()`/`as.vector()` round trip in
 `forward_flow_fluency()`'s per-participant response extraction (`response_matrix[i, ]`
 is already a plain vector once `response_matrix_error()` has coerced the input to a
 matrix).
+
+**Verification against the real GitHub issue #10/#11 data (2026-09-07):** downloaded
+the actual data files attached to both issues and ran them through the rebuilt
+functions directly, rather than only synthetic data.
+
+- Issue #10 (`forward_flow()` "node stack overflow"): their `response_matrix.csv`
+  (6 participants, 60 cues, 1,441-word vocabulary) ran successfully in 0.14s. The
+  original crash's exact mechanism (multi-space `"all"` looping + `googledrive`
+  vector loading) no longer exists in this rebuild, so it can't recur structurally
+  either way. This run surfaced a **real, separate bug** in this rebuild's own code:
+  `forward_flow_free()`'s `result_index_by_id[[id]]` / `response_flow_list[[id]]`
+  indexed with the raw (numeric) participant ID -- `[[` on a list indexes
+  *positionally* for a bare number, not by name. Their real IDs (7, 12, 20, ...)
+  exceeded the 6-element list, throwing "subscript out of bounds"; smaller numeric
+  IDs coinciding with their own list position (as in this file's own earlier test
+  data, IDs 1/2) would have silently returned the *wrong* participant's results
+  instead of erroring at all. Fixed by indexing with `as.character(id)` at both
+  sites; added a regression test using deliberately non-sequential IDs (7/12/20)
+  that reproduces the original failure.
+- Issue #11 (Shiny Spreading Activation): ran their `HCMS_Animals_cleaned_responses.csv`
+  + `group.csv` (88 HC / 89 MS participants) through the exact pipeline
+  `mod_network_estimation.R` uses (auto-detect raw-vs-binary -> `responses_to_binary()`
+  -> `finalize()` -> `equate()` -> `similarity()` -> `tmfg()`), producing two
+  112-node networks with real animal-name `colnames()` preserved throughout. Ran
+  their `HCMS_Animals_BRM.csv` (already-binary, 194 rows) through the same
+  auto-detection branch directly -- `is.character(unlist(brm))` correctly
+  evaluates `FALSE`, skipping `responses_to_binary()` -- producing a clean 194-node
+  network. Then ran `spreadr::spreadr()` on the estimated network using real node
+  names pulled from `colnames(network)` (exactly as `mod_spreading_activation.R`
+  does): zero "these nodes don't exist in network" warnings, and non-zero
+  activation output (max = 10) -- directly contradicting both of the original
+  issue's reported symptoms.
+
+**Broader bug-hunt pass (2026-09-07), prompted by the issue #10 finding above:**
+searched the whole package for the same bug class (a loop variable drawn from
+*user data values*, rather than `names()`/`...`-capture, later used as a bare `[[`
+index) -- `forward_flow.R` was the only place it occurred; every other `[[i]]`/
+`[[group_name]]` site in the package indexes with either an integer loop counter
+(`seq_len()`/`seq_along()`) or a name genuinely guaranteed to be character
+(`names()` of an R list, or a `...`-capture). Also cross-checked three complex,
+previously under-tested numeric algorithms against independent references:
+`distance(A, weighted = TRUE)` (a from-scratch Dijkstra implementation, only
+reachable indirectly via `aspl(..., weighted = TRUE)` and never previously given a
+correctness test, only a type-validation one) against `igraph::distances()` on a
+random weighted network; `cc(A, weighted = TRUE)`'s signed geometric-mean formula
+against a hand-derived value on a small triangle network, including a negative
+edge weight; and `q()`'s vendored Louvain modularity against
+`igraph::modularity()` computing the same partition independently. All three
+matched their reference to floating-point precision -- no bug found in any of
+them, but all three gained permanent regression tests closing a real coverage
+gap (`test-aspl.R`, `test-cc.R`).

@@ -188,6 +188,38 @@ test_that("forward_flow_free's split()-based grouping matches a naive re-scan re
 
 })
 
+test_that("forward_flow_free handles non-sequential numeric IDs correctly", {
+
+  # `[[` on a list indexes *positionally* when given a bare number, not by
+  # name -- with numeric participant IDs like 1, 2 (matching their own
+  # 1-based position in `ids`), a positional bug can silently produce the
+  # *correct* answer by coincidence. Real-world IDs (e.g. participant numbers
+  # 7, 12, 20) expose it directly: either "subscript out of bounds" (an ID
+  # exceeding the number of participants) or silently mismatched output
+  embeddings <- make_embeddings()
+
+  response_matrix <- data.frame(
+    ID = c(7, 7, 7, 12, 12, 12, 20, 20, 20),
+    Cue = "animals",
+    Response = c("dog", "wolf", "cat", "car", "truck", "bus", "dog", "wolf", "cat"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- forward_flow(response_matrix, embeddings, min_response = 2, type = "free")
+
+  expect_setequal(result$mean_flow$ID, c(7, 12, 20))
+  expect_setequal(names(result$response_flow), c("7", "12", "20"))
+
+  # Participant 20 gave the exact same responses as participant 7 -- their
+  # response-by-response flow must be identical, confirming each ID's
+  # results weren't cross-assigned to the wrong participant
+  expect_equal(result$response_flow[["7"]]$animals, result$response_flow[["20"]]$animals)
+
+  # Participant 12's flow (different responses entirely) must differ from 7's
+  expect_false(isTRUE(all.equal(result$response_flow[["7"]]$animals, result$response_flow[["12"]]$animals)))
+
+})
+
 test_that("forward_flow validates its input", {
 
   embeddings <- make_embeddings()

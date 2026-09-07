@@ -42,6 +42,34 @@ test_that("cc attaches per-node clustering coefficients without changing its num
 
 })
 
+test_that("cc's weighted formula matches a hand-derived value, including signed weights", {
+
+  # Onnela/Rubinov & Sporns (2010) geometric-mean weighted CC, hand-derived
+  # for a 3-node triangle with weights w12 = 2, w13 = 4, w23 = 8: each node's
+  # two neighbors are also connected to each other, so
+  # C_i = 2 * (w_ij * w_ik * w_jk)^(1/3) / (k_i * (k_i - 1))
+  #     = 2 * (2*4*8)^(1/3) / (2*1) = 2*4/2 = 4, identical for all 3 nodes
+  # by symmetry -- the only prior test for this branch checked type/sign, not
+  # an actual known value
+  A <- matrix(c(0, 2, 4, 2, 0, 8, 4, 8, 0), 3, 3)
+  result <- cc(A, weighted = TRUE)
+
+  expect_equal(as.numeric(attr(result, "node")), c(4, 4, 4))
+
+  # Negative edge weights (e.g. a TMFG network built on signed correlations)
+  # must use the real-valued (sign-preserving) cube root, not NaN from `^(1/3)`
+  # on a negative number -- flipping w13's sign should flip the sign of every
+  # node's clustering coefficient here (an odd number of negative edges in
+  # each triangle term), not produce NaN
+  A_signed <- A
+  A_signed[1, 3] <- A_signed[3, 1] <- -4
+  result_signed <- cc(A_signed, weighted = TRUE)
+
+  expect_false(anyNA(attr(result_signed, "node")))
+  expect_equal(as.numeric(attr(result_signed, "node")), c(-4, -4, -4))
+
+})
+
 test_that("cc computes weighted clustering coefficients", {
 
   set.seed(1)

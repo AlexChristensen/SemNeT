@@ -293,10 +293,16 @@ forward_flow_free <- function(response_matrix, embeddings, min_response, max_res
   names(response_flow_list) <- ids
 
   for(id in ids){
-    id_index <- result_index_by_id[[id]]
+    # `[[` on a list indexes *positionally* when given a numeric value --
+    # `ids` can itself be numeric (e.g. integer participant IDs), so an
+    # unconverted `id` here would silently look up the wrong participant (or
+    # throw "subscript out of bounds" once an ID exceeds the number of
+    # participants) instead of doing the name-based lookup this needs
+    id_name <- as.character(id)
+    id_index <- result_index_by_id[[id_name]]
     per_cue <- lapply(results[id_index], function(result) result$flow)
     names(per_cue) <- cue_names[id_index]
-    response_flow_list[[id]] <- per_cue
+    response_flow_list[[id_name]] <- per_cue
   }
 
   return(list(mean_flow = mean_flow, mean_response_flow = mean_response_flow, response_flow = response_flow_list))

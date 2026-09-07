@@ -70,6 +70,31 @@ and remains on the pre-2.0.0 code path.
   instead of depending on R's global RNG state via `igraph::cluster_louvain()`
   (which meant the same call could return different results depending on
   unrelated code executed earlier in a session).
+* `forward_flow()`'s `type = "free"` path silently mismatched or crashed on
+  numeric participant IDs (e.g. `7`, `12`, `20`): `[[` on a list indexes
+  *positionally* for a bare number, not by name, so `result_index_by_id[[id]]`/
+  `response_flow_list[[id]]` either threw "subscript out of bounds" (an ID
+  exceeding the participant count) or silently returned another participant's
+  results. Found by re-running GitHub issue #10's actual reported dataset
+  through the rebuilt function. Fixed by indexing with `as.character(id)`.
+
+## Verification against real user-reported data
+
+* GitHub issue #10 ("node stack overflow" in `forward_flow()`) and issue #11
+  (Shiny Spreading Activation producing all-zero output / BRM upload failing)
+  were re-tested end to end using the actual data files attached to those
+  issues, not synthetic data. Both are resolved. See `REFACTOR_PLAN.md`'s
+  "Post-rebuild addition: `forward_flow()`" section for the full
+  investigation and results.
+* `distance(A, weighted = TRUE)` (a from-scratch Dijkstra implementation
+  reachable via `aspl(A, weighted = TRUE)`) and `cc(A, weighted = TRUE)`'s
+  geometric-mean formula had no prior correctness tests (only type
+  validation) -- verified against an independent reference (`igraph` for
+  `distance()`, hand-derived values including negative edge weights for
+  `cc()`) and found correct; permanent regression tests added either way.
+* `q()`'s vendored Louvain modularity was cross-checked against
+  `igraph::modularity()` computing the same partition independently, and
+  matched to floating-point precision.
 
 ## Memory
 

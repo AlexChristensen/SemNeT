@@ -43,6 +43,35 @@ test_that("aspl attaches per-node aspl and eccentricity without changing its num
 
 })
 
+test_that("aspl's weighted distances match an independent (igraph) reference", {
+
+  # `distance(A, weighted = TRUE)` is a from-scratch Dijkstra implementation
+  # with no prior correctness test (only a type-validation one existed) --
+  # verified here against igraph::distances() on a random weighted network,
+  # using SemNeT's own distance = 1/weight convention (Rubinov & Sporns, 2010)
+  skip_if_not_installed("igraph")
+
+  set.seed(42)
+  n <- 8
+  A <- matrix(0, n, n)
+  A[upper.tri(A)] <- sample(c(0, 0, 0.2, 0.5, 0.8, 1), n * (n - 1) / 2, replace = TRUE)
+  A <- A + t(A)
+  diag(A) <- 0
+  for(i in 1:(n - 1)){
+    if(A[i, i + 1] == 0){
+      A[i, i + 1] <- A[i + 1, i] <- 0.5
+    }
+  }
+
+  D_semnet <- distance(A, weighted = TRUE)
+
+  g <- igraph::graph_from_adjacency_matrix(A, mode = "undirected", weighted = TRUE, diag = FALSE)
+  D_igraph <- igraph::distances(g, weights = 1 / igraph::E(g)$weight)
+
+  expect_equal(unname(D_semnet), unname(D_igraph), tolerance = 1e-8)
+
+})
+
 test_that("aspl validates its input", {
 
   expect_error(aspl(matrix(1, 3, 4)), "square")
