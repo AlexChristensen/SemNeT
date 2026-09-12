@@ -53,8 +53,14 @@ mod_permutation_server <- function(id, state)
       )
     })
 
-    task <- ExtendedTask$new(function(sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores){
+    progress_file <- reactiveVal(NULL)
+    progress <- progress_poller(session, progress_file)
+
+    task <- ExtendedTask$new(function(sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, progress_file){
       promises::future_promise({
+        # See mod_shared.R's `progress_poller()` for why this (not `progressr`)
+        # is what actually gets live progress out of a background worker
+        options(SemNeT.progress_file = progress_file)
         permutation_SemNeT(
           sample_1 = sample_1, sample_2 = sample_2, method = method, method_args = method_args,
           sim = sim, minimum_cases = minimum_cases, measure = measure, alternative = alternative,
@@ -63,8 +69,9 @@ mod_permutation_server <- function(id, state)
       }, seed = TRUE)
     })
 
-    reuse_task <- ExtendedTask$new(function(previous, measure, alternative, cores){
+    reuse_task <- ExtendedTask$new(function(previous, measure, alternative, cores, progress_file){
       promises::future_promise({
+        options(SemNeT.progress_file = progress_file)
         permutation_SemNeT(previous = previous, measure = measure, alternative = alternative, cores = cores)
       }, seed = TRUE)
     })
@@ -87,18 +94,21 @@ mod_permutation_server <- function(id, state)
 
       warn_if_slow(input$iter)
       sample_names(c(input$sample_1, input$sample_2))
+      progress_file(new_progress_file())
 
       task$invoke(
         state$groups_data[[input$sample_1]], state$groups_data[[input$sample_2]],
         state$method, state$method_args, state$sim, state$minimum_cases,
-        input$measure, input$alternative, input$iter, input$cores
+        input$measure, input$alternative, input$iter, input$cores,
+        progress_file()
       )
 
     })
 
     observeEvent(input$run_again, {
       req(state$perm_result)
-      reuse_task$invoke(state$perm_result, input$measure, input$alternative, input$cores)
+      progress_file(new_progress_file())
+      reuse_task$invoke(state$perm_result, input$measure, input$alternative, input$cores, progress_file())
     })
 
     observe({
@@ -114,10 +124,13 @@ mod_permutation_server <- function(id, state)
     })
 
     output$status <- renderUI({
-      if(task$status() == "running" || reuse_task$status() == "running"){
-        return(tags$p(tags$em("Running... this tab will update when it's done.")))
+      if(task$status() == "running"){
+        return(progress_status_ui(task, progress))
       }
-      tagList(task_status_ui(task), task_status_ui(reuse_task))
+      if(reuse_task$status() == "running"){
+        return(progress_status_ui(reuse_task, progress))
+      }
+      tagList(progress_status_ui(task, progress), progress_status_ui(reuse_task, progress))
     })
 
     output$result <- renderTable({

@@ -31,8 +31,10 @@ export(randnet.test)
 export(random_network_test)
 export(random_walk)
 export(randwalk)
+export(read_uploaded_file)
 export(response.analysis)
 export(response_analysis)
+export(responses_to_binary)
 export(semantic_network_measures)
 export(semnetmeas)
 export(sim.fluency)
@@ -40,11 +42,7 @@ export(similarity)
 export(simulate_fluency)
 export(test.bootSemNeT)
 export(tmfg)
-importFrom(graphics,
-  boxplot,
-  layout,
-  par
-)
+importFrom(graphics,layout)
 importFrom(methods,is)
 importFrom(stats,
   TukeyHSD,

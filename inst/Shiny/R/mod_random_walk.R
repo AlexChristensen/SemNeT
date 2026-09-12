@@ -55,8 +55,17 @@ mod_random_walk_server <- function(id, state)
       )
     })
 
-    task <- ExtendedTask$new(function(network_a, network_b, name_a, name_b, reps, steps, iter, cores){
+    progress_file <- reactiveVal(NULL)
+    progress <- progress_poller(session, progress_file)
+
+    task <- ExtendedTask$new(function(network_a, network_b, name_a, name_b, reps, steps, iter, cores, progress_file){
       promises::future_promise({
+        # See mod_shared.R's `progress_poller()` for why this (not `progressr`)
+        # is what actually gets live progress out of a background worker.
+        # Resets once per step level (`random_walk()` calls `parallel_process()`
+        # once per level), so the bar's denominator is one level's iterations,
+        # not the full run across every level
+        options(SemNeT.progress_file = progress_file)
         random_walk(network_a, network_b, name_a = name_a, name_b = name_b, reps = reps, steps = steps, iter = iter, cores = cores)
       }, seed = TRUE)
     })
@@ -71,10 +80,12 @@ mod_random_walk_server <- function(id, state)
       }
 
       warn_if_slow(input$iter * input$reps)
+      progress_file(new_progress_file())
 
       task$invoke(
         state$networks[[input$network_a]], state$networks[[input$network_b]],
-        input$network_a, input$network_b, input$reps, input$steps, input$iter, input$cores
+        input$network_a, input$network_b, input$reps, input$steps, input$iter, input$cores,
+        progress_file()
       )
 
     })
@@ -85,7 +96,7 @@ mod_random_walk_server <- function(id, state)
       }
     })
 
-    output$status <- renderUI(task_status_ui(task))
+    output$status <- renderUI(progress_status_ui(task, progress))
 
     output$result <- renderTable({
       req(state$random_walk)

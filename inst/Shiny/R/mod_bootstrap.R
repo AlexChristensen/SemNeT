@@ -67,8 +67,15 @@ mod_bootstrap_server <- function(id, state)
 
     })
 
-    task <- ExtendedTask$new(function(groups_data, type, method, method_args, sim, minimum_cases, percents, iter, cores){
+    progress_file <- reactiveVal(NULL)
+    progress <- progress_poller(session, progress_file)
+
+    task <- ExtendedTask$new(function(groups_data, type, method, method_args, sim, minimum_cases, percents, iter, cores, progress_file){
       promises::future_promise({
+
+        # See mod_shared.R's `progress_poller()` for why this (not `progressr`)
+        # is what actually gets live progress out of a background worker
+        options(SemNeT.progress_file = progress_file)
 
         results <- lapply(percents, function(prop){
           args <- c(
@@ -104,9 +111,12 @@ mod_bootstrap_server <- function(id, state)
 
       warn_if_slow(input$iter * length(percents))
 
+      progress_file(new_progress_file())
+
       task$invoke(
         state$groups_data, input$type, state$method, state$method_args,
-        state$sim, state$minimum_cases, percents, input$iter, input$cores
+        state$sim, state$minimum_cases, percents, input$iter, input$cores,
+        progress_file()
       )
 
     })
@@ -118,7 +128,7 @@ mod_bootstrap_server <- function(id, state)
       }
     })
 
-    output$status <- renderUI(task_status_ui(task))
+    output$status <- renderUI(progress_status_ui(task, progress))
 
     observeEvent(list(state$boot_result, input$test), {
 
@@ -161,7 +171,13 @@ mod_bootstrap_server <- function(id, state)
       condition <- if(!is.null(input$plot_condition)) input$plot_condition else names(state$boot_result)[1]
 
       output$boot_plot <- renderPlot({
-        plot.bootstrap_SemNeT(state$boot_result[[condition]])
+        # The generic dispatches correctly via the registered S3 method even
+        # though `plot.bootstrap_SemNeT()` itself isn't exported -- calling
+        # it directly by name (as this used to) only worked under
+        # `devtools::load_all()`, which attaches internals too; it fails
+        # under a real `library(SemNeT)` install, exactly how the Shiny app
+        # actually launches
+        plot(state$boot_result[[condition]])
       })
 
     })

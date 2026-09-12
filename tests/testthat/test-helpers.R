@@ -238,3 +238,42 @@ test_that("parallel_process validates its arguments", {
   expect_error(parallel_process(5, "not a function"), "parallel_process")
 
 })
+
+test_that("parallel_process caps requested cores to what's actually available", {
+
+  # Simulate running inside an already-nested worker (e.g. a Shiny
+  # `ExtendedTask`'s background process), where `future::availableCores()`
+  # is deliberately capped to 1 -- requesting more workers than that used to
+  # trip `parallelly`'s hard localhost-worker-count guard instead of
+  # degrading to sequential execution
+  testthat::local_mocked_bindings(availableCores = function() 1L, .package = "future")
+
+  plan_before <- future::plan()
+
+  result <- parallel_process(5, function(i) i^2, cores = 4, progress = FALSE)
+  expect_equal(unlist(result), (1:5)^2)
+
+  expect_equal(class(future::plan()), class(plan_before))
+
+})
+
+test_that("parallel_process's progress file reports a monotonic completion count", {
+
+  progress_file <- tempfile()
+  writeLines("1", progress_file)
+  old_option <- options(SemNeT.progress_file = progress_file)
+  on.exit(options(old_option), add = TRUE)
+
+  # Multiple iterations across 2 workers -- completion order across workers
+  # isn't guaranteed, but the number of completions recorded must still end
+  # up exactly matching the iteration count, regardless of order
+  parallel_process(6, function(i) i, cores = 2, progress = FALSE)
+
+  total <- as.numeric(readLines(progress_file, n = 1))
+  expect_equal(total, 6)
+
+  # One byte appended per completed iteration, not the (out-of-order) raw
+  # iteration index itself
+  expect_equal(file.info(paste0(progress_file, ".progress"))$size, 6)
+
+})

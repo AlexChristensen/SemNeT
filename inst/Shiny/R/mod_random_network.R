@@ -41,8 +41,14 @@ mod_random_network_server <- function(id, state)
 
   moduleServer(id, function(input, output, session){
 
-    task <- ExtendedTask$new(function(networks, iter, cores){
+    progress_file <- reactiveVal(NULL)
+    progress <- progress_poller(session, progress_file)
+
+    task <- ExtendedTask$new(function(networks, iter, cores, progress_file){
       promises::future_promise({
+        # See mod_shared.R's `progress_poller()` for why this (not `progressr`)
+        # is what actually gets live progress out of a background worker
+        options(SemNeT.progress_file = progress_file)
         do.call(random_network_test, c(networks, list(iter = iter, cores = cores)))
       }, seed = TRUE)
     })
@@ -50,7 +56,8 @@ mod_random_network_server <- function(id, state)
     observeEvent(input$run, {
       req(state$networks)
       warn_if_slow(input$iter)
-      task$invoke(state$networks, input$iter, input$cores)
+      progress_file(new_progress_file())
+      task$invoke(state$networks, input$iter, input$cores, progress_file())
     })
 
     observe({
@@ -59,7 +66,7 @@ mod_random_network_server <- function(id, state)
       }
     })
 
-    output$status <- renderUI(task_status_ui(task))
+    output$status <- renderUI(progress_status_ui(task, progress))
 
     output$result <- renderTable({
       req(state$random_test)

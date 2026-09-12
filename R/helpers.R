@@ -494,6 +494,21 @@ parallel_process <- function(iterations, FUN, ..., cores = 1, progress = TRUE)
   # 'FUN' must actually be a function
   typeof_error(FUN, "function", "parallel_process")
 
+  # When this call is itself running inside a background `multisession`
+  # worker (e.g. a Shiny `ExtendedTask`'s `future_promise()` body, spawned
+  # from the app-level plan set in `inst/Shiny/global.R`), spinning up a
+  # *second*, nested `multisession` pool here trips `parallelly`'s hard
+  # localhost-worker-count guard (`checkNumberOfLocalWorkers()`), since a
+  # worker process's own `availableCores()` is deliberately capped (usually
+  # to 1) to prevent exactly this kind of recursive worker explosion.
+  # Capping the request to what's actually safely available degrades that
+  # case to sequential (still correct, just not internally parallel one
+  # level deeper) while leaving true top-level interactive/console use --
+  # where `availableCores()` reflects the real host -- unaffected
+  if(cores > 1){
+    cores <- min(cores, future::availableCores())
+  }
+
   # Record the currently active plan so it can be restored afterward, and switch
   # to a sequential plan for one core or multisession (background R processes)
   # for more than one -- `workers` is only a valid argument for multisession
@@ -506,9 +521,59 @@ parallel_process <- function(iterations, FUN, ..., cores = 1, progress = TRUE)
   # Guarantee the previous plan is restored even if 'FUN' throws an error
   on.exit(future::plan(old_plan), add = TRUE)
 
+  # `progressr`'s cross-process relay assumes the caller is synchronously
+  # *waiting* on the future (e.g. a plain interactive `future::value()` call)
+  # -- it does not reach a `shiny::ExtendedTask`/`promises::future_promise()`
+  # caller at all, since that never blocks to poll for it. For that case (and
+  # only that case -- normal interactive/console use is unaffected), the
+  # Shiny app instead points `options(SemNeT.progress_file = <path>)` at a
+  # per-task file *before* calling into a package function that reaches this
+  # point, and every iteration's completion is written there directly. No
+  # exported function's signature needs a new argument for this
+  progress_file <- getOption("SemNeT.progress_file", default = NULL)
+
+  # Reset the shared file to this call's total before any iteration begins,
+  # so a UI polling it always has an accurate denominator -- including across
+  # multiple `parallel_process()` calls within the same background task (e.g.
+  # bootstrap_SemNeT() calls this once per group). The sibling ".progress"
+  # file is truncated to empty here too -- see `wrapped_FUN()` below for why
+  # it, not this file, is what actually tracks completions
+  progress_marker_file <- paste0(progress_file, ".progress")
+
+  if(!is.null(progress_file)){
+    try({
+      writeLines(as.character(iterations), progress_file)
+      writeLines(character(0), progress_marker_file)
+    }, silent = TRUE)
+  }
+
+  # Wrap 'FUN' so every call also records its completion, regardless of
+  # whether a console progress bar was also requested below. Each completed
+  # iteration appends exactly one byte to `progress_marker_file`; a UI poller
+  # reads the *count* of completions (that file's size) rather than the raw
+  # iteration index `i` written here. That distinction matters once
+  # `cores > 1`: `future_lapply()`'s workers finish iterations out of order
+  # (e.g. iteration 900 can complete before iteration 100), so writing `i`
+  # itself makes a polled progress value jump backward and forward instead of
+  # climbing monotonically. A byte count of completions-so-far is correct
+  # regardless of completion order. `append = TRUE` opens the file in a mode
+  # that appends each small write atomically on a local filesystem, so
+  # concurrent workers' single-byte appends don't corrupt one another
+  wrapped_FUN <- function(i, ...){
+
+    result <- FUN(i, ...)
+
+    if(!is.null(progress_file)){
+      try(cat("1", file = progress_marker_file, append = TRUE), silent = TRUE)
+    }
+
+    return(result)
+
+  }
+
   # Run without a progress bar when one wasn't requested
   if(!progress){
-    return(future.apply::future_lapply(seq_len(iterations), FUN, ..., future.seed = TRUE))
+    return(future.apply::future_lapply(seq_len(iterations), wrapped_FUN, ..., future.seed = TRUE))
   }
 
   # Run with a `progressr` progress bar wrapping the parallel apply
@@ -522,7 +587,7 @@ parallel_process <- function(iterations, FUN, ..., cores = 1, progress = TRUE)
       future.apply::future_lapply(
         seq_len(iterations),
         function(i, ...){
-          result <- FUN(i, ...)
+          result <- wrapped_FUN(i, ...)
           report_step()
           return(result)
         },
@@ -722,14 +787,53 @@ bad_response <- function(word, ...)
 
 }
 
+#' @title Convert Raw Responses to a Binary Response Matrix
+#'
+#' @description Converts a raw word-response matrix (participants by response
+#' order, one word per cell) into a binary (participant by vocabulary)
+#' response matrix, alongside a matching matrix recording response order
+#'
+#' @param responses Matrix or data frame.
+#' A raw word-response matrix: participants (rows) by response order
+#' (columns), one word per cell (e.g. verbal fluency data). Empty, missing,
+#' and placeholder cells (\code{NA}, \code{""}, whitespace-only) are treated
+#' as no response
+#'
+#' @return A list of class \code{"responses_to_binary"} with:
+#' \item{binary}{A participant by vocabulary matrix of 0s (never said) and 1s (said)}
+#' \item{order}{A participant by vocabulary matrix of 0s (never said) and the
+#' response's 1-based order (first said, second said, ...) otherwise}
+#'
+#' @examples
+#' # Raw fluency responses, 2 participants, up to 3 responses each
+#' responses <- matrix(
+#'   c("dog", "cat", NA, "cat", "wolf", "dog"),
+#'   nrow = 2, byrow = TRUE
+#' )
+#'
+#' result <- responses_to_binary(responses)
+#' result$binary
+#' result$order
+#'
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#'
 #' @importFrom stats na.omit
-#' @noRd
+#'
+#' @export
 # Convert a raw word-response matrix into a binary (participant x vocabulary) matrix
-# Used by `pf()` -- kept general enough for Phase 3's `equate()`/pipeline functions,
-# which will also need it, so it lives here rather than inside a single function file
-# Updated 06.09.2026
+# Exported so the Shiny app's Network Estimation tab (which needs this exact
+# conversion for raw-response uploads) can call it directly, matching every
+# other tab's "call the real package function, no duplicates" rule -- as an
+# unexported (`@noRd`) helper this was invisible under a real `library(SemNeT)`
+# install (only `devtools::load_all()`, used throughout Phase 7's own testing,
+# happens to attach internals too, which is what let this ship unnoticed)
+# Updated 10.09.2026
 responses_to_binary <- function(responses)
 {
+
+  # Validate and coerce input before any computation begins -- shared with
+  # every other function that accepts a raw-or-already-binary response matrix
+  responses <- response_matrix_error(responses, "responses_to_binary")
 
   # Data matrix
   mat <- as.matrix(responses)

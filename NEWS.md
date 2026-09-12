@@ -3,8 +3,10 @@
 Full rebuild of the package's internals (see `REFACTOR_PLAN.md` for the
 phase-by-phase development record). Every pre-2.0.0 exported name still
 works -- see "Backward compatibility" below -- so existing scripts do not
-need to change. The Shiny app (`SemNeTShiny()`) is not part of this rebuild
-and remains on the pre-2.0.0 code path.
+need to change. The Shiny app (`SemNeTShiny()`) is also fully rebuilt --
+per-session state, background execution for every long-running analysis, a
+new Permutation Analyses tab, and real file exports -- see `SHINY_PLAN.md`
+for its own development record.
 
 ## New functions
 
@@ -22,6 +24,8 @@ and remains on the pre-2.0.0 code path.
   arguments, `parallel_process()` instead of a hand-managed
   `parallel::makeCluster()`, and the existing `cosine()` helper instead of a
   new `LSAfun` dependency.
+* `responses_to_binary()` and `read_uploaded_file()` -- previously internal
+  helpers, now exported (see "Real bugs fixed" below for why).
 
 ## Real bugs fixed
 
@@ -77,6 +81,61 @@ and remains on the pre-2.0.0 code path.
   exceeding the participant count) or silently returned another participant's
   results. Found by re-running GitHub issue #10's actual reported dataset
   through the rebuilt function. Fixed by indexing with `as.character(id)`.
+* The Shiny app's Network Estimation (TMFG), Load Data, and Bootstrap
+  Analyses tabs threw "could not find function `responses_to_binary`" /
+  `read_uploaded_file` / silently used the wrong `plot()` method under a real
+  `library(SemNeT)` install -- all three were internal (unexported) package
+  functions called directly from `inst/Shiny/` code, invisible outside the
+  package's own namespace. This only worked during development because
+  Phase 7's own testing used `devtools::load_all()`, which (unlike
+  `library()`) attaches internal functions too. Fixed by exporting
+  `responses_to_binary()`/`read_uploaded_file()` and by calling the generic
+  `plot()` (which already dispatches correctly via the registered S3 method)
+  instead of `plot.bootstrap_SemNeT()` directly.
+* The Shiny app's "background" analyses (Bootstrap, Permutation, Random
+  Network, Random Walk) never actually ran in the background at all --
+  `global.R` never set a `future::plan()`, so every `ExtendedTask` silently
+  fell back to `future::sequential`, blocking the entire app (no UI updates,
+  unresponsive to any input) for the full duration of every run. Confirmed
+  directly: a 1000-iteration bootstrap on the bundled example data takes
+  291 seconds, during which the app was completely frozen. Fixed by setting
+  `future::plan(future::multisession, ...)` in `global.R`. Each of those
+  tabs also now shows a real, live-updating progress bar instead of static
+  "Running..." text -- `progressr`'s Shiny handler cannot report progress
+  from inside a background `ExtendedTask` at all (confirmed via isolated
+  testing: it relies on the caller synchronously blocking on the future,
+  which `promises::future_promise()` never does), so this uses a plain
+  per-task file the background worker writes to directly instead, polled by
+  the main session -- see `SHINY_PLAN.md` for the full investigation.
+* The new file-based progress bar above (`cores > 1`) jumped around instead
+  of climbing steadily -- e.g. up to 100% then back down to 36%. Root cause:
+  `parallel_process()` wrote the *raw iteration index* to the progress file
+  on every completion, but `future_lapply()`'s parallel workers finish
+  iterations out of order (worker B can finish iteration 900 before worker A
+  finishes iteration 100), so the displayed value reflected whichever worker
+  wrote most recently, not how many iterations had actually completed. Fixed
+  by counting completions instead of echoing the index: each completed
+  iteration now appends one byte to a sibling file, and the UI reads that
+  file's size -- a count that only ever goes up, regardless of completion
+  order.
+* Setting a tab's "Cores" input above 1 threw "Attempting to set up N
+  localhost parallel workers with only 1 CPU cores available" and failed the
+  whole analysis. Root cause: `parallel_process()`'s own `cores > 1` branch
+  tried to start a *second*, nested `future::multisession` pool inside the
+  background worker process that the app-level pool (`global.R`) had already
+  spawned for that task -- `parallelly`'s hard localhost-worker-count guard
+  correctly rejects this as unsafe, since a worker's own `availableCores()`
+  is deliberately capped (usually to 1) to prevent exactly this kind of
+  recursive worker explosion. Fixed by capping the requested `cores` to
+  `future::availableCores()` before switching plans: this degrades to
+  sequential execution one level deeper (still correct) inside a nested
+  worker, while leaving top-level interactive/console use (where
+  `availableCores()` reflects the real host) unaffected.
+* `max_app_cores()` (the ceiling on every tab's "Cores" input and the
+  app-level worker pool) was capped at 8 regardless of the host machine's
+  actual core count. Changed to the host's full core count minus one (left
+  free for the OS/main Shiny process), per request, for deployments where
+  the host isn't shared across many concurrent sessions.
 
 ## Verification against real user-reported data
 
@@ -162,15 +221,36 @@ layer (see each wrapper's own `?help` page for details):
 
 ## Dependency changes
 
-* **Dropped**: `pbapply`, `dplyr`, `plyr`, `magrittr`, `ggplot2`, `scales`,
-  `philentropy`. Plotting (`plot.bootstrap_SemNeT()`) now uses base
-  `graphics::boxplot()`; Chebyshev distance (`pf()`) uses
+* **Dropped**: `pbapply`, `dplyr`, `plyr`, `magrittr`, `scales`,
+  `philentropy`. Chebyshev distance (`pf()`) uses
   `stats::dist(method = "maximum")`; parallelism uses `future`/
   `future.apply`/`progressr` with guaranteed cleanup, replacing several
   leak-prone `parallel::makeCluster()`/`pbapply::pblapply()` blocks.
+  `plot.bootstrap_SemNeT()` still needed a real raincloud plot (see below),
+  so `dplyr`/`plyr`/`magrittr`/`scales` were dropped as glue this one plot
+  used incidentally (a grouped min/max, one sort-by-column call, and default
+  axis breaks -- all trivial in base R), not by dropping the plot itself or
+  its one genuine dependency, `ggplot2`.
+* `plot.bootstrap_SemNeT()` moved to `Suggests`-only `ggplot2` (checked via
+  `requireNamespace()` right before drawing, same pattern as the Shiny app's
+  own optional dependencies) rather than an unconditional package-wide
+  `Imports`, initially **replaced by a base `graphics::boxplot()`** as part
+  of the dependency trim above -- then **reverted**: the boxplot substitution
+  dropped the actual raincloud plot (half-violin + boxplot + jittered raw
+  values) the original package built via a ~300-line hand-rolled `ggplot2`
+  `ggproto` geom, which is worth keeping. That geom is now ported to this
+  package (`R/plot.bootstrap_SemNeT.R`), rewritten against base R only (no
+  `dplyr`/`plyr`/`magrittr`), with one further bug fixed along the way: its
+  bounding-box computation grouped by data group alone, ignoring which facet
+  panel a row belonged to -- harmless in the original (never faceted, called
+  once per measure), but it silently broke `facet_wrap(scales = "free_x")`
+  once this port combined all three measures into one faceted plot, pooling
+  each group's axis range across every panel instead of keeping it
+  per-panel. Fixed by grouping on `(PANEL, group)` together.
 * **Added**: `future`, `future.apply`, `progressr`, `stats`, `graphics`,
   `utils` (all either new parallelism infrastructure or previously-implicit
-  base-package usage now declared explicitly).
+  base-package usage now declared explicitly). `ggplot2` re-added as
+  `Suggests` (see above).
 * **Unchanged**: `igraph`, `qgraph` (used by `compare_networks()`'s
   plotting), `car`, `broom`, `effects` (used by `bootstrap_test_SemNeT()`'s
   ANOVA/ANCOVA), `methods`.
