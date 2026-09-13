@@ -276,6 +276,41 @@ errors) before and after the fix, and end-to-end live in the running app
 (Playwright): the Bootstrap tab's "Generate Bootstrap Plots" button produces
 a correctly-scaled three-panel raincloud plot per group.
 
+## `textcleaner_shiny()` hand-off support (2026-09-12)
+
+Per direct request, the Load Data tab now recognizes a `textcleaner`-classed object already
+sitting in `.GlobalEnv` (from SemNetCleaner's own `textcleaner_shiny()` app -- a sibling
+package, its own "Save to R Environment" button in its Export tab) as a second data source,
+alongside the existing file-upload widget -- not a replacement for it. Both apps are
+ordinarily launched sequentially from the same interactive R session (`shiny::runApp()` blocks
+the console until stopped), so `.GlobalEnv` itself is the entire hand-off mechanism -- no file,
+temp path, or `options()` signal passed between the two packages.
+
+- **`find_textcleaner_objects()`** (new, exported, `R/shiny_helpers.R`): scans `.GlobalEnv` for
+  objects inheriting both `"textcleaner"` and `"fluency"` classes. Restricted to `type =
+  "fluency"` results deliberately -- a `type = "free"` result's `$data$clean` is a long-format
+  response/cue/ID table, a different shape than the participant x response-slot word matrix
+  this app's own `responses_to_binary()` (and every bundled example dataset) expects. Real,
+  tested package logic (`tests/testthat/test-shiny_helpers.R`), not UI glue, matching this
+  package's own existing precedent for `read_uploaded_file()`.
+- **`mod_load_data.R`**: a new picker (a `selectInput` of detected objects + "Load from R
+  Environment"/"Refresh" buttons) appears below the existing upload fields. Loading assigns the
+  object's `$responses$clean` to `state$data` and `rep(1, nrow(data))` to `state$group` (a
+  `textcleaner` result carries no group information of its own), then follows the exact same
+  success/warning notification path the file-upload branch already uses.
+- **Verified live** (headless Chrome via `chromote`, the Claude-in-Chrome extension not being
+  available in this environment): pre-seeded a real `textcleaner`/`fluency` object into
+  `.GlobalEnv` before launching `SemNeTShiny()` in the same R process -- the picker correctly
+  listed it, "Load from R Environment" correctly advanced to the Network Estimation tab with
+  "Data Loaded Successfully" / "Loaded from `textcleaner_result`.". A "Not valid!" alert also
+  appears on this run -- confirmed via a second live pass through the pre-existing, untouched
+  "See Response Matrix Example" -> "Load Data" path that this is a **pre-existing quirk in the
+  app, unrelated to this change** (identical alert, identical trigger point, no code from this
+  addition involved) -- not fixed here, out of scope for this request, recorded for whoever
+  picks it up next.
+- `devtools::test()`: 437/437 passing, 0 failures. `devtools::check(cran = FALSE)`: 0 errors, 0
+  warnings, 0 notes.
+
 ## Execution cadence
 Phase 6 first, full verification, stop for check-in. Then Phase 7 module-by-module,
 each checked against the app running in a real browser, final end-to-end pass last.

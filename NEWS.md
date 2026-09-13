@@ -26,6 +26,14 @@ for its own development record.
   new `LSAfun` dependency.
 * `responses_to_binary()` and `read_uploaded_file()` -- previously internal
   helpers, now exported (see "Real bugs fixed" below for why).
+* `find_textcleaner_objects()` -- scans `.GlobalEnv` for `textcleaner`/
+  `"fluency"`-classed objects (from the sibling `SemNetCleaner` package's own
+  `textcleaner_shiny()` app). Powers a new picker in `SemNeTShiny()`'s Load
+  Data tab that loads one directly, alongside the existing file-upload
+  widget -- both apps are ordinarily launched sequentially from the same
+  interactive R session, so `.GlobalEnv` itself is the whole hand-off
+  mechanism between the two packages. See `SHINY_PLAN.md` for the full
+  record.
 
 ## Real bugs fixed
 

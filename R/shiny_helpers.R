@@ -111,3 +111,51 @@ read_uploaded_file <- function(datapath, filename, header = TRUE, sep = ",")
   ))
 
 }
+
+#' @title Find Usable \code{textcleaner} Objects in the Global Environment
+#'
+#' @description Scans \code{.GlobalEnv} for objects inheriting class
+#' \code{"textcleaner"} \emph{and} \code{"fluency"} (from SemNetCleaner's
+#' own \code{textcleaner()}/\code{textcleaner_shiny()} -- a sibling
+#' package) -- used by the Shiny app's Load Data tab to offer loading one
+#' directly, as a second data source alongside its own file-upload widget.
+#'
+#' Restricted to \code{type = "fluency"} results: a \code{type = "free"}
+#' result's \code{$data$clean} is a long-format response/cue/ID table, a
+#' different shape than the participant x response-slot word matrix this
+#' package's own \code{responses_to_binary()} (and every bundled example
+#' dataset) expects -- not something to silently reshape without a real
+#' design decision, so it's excluded here rather than offered and failing
+#' downstream.
+#'
+#' @return A character vector of object names in \code{.GlobalEnv} that are
+#' usable \code{textcleaner} results (possibly empty)
+#'
+#' @examples
+#' find_textcleaner_objects()
+#'
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#'
+#' @export
+# New: the shared hand-off mechanism between SemNetCleaner's
+# textcleaner_shiny() app and this package's own SemNeTShiny() app -- both
+# are ordinarily launched sequentially from the same interactive R session,
+# so `.GlobalEnv` itself (not a file, temp path, or `options()` signal) is
+# the whole channel. Exported (not just internal) for the same reason
+# read_uploaded_file() is: inst/Shiny/'s own module files are sourced into
+# the global environment by Shiny's own app-loading mechanism, not into the
+# package namespace -- an unexported function is not reachable from there
+# by its bare name.
+find_textcleaner_objects <- function()
+{
+
+  candidates <- ls(envir = .GlobalEnv)
+
+  is_usable_textcleaner <- vapply(candidates, function(name){
+    obj <- tryCatch(get(name, envir = .GlobalEnv), error = function(e) NULL)
+    inherits(obj, "textcleaner") && inherits(obj, "fluency")
+  }, logical(1))
+
+  candidates[is_usable_textcleaner]
+
+}
