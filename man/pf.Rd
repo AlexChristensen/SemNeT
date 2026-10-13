@@ -11,26 +11,59 @@ pf(data)
 }
 \arguments{
 \item{data}{Matrix or data frame.
-A binary response matrix, or the original raw word responses}
+A preprocessed verbal fluency matrix where rows are participants and
+columns are the order of their verbal fluency responses. Content may be
+the raw word responses or an ordered numeric response matrix (see
+\code{responses2binary()}). A strictly binary (0/1) matrix is not
+accepted because it has discarded the response order the distance needs}
 }
 \value{
-An adjacency matrix. The pre-binarization, Chebyshev-distance-weighted
-network is attached as the \code{"weighted"} attribute, rather than being
-computed and discarded
+An adjacency matrix. The distances (\eqn{D_{ij}}) of the retained
+links are attached as the \code{"weighted"} attribute (\code{0} where there
+is no link)
 }
 \description{
-Estimates a pathfinder network using the MST-Pathfinder
-Network method from Quirin et al. (2008; see also Schvaneveldt, 1990)
+Estimates a semantic network from verbal fluency data by
+applying the MST-Pathfinder Network algorithm (Quirin et al., 2008; see also
+Schvaneveldt, 1990) to the response-order distance of Paulsen et al. (1996)
+}
+\details{
+The distance between two responses \eqn{i} and \eqn{j} follows
+Paulsen et al. (1996):
+\deqn{D_{ij} = \frac{N}{T_{ij}^2} \sum_{k=1}^{T_{ij}} \frac{d_{ijk}}{n_k}}
+where \eqn{d_{ijk}} is the number of positions between the two responses in
+participant \eqn{k}'s list, \eqn{n_k} is that participant's number of
+responses (the largest position in their row), \eqn{T_{ij}} is the number of participants who gave both
+responses, and \eqn{N} is the number of participants. Responses that are
+close together in many participants' lists, relative to how many responses
+they gave, are close; a pair no participant gave together has an infinite
+distance and can only be linked through other responses. The positions are
+those of \code{\link{responses2binary}}'s \code{$order} (a response a
+participant repeats is positioned at its last occurrence), and responses
+nobody gave are not nodes.
+
+The network keeps a link between two responses only if no indirect path
+between them has every one of its links shorter than the direct distance
+(Pathfinder parameters \eqn{r = \infty} and \eqn{q = n - 1}), computed with
+the MST-Pathfinder algorithm: the union of all minimum spanning trees of the
+distance matrix. Pairs at exactly the same distance are all kept when none
+is bridged by shorter links. When some responses are never given together
+with the others the network is not connected (responses with no finite
+distance to any other are isolated nodes).
 }
 \examples{
 # Obtain data
-data <- open.binary
+data <- open.clean[1:100, ]
 
 # Estimate network
 pf_net <- pf(data)
 
 }
 \references{
+Paulsen, J. S., Romero, R., Chan, A., Davis, A. V., Heaton, R. K., & Jeste, D. V. (1996).
+Impairment of the semantic network in schizophrenia.
+\emph{Psychiatry Research}, \emph{63}, 109-121.
+
 Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008)
 A quick MST-based algorithm to obtain Pathfinder networks (Inf, n-1).
 \emph{Journal of the American Society for Information Science and Technology}, \emph{59}, 1912-1924.

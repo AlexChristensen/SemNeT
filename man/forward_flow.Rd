@@ -33,7 +33,12 @@ every flow value it touches)}
 \item{min_response}{Numeric.
 Minimum number of responses a participant (\code{type = "fluency"}) or
 participant-cue pair (\code{type = "free"}) must have to compute forward
-flow for it. Defaults to \code{3}}
+flow for it (at least 2: the first response has no earlier response to be
+measured against). Blank-like responses (\code{""}, \code{" "},
+\code{"NA"}) are treated as missing, and responses are counted before any
+not found in \code{embeddings} are dropped. A response a participant
+repeats has a distance of 0 to its earlier occurrence, and is kept.
+Defaults to \code{3}}
 
 \item{max_response}{Numeric.
 Maximum number of responses to use, keeping only the first \code{n}.

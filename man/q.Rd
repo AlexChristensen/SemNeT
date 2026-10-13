@@ -11,7 +11,7 @@ q(A, resolution = 1, seed = NULL, signed = FALSE)
 }
 \arguments{
 \item{A}{Matrix or data frame.
-An adjacency matrix of network data}
+An adjacency matrix of network data. Must be symmetric}
 
 \item{resolution}{Numeric.
 Adjusts modularity to prefer smaller (\code{resolution > 1}) or larger
@@ -21,8 +21,8 @@ Defaults to \code{1} (standard modularity)}
 \item{seed}{Numeric.
 A seed for the Louvain algorithm's internal random number generator, for
 reproducible community detection.
-Defaults to \code{NULL} (not reproducible). Note this is independent of
-R's own \code{set.seed()} -- see Details}
+Defaults to \code{NULL} (not reproducible); \code{0} also gives random
+results. Note this is independent of R's own \code{set.seed()} -- see Details}
 
 \item{signed}{Boolean.
 Whether modularity should be computed on the signed network (Gomez et
@@ -32,7 +32,8 @@ Defaults to \code{FALSE} (the original, \code{abs()}-based behavior)}
 }
 \value{
 Returns Q, a measure of how well the network partitions into
-distinct, densely-connected communities
+distinct, densely-connected communities. A network without edges has no
+defined modularity (\code{NaN})
 }
 \description{
 Computes a global modularity measure (Q) using the Louvain
@@ -44,6 +45,15 @@ Community detection runs via a compiled Louvain implementation
 \code{seed}, not on R's global random number generator -- unlike
 \code{igraph::cluster_louvain()}, calling \code{set.seed()} beforehand has
 no effect on \code{q()}'s reproducibility; pass \code{seed} directly instead.
+A given nonzero \code{seed} always gives the same partition; \code{seed = 0}
+(like \code{NULL}) seeds from the clock.
+
+With \code{signed = TRUE}, the partition (found on the absolute-value
+network) is scored as
+\eqn{Q = \frac{W^+}{W^+ + W^-} Q^+ - \frac{W^-}{W^+ + W^-} Q^-}
+(Gomez et al., 2009), where \eqn{W^+} and \eqn{W^-} are the total positive
+and absolute negative weights and \eqn{Q^+} and \eqn{Q^-} are the modularity
+of the positive and of the absolute negative edges.
 }
 \examples{
 # Pearson's correlation only for CRAN checks

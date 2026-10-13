@@ -5,7 +5,7 @@
 \alias{CN}
 \title{Community Network Estimation}
 \usage{
-cn(data, window = 2, alpha = 0.05, enrich = FALSE)
+cn(data, window = 2, alpha = 0.05, enrich = FALSE, cutoff = 0.5)
 
 CN(data, window = 2, alpha = 0.05, enrich = FALSE)
 }
@@ -14,20 +14,36 @@ CN(data, window = 2, alpha = 0.05, enrich = FALSE)
 A preprocessed verbal fluency matrix where rows are participants and
 columns are the order of their verbal fluency responses. Content may be
 the raw word responses or an ordered numeric response matrix (see
-\code{responses_to_binary()})}
+\code{responses2binary()})}
 
 \item{window}{Numeric.
 Size of window to look for co-occurrences in.
 Defaults to \code{2}}
 
 \item{alpha}{Numeric.
-Significance value.
+Significance level of the test of each pair of responses' co-occurrence
+against chance, following Goni et al. (2011): the pair's co-occurrence rate
+gets a two-sided \code{1 - alpha} Clopper-Pearson confidence interval, and an
+edge is kept when the rate expected by chance falls below the interval's
+lower bound (so each tail holds \code{alpha / 2}). Must be strictly between
+\code{0} and \code{1}. The tests are \strong{not} adjusted for the number of
+pairs tested.
 Defaults to \code{.05}}
 
 \item{enrich}{Boolean.
 Should the network be enriched by connecting all nodes within their
 respective modules?
 Defaults to \code{FALSE}}
+
+\item{cutoff}{Numeric.
+Height at which the hierarchical clustering of the generalized topological
+overlap dissimilarity is cut into modules when \code{enrich = TRUE}.
+Goni et al. (2011) chose their cutoff (0.58 in their data) so that it
+separated the blocks of the overlap matrix as well as possible, so there is
+\strong{no established value}: it depends on the data and should be
+inspected rather than assumed. A warning is given whenever
+\code{enrich = TRUE}.
+Defaults to \code{0.50}}
 }
 \value{
 Returns an undirected semantic network

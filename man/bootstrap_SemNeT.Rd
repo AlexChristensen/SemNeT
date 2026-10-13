@@ -14,78 +14,118 @@ bootstrap_SemNeT(
   minimum_cases = 2,
   iter = 1000,
   cores = 1,
-  keep_networks = FALSE
+  keep_networks = FALSE,
+  seed = NULL
 )
 }
 \arguments{
 \item{...}{Named matrices or data frames.
-At least one response matrix, one per group, e.g.
+One response matrix per group (at least one), e.g.,
 \code{bootstrap_SemNeT(low = low_data, high = high_data)}}
 
-\item{method}{Character.
-Network estimation method to use: \code{"tmfg"}, \code{"cn"}, \code{"nrw"},
-or \code{"pf"} -- see \code{\link{tmfg}}, \code{\link{cn}}, \code{\link{nrw}},
-and \code{\link{pf}}. Defaults to \code{"tmfg"}}
+\item{method}{Character (length = 1).
+Network estimation method.
+Defaults to \code{"tmfg"}.
+Available options:
+
+\itemize{
+
+\item \code{"tmfg"} --- See \code{\link{tmfg}}
+
+\item \code{"cn"} --- See \code{\link{cn}}
+
+\item \code{"nrw"} --- See \code{\link{nrw}}
+
+\item \code{"pf"} --- See \code{\link{pf}}
+
+}}
 
 \item{method_args}{List.
-Additional arguments passed on to the chosen \code{method}'s own function.
-Defaults to \code{list()} (every method's own defaults apply)}
+Additional arguments passed to \code{method}'s function.
+Defaults to \code{list()} (the method's defaults)}
 
-\item{type}{Character.
-Type of bootstrap to perform: \code{"case"} resamples participants with
-replacement; \code{"node"} keeps every participant but randomly drops
-nodes (see \code{prop}) -- this requires every group to already share the
-same nodes. Defaults to \code{"case"}}
+\item{type}{Character (length = 1).
+Type of bootstrap.
+Defaults to \code{"case"}.
+Available options:
 
-\item{prop}{Numeric.
+\itemize{
+
+\item \code{"case"} --- Resamples participants with replacement
+
+\item \code{"node"} --- Keeps every participant and randomly drops nodes
+(see \code{prop}). Requires every group to share the same nodes. Each
+iteration drops the \emph{same} nodes from every group, so a group
+contrast within an iteration is not affected by which nodes happened to be
+kept
+
+}}
+
+\item{prop}{Numeric (length = 1).
 \strong{Only} for \code{type = "node"}.
 Proportion of nodes to keep in each resampled network.
 Defaults to \code{.50}}
 
-\item{sim}{Character.
-Similarity measure to use, \code{method = "tmfg"} only.
-Defaults to \code{"cosine"}. See \code{\link{similarity}} for other options}
+\item{sim}{Character (length = 1).
+Similarity measure for \code{method = "tmfg"}.
+Defaults to \code{"cosine"}.
+See \code{\link{similarity}} for other options}
 
-\item{minimum_cases}{Numeric.
+\item{minimum_cases}{Numeric (length = 1).
 \strong{Only} for \code{method = "tmfg"} and \code{type = "case"}.
-Minimum number of participants required to have given a response for that
-response to be kept, via \code{\link{finalize}}, before equating every
-group's vocabulary via \code{\link{equate}}.
+Minimum number of participants who gave a response for it to be kept
+(\code{\link{finalize}}) before the groups' vocabularies are equated
+(\code{\link{equate}}). It is applied to each resample, in which a
+participant can appear more than once, so a response only one participant
+gave can survive in a resample (when that participant is drawn twice or more)
+even though the full data would drop it. Resampled networks therefore tend to
+contain somewhat different vocabularies than the observed network.
 Defaults to \code{2}}
 
-\item{iter}{Numeric.
-Number of bootstrapped samples to generate per group.
+\item{iter}{Numeric (length = 1).
+Number of bootstrap samples per group.
 Defaults to \code{1000}}
 
-\item{cores}{Numeric.
-Number of processing cores to use.
+\item{cores}{Numeric (length = 1).
+Number of processing cores.
 Defaults to \code{1} (sequential)}
 
-\item{keep_networks}{Boolean.
-Whether every bootstrapped network itself should be kept in the result, in
-addition to its measures. A full set of \code{iter} dense networks per
-group can be large (an N-node network is N x N numbers, \code{iter} times,
-per group); most uses only need \code{measures}/\code{summary}/\code{edges}.
+\item{keep_networks}{Boolean (length = 1).
+Should every bootstrapped network be kept?
+These can be large (\code{iter} dense networks per group)
+and are not needed for testing.
 Defaults to \code{FALSE}}
+
+\item{seed}{Numeric (length = 1).
+Defaults to \code{NULL} or random results (\code{0} is random too).
+Set a nonzero value for reproducible results.
+Each bootstrap sample (and its \code{\link{q}} community detection) gets its
+own seed, so results do not depend on \code{set.seed()}, \code{cores}, or
+the order workers finish}
 }
 \value{
-Returns a list of class \code{"bootstrap_SemNeT"}:
-\item{groups}{A named list, one entry per group in \code{...}, each a list of:
-\code{networks} (the \code{iter} bootstrapped networks, or \code{NULL}
-unless \code{keep_networks = TRUE}), \code{measures} (a 3 x \code{iter}
-matrix of \code{aspl}/\code{cc}/\code{q} values), \code{edges} (each
-bootstrapped network's edge count, length \code{iter} -- always present,
-regardless of \code{keep_networks}), and \code{summary} (a data frame of
-each measure's mean, standard deviation, standard error, and 95\%
-confidence interval across the \code{iter} samples)}
-\item{meta}{A list of \code{prop} (only for \code{type = "node"}),
-\code{iter}, \code{type}, and \code{method}}
+Returns a list containing:
+
+\item{groups}{A named list with one list per group containing
+\code{networks} (the bootstrapped networks; \code{NULL} unless
+\code{keep_networks = TRUE}), \code{measures} (a 3 x \code{iter} matrix of
+\code{aspl}, \code{cc}, and \code{q}), \code{edges} and \code{nodes}
+(each bootstrapped network's counts), \code{observed} (the \code{measures},
+\code{edges}, and \code{nodes} of the network estimated from the full data;
+\code{NA} if it could not be estimated), and \code{summary} (each measure's
+bootstrap mean, standard error, and 95\% percentile range of the bootstrap
+values; this describes the spread of the resampled statistics, which for a
+case bootstrap is not centred on, and is not a confidence interval for, the
+observed value -- see \code{observed} and \code{\link{bootstrap_test_SemNeT}})}
+
+\item{meta}{A list containing \code{prop} (\code{type = "node"} only),
+\code{iter}, \code{type}, \code{method}, and \code{seed}}
 }
 \description{
-Repeatedly re-estimates each group's semantic network from
-resampled data (dropping a proportion of nodes, or resampling participants
-with replacement) to build a bootstrap distribution of \code{\link{aspl}},
-\code{\link{cc}}, and \code{\link{q}} for every group
+Estimates each group's semantic network from \code{iter}
+resampled datasets (participants resampled with replacement or a proportion
+of nodes dropped) to build bootstrap distributions of \code{\link{aspl}},
+\code{\link{cc}}, and \code{\link{q}}
 }
 \examples{
 # Simulate datasets
@@ -96,7 +136,7 @@ two <- simulate_fluency(20)
 # Bootstrap node-drop (partial) networks
 boot_result <- bootstrap_SemNeT(
   one = one, two = two, prop = .50, iter = 100, cores = 2,
-  method = "tmfg", type = "node"
+  method = "tmfg", type = "node", seed = 1234
 )
 
 # Bootstrap case-resampled networks -- equating (see `equate()`) requires
@@ -109,6 +149,10 @@ boot_result <- bootstrap_SemNeT(
 )
 }
 
+}
+\seealso{
+\code{\link{bootstrap_test_SemNeT}} for testing group differences and
+\code{\link[=plot.bootstrap_SemNeT]{plot}} for plotting the distributions
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

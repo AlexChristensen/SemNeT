@@ -13,10 +13,21 @@ per group, e.g. \code{response_analysis(low = low_data, high = high_data)}}
 }
 \value{
 With exactly two groups, a list with:
-\item{total}{A named vector comparing the total responses given by each
-participant via a two-sample \emph{t}-test and Cohen's \emph{d}}
-\item{unique}{A named vector comparing the number of unique responses
-provided by each group via McNemar's test}
+\item{total}{A named vector comparing the number of distinct responses given
+by each participant (a response repeated by a participant counts once) via a
+two-sample \emph{t}-test and Cohen's \emph{d}}
+\item{unique}{A named vector comparing the number of responses unique to
+each group via McNemar's test (and \code{phi}, see Details)}
+\item{vocabulary}{Descriptive statistics for the groups' vocabularies that
+account for the groups' sizes, unlike \code{unique}:
+\code{jaccard} (shared responses over all responses given by either group;
+it still grows with group size, because larger groups reveal more rare
+responses);
+\code{n_participants_<group>}; \code{rarefied_n} (the sample size compared,
+the smaller group's); \code{rarefied_<group>} (the expected number of
+distinct responses in a random sample of \code{rarefied_n} participants from
+the group, Hurlbert, 1971; the smaller group's is its observed number); and
+\code{rarefied_diff} (the first group's minus the second's)}
 With more than two groups, a named list of such lists, one per pair of
 groups (named \code{"<group1>_vs_<group2>"})
 }
@@ -26,6 +37,23 @@ responses between groups (follows Christensen et al., 2018). With more
 than two groups, every pairwise comparison is returned, since both
 underlying tests (a two-sample \emph{t}-test and McNemar's test) are
 inherently pairwise
+}
+\details{
+The number of responses unique to each group (\code{unique}) grows
+with a group's number of participants, and the responses are not independent
+observations, so the McNemar test on those counts should be read as a
+description, not as a test of the groups. The \code{vocabulary} statistics
+compare groups at the same number of participants instead.
+
+McNemar's test only uses the two off-diagonal cells (the numbers of responses
+unique to each group), so here it is a continuity-corrected sign test on those
+two counts; it is \code{NA} when neither group has a unique response.
+\code{phi} is the correlation between the two groups' indicators of giving
+each response across the responses given by either group. Because no response
+is given by neither group, it is at most 0 by construction (and reported as an
+absolute value), so it describes the overlap of the vocabularies and not an
+association between the groups. The \emph{t}-test is \code{NA} when it is
+undefined (e.g., every participant gave the same number of responses).
 }
 \examples{
 # Obtain data
@@ -40,6 +68,10 @@ response_analysis(low = low, high = high)
 Christensen, A. P., Kenett, Y. N., Cotter, K. N., Beaty, R. E., & Silvia, P. J. (2018).
 Remotely close associations: Openness to experience and semantic memory structure.
 \emph{European Journal of Personality}, \emph{32}, 480-492.
+
+Hurlbert, S. H. (1971).
+The nonconcept of species diversity: A critique and alternative parameters.
+\emph{Ecology}, \emph{52}, 577-586.
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

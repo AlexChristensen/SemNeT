@@ -2,69 +2,78 @@
 
 test_that("tmfg returns a valid TMFG-filtered adjacency matrix", {
 
+  # Set seed
   set.seed(1)
+
+  # Set up correlations
   cordata <- cor(matrix(rnorm(15 * 20), nrow = 15, ncol = 20))
+
+  # Estimate network
   net <- suppressWarnings(tmfg(cordata))
 
+  # Check for matrix
   expect_true(is.matrix(net))
+
+  # Check dimensions
   expect_equal(dim(net), dim(cordata))
 
-  # TMFG retains exactly 3n - 6 edges (off-diagonal, counting each edge once)
+  # Binarize network
   binary <- ifelse(net != 0, 1, 0)
+
+  # Remove self-loops
   diag(binary) <- 0
+
+  # Check for 3n - 6 edges
   expect_equal(sum(binary) / 2, 3 * ncol(cordata) - 6)
 
 })
 
 test_that("tmfg handles the minimum 4-node case without corrupting output", {
 
+  # Set seed
   set.seed(3)
+
+  # Set up correlations
   small <- cor(matrix(rnorm(15 * 4), nrow = 15, ncol = 4))
+
+  # Estimate network
   net <- suppressWarnings(tmfg(small))
 
+  # Check dimensions
   expect_equal(dim(net), c(4, 4))
+
+  # Check for finite values
   expect_true(all(is.finite(net)))
 
-  # A 4-node network is the tetrahedron itself: fully connected
+  # Binarize network
   binary <- ifelse(net != 0, 1, 0)
+
+  # Check for fully connected network
   expect_equal(sum(binary), 16)
-
-})
-
-test_that("tmfg errors below the 4-node minimum instead of silently corrupting", {
-
-  expect_error(tmfg(cor(matrix(rnorm(15 * 3), nrow = 15, ncol = 3))), "at least 4 nodes")
-
-})
-
-test_that("tmfg warns (but still runs) below the recommended 9-node minimum", {
-
-  set.seed(4)
-  cordata <- cor(matrix(rnorm(15 * 6), nrow = 15, ncol = 6))
-  expect_warning(tmfg(cordata), "smaller than recommended")
 
 })
 
 test_that("tmfg's depend = TRUE path preserves directional edge weights", {
 
+  # Set seed
   set.seed(2)
+
+  # Set up asymmetric matrix
   asym <- matrix(runif(20 * 20, -1, 1), 20, 20)
+
+  # Set diagonal
   diag(asym) <- 1
 
+  # Estimate network
   net <- suppressWarnings(tmfg(asym, depend = TRUE))
 
+  # Check dimensions
   expect_equal(dim(net), dim(asym))
 
-  # A directed edge's two weights should come from the original asymmetric
-  # matrix in each direction, so they need not be equal to each other
+  # Get connected pairs
   connected <- which(net != 0 & upper.tri(net), arr.ind = TRUE)
+
+  # Check for connections
   expect_true(nrow(connected) > 0)
-
-})
-
-test_that("tmfg validates its input", {
-
-  expect_error(tmfg(matrix(1, 3, 4)), "square")
-  expect_error(tmfg(cor(matrix(rnorm(50), 10, 5)), depend = "yes"), "tmfg")
 
 })

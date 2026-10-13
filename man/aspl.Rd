@@ -5,7 +5,7 @@
 \alias{ASPL}
 \title{Average Shortest Path Length}
 \usage{
-aspl(A, weighted = FALSE)
+aspl(A, weighted = FALSE, type = c("arithmetic", "harmonic"))
 
 ASPL(A, weighted = FALSE)
 }
@@ -14,16 +14,48 @@ ASPL(A, weighted = FALSE)
 An adjacency matrix of network data}
 
 \item{weighted}{Boolean.
-Is the network weighted?
+Is the network weighted? A weighted edge's length is the inverse of its
+weight (weights are strengths), so the value depends on the scale of the
+weights and negative weights are not allowed.
 Defaults to \code{FALSE}. Set to \code{TRUE} for weighted measures}
+
+\item{type}{Character (length = 1).
+How the shortest-path distances are averaged.
+Defaults to \code{"arithmetic"}.
+Available options:
+
+\itemize{
+
+\item \code{"arithmetic"} --- The mean of every node's mean distance to the
+nodes it can reach. Unreachable pairs are left out of the average
+
+\item \code{"harmonic"} --- The harmonic mean of the distances between all
+pairs of nodes, the inverse of the global efficiency
+(Latora & Marchiori, 2001): \eqn{1 / \mathrm{mean}(1 / d_{ij})} over all
+pairs of distinct nodes. Unreachable pairs have an infinite distance, whose
+inverse is 0, so they are counted instead of left out
+
+}}
 }
 \value{
-Returns the network's ASPL. The per-node average shortest path
-length and eccentricity are attached as the \code{"node"} and
-\code{"eccentricity"} attributes, rather than being computed and discarded
+Returns the network's ASPL. The per-node average distance
+(\code{type}-matched; \code{NaN} for an isolated node when
+\code{"arithmetic"}, \code{Inf} when \code{"harmonic"}) and the
+eccentricity (the longest finite shortest path) are attached as the
+\code{"node"} and \code{"eccentricity"} attributes, rather than being
+computed and discarded
 }
 \description{
 Computes the global average shortest path length of a network
+}
+\details{
+For a connected network, \code{"arithmetic"} is the usual average
+shortest path length (e.g., \code{igraph::mean_distance()}), and
+\code{"harmonic"} is smaller than it. They differ most for a disconnected
+network: \code{"arithmetic"} ignores unreachable pairs, which makes a
+fragmented network look better connected than it is and weights each node by
+the size of its component, whereas \code{"harmonic"} counts them. A network
+with no connected pair has an \code{Inf} harmonic ASPL.
 }
 \examples{
 # Pearson's correlation only for CRAN checks
@@ -35,6 +67,10 @@ network_aspl <- aspl(A)
 
 }
 \references{
+Latora, V., & Marchiori, M. (2001).
+Efficient behavior of small-world networks.
+\emph{Physical Review Letters}, \emph{87}, 198701.
+
 Rubinov, M., & Sporns, O. (2010).
 Complex network measures of brain connectivity: Uses and interpretations.
 \emph{NeuroImage}, \emph{52}, 1059-1069.

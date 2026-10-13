@@ -4,7 +4,7 @@
 \alias{random_network_test}
 \title{Test Against Random Networks}
 \usage{
-random_network_test(..., iter = 1000, cores = 1)
+random_network_test(..., iter = 1000, cores = 1, seed = NULL)
 }
 \arguments{
 \item{...}{Named matrices or data frames.
@@ -18,16 +18,48 @@ Defaults to \code{1000}}
 \item{cores}{Numeric.
 Number of computer processing cores to use.
 Defaults to \code{1}}
+
+\item{seed}{Numeric.
+A seed for reproducible results (including the community detection behind
+\code{q}), the same whatever \code{cores} is. Each random network gets its
+own seed derived from it.
+Defaults to \code{NULL} (not reproducible; \code{0} is random too)}
 }
 \value{
 Returns a named list (one entry per input network) of data frames
-with the \emph{p}-value, and the random-network distribution's mean and
-standard deviation, for each of \code{aspl}, \code{cc}, and \code{q}
+with, for each of \code{aspl}, \code{cc}, and \code{q}, the Monte Carlo
+\emph{p}-value and the mean and standard deviation of the random-network
+distribution: \code{p_value}, \code{random_mean}, and \code{random_sd} for
+Erdos-Renyi networks, and \code{p_value_degree}, \code{random_mean_degree},
+and \code{random_sd_degree} for degree-preserving networks
 }
 \description{
-Performs significance tests for global measures of semantic
-networks against the global measures of equivalent size (and density)
-random networks
+Tests global measures of semantic networks against the
+distribution of the same measures in random networks of equivalent size and
+density (Erdos-Renyi) and in random networks that also keep every node's
+degree
+}
+\details{
+Every network is binarized (any nonzero edge becomes 1) before its
+measures are computed, and its edge count is the number of nonzero
+off-diagonal entries (a weighted network's weights are not summed).
+
+Two null models are used, because they answer different questions. An
+Erdos-Renyi network has the observed node and edge counts but otherwise random
+edges, so any structure (including the degree distribution that nearly every
+semantic network has) distinguishes the observed network from it. A
+degree-preserving network is the observed network after many random edge
+swaps (\code{\link[igraph]{rewire}}), so it keeps every node's degree and
+asks whether the measure differs beyond what the degrees imply.
+
+\emph{p}-values are Monte Carlo \emph{p}-values, with no normality
+assumption: \eqn{(1 + \#\{|x_i - \bar{x}| \ge |x_{obs} - \bar{x}|\}) / (iter + 1)},
+where \eqn{x_i} are the \code{iter} random-network values and \eqn{\bar{x}}
+their mean. They cannot be smaller than \code{1 / (iter + 1)} (and are
+reported to 4 significant digits, so that they are not rounded to 0). Neither null
+model guarantees a connected network, and \code{aspl} ignores unreachable
+pairs, so a sparse random network can differ from a connected observed one
+for that reason alone. The tests are not adjusted for the number of measures.
 }
 \examples{
 # Get openness data
@@ -45,9 +77,13 @@ random_network_test(low = net_one, high = net_two, iter = 100, cores = 2)
 
 }
 \references{
-Viger, F., & Latapy, M. (2016).
-Efficient and simple generation of random simple connected graphs with prescribed degree sequence.
-\emph{Journal of Complex Networks}, \emph{4}, 15-37.
+Erdos, P., & Renyi, A. (1960).
+On the evolution of random graphs.
+\emph{Publications of the Mathematical Institute of the Hungarian Academy of Sciences}, \emph{5}, 17-61.
+
+Maslov, S., & Sneppen, K. (2002).
+Specificity and stability in topology of protein networks.
+\emph{Science}, \emph{296}, 910-913.
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

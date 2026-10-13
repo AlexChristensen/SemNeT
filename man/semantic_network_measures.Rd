@@ -8,7 +8,10 @@ semantic_network_measures(
   A,
   measures = c("aspl", "cc", "q"),
   weighted = FALSE,
-  seed = NULL
+  seed = NULL,
+  na.rm = FALSE,
+  signed = FALSE,
+  type = c("arithmetic", "harmonic")
 )
 }
 \arguments{
@@ -25,7 +28,30 @@ Defaults to \code{FALSE}. Set to \code{TRUE} for weighted measures}
 
 \item{seed}{Numeric.
 Passed on to \code{\link{q}} for reproducible community detection.
-Defaults to \code{NULL} (not reproducible) -- see \code{\link{q}}'s Details}
+Defaults to \code{NULL} (not reproducible; \code{0} is random too) -- see
+\code{\link{q}}'s Details}
+
+\item{na.rm}{Boolean.
+Passed on to \code{\link{cc}}: should nodes with fewer than two neighbors
+(whose clustering coefficient is undefined) be left out of the average
+(\code{TRUE}) instead of counted as 0 (\code{FALSE})?
+Only affects \code{"cc"}.
+Defaults to \code{FALSE}}
+
+\item{signed}{Boolean.
+Passed on to \code{\link{q}}: should modularity be computed on the signed
+network (Gomez et al., 2009), discounting negative edges?
+Only affects \code{"q"}, and only matters for a network with negative
+weights, so it needs \code{weighted = TRUE} (an unweighted network is
+binarized first, which removes the sign).
+Defaults to \code{FALSE}}
+
+\item{type}{Character.
+Passed on to \code{\link{aspl}}: \code{"arithmetic"} (the mean of each
+node's mean distance to the nodes it can reach; unreachable pairs are left
+out) or \code{"harmonic"} (the inverse of the mean inverse distance between
+all pairs, which counts unreachable pairs). Only affects \code{"aspl"}.
+Defaults to \code{"arithmetic"}}
 }
 \value{
 Returns a named numeric vector with one value per requested measure
@@ -48,6 +74,11 @@ net <- suppressWarnings(tmfg(cos))
 # Compute global network measures
 global_measures <- semantic_network_measures(net)
 
+}
+\references{
+Gomez, S., Jensen, P., & Arenas, A. (2009).
+Analysis of community structure in networks of correlated data.
+\emph{Physical Review E}, \emph{80}, 016114.
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

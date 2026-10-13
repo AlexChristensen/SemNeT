@@ -7,19 +7,24 @@
 #' A preprocessed verbal fluency matrix where rows are participants and
 #' columns are the order of their verbal fluency responses. Content may be
 #' the raw word responses or an ordered numeric response matrix (see
-#' \code{responses_to_binary()})
+#' \code{responses2binary()})
 #'
 #' @param type Character.
 #' Type of \code{threshold} to apply. One of:
 #' \itemize{
-#' \item \code{"num"} --- Minimum number of co-occurrences
-#' \item \code{"prop"} --- Minimum proportion of co-occurrences
+#' \item \code{"num"} --- Minimum number of participants in whose responses
+#' the two responses were adjacent
+#' \item \code{"prop"} --- Minimum proportion of participants in whose
+#' responses the two responses were adjacent
 #' }
 #' Defaults to \code{"num"}
 #'
 #' @param threshold Numeric.
 #' Value of the minimum number or proportion of co-occurrences.
-#' Defaults to \code{0} for both \code{"num"} and \code{"prop"}
+#' Defaults to \code{0} for both \code{"num"} and \code{"prop"}.
+#' With a \code{threshold} above 0, responses left with no link are dropped
+#' from the network; at \code{0} every response is kept (including one that
+#' was never adjacent to a different response)
 #'
 #' @return Returns an undirected semantic network
 #'
@@ -44,112 +49,145 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# Naive random walk network estimation
+# Naive random walk network ----
 # Updated 06.09.2026
 nrw <- function(data, type = c("num", "prop"), threshold = 0)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   data <- nrw_errors(data, type, threshold)
 
-  # `match.arg()` also supplies the "num" default when 'type' is missing
+  # Set type
   type <- match.arg(type)
 
-  # An ordered numeric response matrix must first become word responses
+  # Check for ordered responses
   if(is.numeric(data)){
-    data <- binary_to_responses(data)
+
+    # Convert to word responses
+    data <- binary2responses(data)
+
   }
 
+  # Ensure matrix
   mat <- as.matrix(data)
+
+  # Replace bad responses with missing
   mat <- bad_response(mat)
 
+  # Get vocabulary
   vocabulary <- sort(na.omit(unique(as.vector(mat))))
 
+  # Initialize co-occurrence matrix
   co_occurrence <- matrix(0, nrow = length(vocabulary), ncol = length(vocabulary))
+
+  # Set column names
   colnames(co_occurrence) <- vocabulary
+
+  # Set row names
   row.names(co_occurrence) <- vocabulary
 
-  # Pad each participant's response row with NA at both ends, so a response
-  # in the first or last position still has a defined (empty) neighbor
-  padded_responses <- cbind(rep(NA, nrow(mat)), mat, rep(NA, nrow(mat)))
+  # Loop over participants
+  for(participant in seq_len(nrow(mat))){
 
-  # Each participant's response order is ragged (some gave more responses
-  # than others), so counting adjacent-response pairs stays a loop
-  for(participant in seq_len(nrow(padded_responses))){
+    # Get responses of participant
+    responses_given <- mat[participant, ]
 
-    responses_given <- padded_responses[participant, !is.na(padded_responses[participant, ])]
-    full_row <- padded_responses[participant, ]
+    # Get first response of each pair
+    first <- match(responses_given[-length(responses_given)], vocabulary)
 
-    for(response in seq_along(responses_given)){
+    # Get second response of each pair
+    second <- match(responses_given[-1], vocabulary)
 
-      position <- which(full_row == responses_given[response])
-      neighbors <- na.omit(full_row[c(position - 1, position + 1)])
+    # Identify adjacent distinct responses
+    adjacent <- !is.na(first) & !is.na(second) & first != second
 
-      if(length(neighbors) != 0){
-        co_occurrence[responses_given[response], neighbors] <- co_occurrence[responses_given[response], neighbors] + 1
-        co_occurrence[neighbors, responses_given[response]] <- co_occurrence[neighbors, responses_given[response]] + 1
-      }
+    # Check for adjacent responses
+    if(any(adjacent)){
+
+      # Get unique pairs
+      pairs <- unique(cbind(pmin(first[adjacent], second[adjacent]), pmax(first[adjacent], second[adjacent])))
+
+      # Count pairs
+      co_occurrence[pairs] <- co_occurrence[pairs] + 1
+
+      # Count reversed pairs
+      co_occurrence[pairs[, 2:1, drop = FALSE]] <- co_occurrence[pairs[, 2:1, drop = FALSE]] + 1
 
     }
 
   }
 
-  # Convert counts to a proportion of participants when requested
+  # Check for proportion
   if(type == "prop"){
+
+    # Convert counts to proportions
     co_occurrence <- co_occurrence / nrow(data)
+
   }
 
-  # Threshold the (count or proportion) co-occurrence matrix down to a binary network
+  # Remove co-occurrences below threshold
   co_occurrence[co_occurrence < threshold] <- 0
 
+  # Check for threshold
   if(threshold != 0){
 
+    # Binarize co-occurrences at threshold
     co_occurrence[co_occurrence >= threshold] <- 1
 
-    # Nodes that lost every connection at this threshold are dropped entirely
+    # Identify nodes without edges
     disconnected <- which(colSums(co_occurrence) == 0)
+
+    # Check for disconnected nodes
     if(length(disconnected) > 0){
-      co_occurrence <- co_occurrence[-disconnected, -disconnected]
+
+      # Remove disconnected nodes
+      co_occurrence <- co_occurrence[-disconnected, -disconnected, drop = FALSE]
+
     }
 
   }else{
+
+    # Binarize co-occurrences
     co_occurrence[co_occurrence != 0] <- 1
+
   }
 
+  # Return network
   return(co_occurrence)
 
 }
 
 #' @noRd
-# Argument errors for `nrw()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 nrw_errors <- function(data, type, threshold)
 {
 
-  # 'data' must be a raw (not-yet-binarized) response matrix -- naive random
-  # walk needs response order, which a plain 0/1 binary matrix has already
-  # discarded. Fixes the original's `max() >= 1` bug (see
-  # `ordered_response_matrix_error()` in helpers.R), which rejected
-  # virtually every valid ordered numeric response matrix
+  # 'data' errors
   data <- ordered_response_matrix_error(data, "nrw")
 
-  # 'type' must be one (and only one) of the documented options
+  # 'type' errors
   length_error(type, c(1, 2), "nrw")
+  typeof_error(type, "character", "nrw")
 
-  # 'threshold' must be a single non-negative number, and additionally
-  # below 1 when 'type' is "prop" (a proportion can't exceed 1)
+  # 'threshold' errors
   length_error(threshold, 1, "nrw")
   typeof_error(threshold, "numeric", "nrw")
 
-  # `nrw()` always forwards 'type' here explicitly (even when its own caller
-  # left it at the default), so `missing(type)` would always read `FALSE` --
-  # `length(type) == 1` is the actual signal that a single choice was made
+  # Check for proportion
   if(length(type) == 1 && type == "prop"){
+
+    # Proportions range from 0 to 1
     range_error(threshold, c(0, 1), "nrw")
+
   }else{
+
+    # Counts range from 0 upward
     range_error(threshold, c(0, Inf), "nrw")
+
   }
 
+  # Return 'data' (in case of data frame)
   return(data)
 
 }

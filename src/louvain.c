@@ -1,6 +1,5 @@
-/* Vendored verbatim from {EGAnet}'s src/louvain.c (same author) -- see
-   ../REFACTOR_PLAN.md's Phase 2 addendum for why. Replaces
-   `igraph::cluster_louvain()` in `q()`: this version's randomness depends
+/* Vendored verbatim from {EGAnet}'s src/louvain.c (same author). Used by
+   `q()` in place of `igraph::cluster_louvain()`: this version's randomness depends
    only on an explicit `seed`, not R's global RNG state, so results are
    reproducible regardless of call order or parallelization. */
 

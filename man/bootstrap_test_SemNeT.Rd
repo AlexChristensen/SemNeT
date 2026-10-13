@@ -6,63 +6,211 @@
 \usage{
 bootstrap_test_SemNeT(
   ...,
-  test = c("t-test", "ANOVA", "ANCOVA"),
   measures = c("aspl", "cc", "q"),
+  groups = NULL,
   formula = NULL,
-  groups = NULL
+  ci_level = 0.95,
+  power = 0.8,
+  adjust = c("none", "bonferroni"),
+  ci_type = c("normal", "bc", "percentile"),
+  test = NULL,
+  legacy = FALSE
 )
 }
 \arguments{
-\item{...}{One or more \code{bootstrap_SemNeT} objects from
-\code{\link{bootstrap_SemNeT}}, all describing the same groups. More than
-one is only useful for \code{type = "node"} results at different values
-of \code{prop}, compared side by side}
-
-\item{test}{Character.
-Type of statistical test: \code{"t-test"} (every pairwise comparison,
-single-factor designs only), \code{"ANOVA"}, or \code{"ANCOVA"} (controls
-for each bootstrapped network's number of edges as a covariate, via
-\code{\link[car]{Anova}} type II/III sums of squares). Defaults to
-\code{"t-test"}}
+\item{...}{One or more \code{\link{bootstrap_SemNeT}} objects
+of the same groups.
+More than one is useful for \code{type = "node"} results at different
+\code{prop} values or for \code{type = "case"} results from different seeds.
+\strong{Only} \code{type = "case"} results support inference about groups
+of participants (see \strong{Details})}
 
 \item{measures}{Character.
-One or more of \code{"aspl"}, \code{"cc"}, \code{"q"}.
+One or more of \code{"aspl"}, \code{"cc"}, and \code{"q"}.
 Defaults to all three}
 
-\item{formula}{Character.
-\strong{Only} for \code{test = "ANOVA"}/\code{"ANCOVA"} with a multi-factor
-\code{groups} design. A formula with the outcome written as \code{"y"},
-e.g. \code{formula = "y ~ gf * caq"} for a two-way ANOVA. Defaults to
-\code{NULL} (every column of \code{groups}, additively or as the single
-factor's own levels)}
-
 \item{groups}{Matrix or data frame.
-One row per group (matched to \code{bootstrap_SemNeT}'s group names by
-row name if present, otherwise by the order groups were originally
-entered into \code{bootstrap_SemNeT}), one column per grouping/design
-variable. Defaults to \code{NULL} (a single factor using each group's own
-name as its level)}
+One row per group (matched to the group names by row name if present,
+otherwise by the order groups were entered), one column per design variable.
+With one variable, every pair of its levels is compared; with several,
+the main effect of each variable is compared (the unweighted average of the
+groups at each level).
+Defaults to \code{NULL} (one variable using the group names)}
+
+\item{formula}{Character (length = 1).
+\strong{Only} for multiple variables in \code{groups}.
+Outcome written as \code{"y"}, e.g., \code{"y ~ gf * caq"}, to add two-way
+interaction contrasts (a difference of differences). Requires a fully
+crossed design; higher-order interactions are not supported.
+Defaults to \code{NULL} (main effects only)}
+
+\item{ci_level}{Numeric (length = 1).
+Confidence level between 0 and 1 (exclusive).
+Defaults to \code{.95}.
+At least 1000 bootstrap iterations are recommended}
+
+\item{power}{Numeric (length = 1).
+Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
+Defaults to \code{.80}}
+
+\item{adjust}{Character (length = 1).
+Multiplicity adjustment across the comparisons within each measure. Nothing
+is ever adjusted across the measures or across the objects passed in
+\code{...}; with several comparisons and \code{"none"}, each is an
+unadjusted test.
+Defaults to \code{"none"}.
+Available options:
+
+\itemize{
+
+\item \code{"none"} --- No adjustment
+
+\item \code{"bonferroni"} --- Widens each interval to the
+\code{1 - (1 - ci_level) / m} level and multiplies each \emph{p}-value by
+\code{m}, the number of comparisons
+
+}}
+
+\item{ci_type}{Character (length = 1).
+Type of test and interval (not used for node results).
+Defaults to \code{"normal"}.
+Available options:
+
+\itemize{
+
+\item \code{"normal"} --- Wald test and interval: the observed difference
+plus and minus the normal quantile times the bootstrap standard error.
+Assumes the bootstrap distribution is roughly normal and needs fewer
+iterations than the percentile-based intervals. Requires the groups'
+observed statistics (\code{NA} without them, with a message)
+
+\item \code{"bc"} --- Bias-corrected percentile interval (Efron & Tibshirani, 1993).
+Requires the groups' observed statistics (falls back to \code{"percentile"}
+without them, with a message)
+
+\item \code{"percentile"} --- Percentile interval (e.g., the 2.5th and 97.5th
+percentiles of the within-iteration differences at \code{ci_level = .95})
+
+}}
+
+\item{test}{Character (length = 1).
+\strong{Only} for \code{legacy = TRUE}: \code{"t-test"}, \code{"ANOVA"},
+or \code{"ANCOVA"}.
+Defaults to \code{NULL} (\code{"t-test"} when \code{legacy = TRUE}).
+Supplying it with \code{legacy = FALSE} is an error}
+
+\item{legacy}{Boolean (length = 1).
+Should the parametric tests on bootstrap replicates from versions before
+2.1.0 be reproduced?
+\strong{These tests are statistically invalid}: they treat bootstrap samples
+as independent observations and divide the bootstrap standard deviation
+(already a standard error) by \code{sqrt(iter)}, inflating test statistics
+by about \code{sqrt(iter)}. A warning is always issued.
+Defaults to \code{FALSE}}
 }
 \value{
-Returns a list of class \code{"bootstrap_test_SemNeT"}:
-\item{test}{The \code{test} that was run}
-\item{measures}{The \code{measures} that were tested}
-\item{groups}{The (possibly defaulted) \code{groups} design matrix used}
-\item{results}{A named list, one entry per \code{bootstrap_SemNeT} object
-in \code{...} (named \code{"Case"}, or \code{"Proportion (<prop>)"} for
-\code{type = "node"} results), each a named list with one entry per
-\code{measures}, each a list of: \code{table} (the test's own statistics
-table), \code{post_hoc} (a Tukey HSD table, only for \code{"ANOVA"}/
-\code{"ANCOVA"} with a single factor of more than two levels, otherwise
-\code{NULL}), and \code{adjusted_means} (only for \code{"ANOVA"}/
-\code{"ANCOVA"}; a single data frame for a one-factor design or a
-user-supplied interaction \code{formula}, otherwise -- an additive,
-multi-column \code{groups} design with no \code{formula} -- a named list
-of one data frame per factor; \code{NULL} for \code{"t-test"})}
+Returns a list containing:
+
+\item{test}{\code{"bootstrap CI"} or the legacy \code{test}}
+
+\item{measures}{The measures that were tested}
+
+\item{groups}{The \code{groups} design matrix that was used}
+
+\item{results}{A named list with one list per object in \code{...}
+(\code{"Case"} or \code{"Proportion (<prop>)"}), each with one list per
+measure containing \code{table} and \code{differences} (an \code{iter} x
+comparisons matrix of the within-iteration contrasts). The \code{table}'s
+numbers are not rounded (the printed tables format them), so \code{z},
+\code{p_value} and the interval agree exactly with \code{observed_diff} and
+\code{se}; for \code{legacy = TRUE}, \code{table}, \code{post_hoc}, and
+\code{adjusted_means}.
+
+\code{table} has one row per comparison: \code{term}, \code{contrast},
+\code{mean_1}, \code{se_1}, \code{mean_2}, and \code{se_2} (the bootstrap mean
+and standard error of each side; \code{NA} for interactions),
+\code{mean_diff}, \code{observed_diff}, \code{bias}
+(\code{mean_diff - observed_diff}), \code{se} (of the difference),
+\code{bias_se} (\code{|bias| / se}), \code{z}
+(Wald statistic; \code{ci_type = "normal"} only), \code{mde},
+\code{ci_lower}, \code{ci_upper}, \code{p_value} (Wald test;
+\code{ci_type = "normal"} only, otherwise \code{NA}), \code{n_boot}, and
+\code{direction} (\code{"n.s."} when the interval includes 0).
+
+For node results, \code{table} has \code{term}, \code{contrast},
+\code{observed_diff}, \code{mean_diff}, \code{sd_diff}, \code{q_lower} and
+\code{q_upper} (central \code{ci_level} range of the subsample differences),
+\code{prop_same_sign} (share with the observed difference's sign), and
+\code{n_boot}: a robustness summary with no \emph{p}-value or interval}
+
+\item{meta}{A named list like \code{results} containing \code{type},
+\code{method}, \code{iter}, \code{seed} (\code{NA} if none), \code{prop}
+(node results only), and \code{networks} (each group's mean \code{nodes} and
+\code{edges} across bootstrapped networks and its \code{observed_nodes} and
+\code{observed_edges})}
+
+\item{ci_level}{The confidence level used}
+
+\item{power}{The power used for \code{mde}}
+
+\item{adjust}{The multiplicity adjustment used}
+
+\item{ci_type}{The test and interval type used}
+
+\item{legacy}{Whether the legacy (invalid) tests were run}
 }
 \description{
-Computes statistical tests comparing groups' bootstrapped
-network measures from one or more \code{\link{bootstrap_SemNeT}} results
+Compares groups' bootstrapped network measures using Wald tests
+and confidence intervals of the within-iteration group contrasts. The
+bootstrap samples are never treated as independent observations
+}
+\details{
+Always run \code{\link{permutation_SemNeT}} alongside this function
+and report both: the bootstrap shows how precisely each group's networks and
+their difference are estimated, whereas the permutation test asks whether
+group membership matters.
+
+Groups are bootstrapped independently, so the difference between
+two groups' measures within a bootstrap iteration is a draw from the
+bootstrap distribution of the group difference.
+
+With \code{ci_type = "normal"} (default), the test statistic is the Wald
+statistic \eqn{z = \hat\Delta / \mathrm{SD}^*}, where \eqn{\hat\Delta} is the
+observed contrast and \eqn{\mathrm{SD}^*} is the standard deviation of the
+within-iteration contrasts (the bootstrap standard error). The
+\emph{p}-value is \eqn{2\{1-\Phi(|z|)\}} and matches the interval
+\eqn{\hat\Delta \pm z_{1-\alpha/2}\,\mathrm{SD}^*}. The null hypothesis is
+that the contrast \emph{at the study's sample sizes} is zero, not the
+large-sample contrast, because network measures depend on sample size. The
+test relies on a normal approximation and was conservative in permuted-data
+checks. When group labels can be permuted, \code{\link{permutation_SemNeT}}
+is the exact test and should be preferred.
+
+For \code{ci_type = "bc"} and \code{"percentile"}, a difference is reliable if
+the interval excludes 0 (Tu et al., under review). No \emph{p}-value is
+reported (\code{p_value} is \code{NA}): the smallest level at which such an
+interval excludes 0 is not a null-distribution \emph{p}-value and was easily
+mistaken for one. Use \code{ci_type = "normal"} for a Wald \emph{p}-value, or
+\code{\link{permutation_SemNeT}} for a test. Case resampling changes
+each resampled network's size, so the bootstrap distribution is not centred on
+the full-data statistic (reported as \code{bias}).
+
+The minimal detectable effect (\code{mde}) is
+\eqn{(z_{1-\alpha/2} + z_{\mathrm{power}})\,\mathrm{SD}^*}: the smallest true
+contrast a two-sided Wald test would detect with probability \code{power}
+(\eqn{\alpha} is divided by the number of comparisons for
+\code{adjust = "bonferroni"}). It depends only on the bootstrap standard
+error, so a non-significant difference smaller than \code{mde} is inconclusive.
+The bootstrap standard error can exceed the true sampling standard deviation,
+so \code{mde} errs large. It also assumes the contrast is roughly normally
+distributed, for every \code{ci_type}. When that is doubtful (check the
+\code{differences} of each measure), \code{\link{permutation_SemNeT}} reports
+an \code{mde} whose critical value comes from the permutation null instead of a
+normal quantile.
+
+Node results (\code{type = "node"}) subsample words, not participants, and
+the subsample sizes change the measures themselves, so they are summarized
+descriptively instead of tested.
 }
 \examples{
 # Get openness data
@@ -72,14 +220,32 @@ high <- open.clean[which(open.group == "High"), ]
 \donttest{
 # Bootstrap networks
 boot_result <- bootstrap_SemNeT(
-  low = low, high = high, iter = 100, cores = 2,
+  low = low, high = high, iter = 1000, cores = 2,
   type = "case", method = "tmfg"
 )
 
-# Compute tests
+# Wald tests of the group differences
 bootstrap_test_SemNeT(boot_result)
+
+# Percentile intervals
+bootstrap_test_SemNeT(boot_result, ci_type = "percentile")
 }
 
+}
+\references{
+\strong{Bootstrap} \cr
+Efron, B., & Tibshirani, R. J. (1993).
+\emph{An introduction to the bootstrap}.
+Chapman & Hall.
+
+\strong{Inflated bootstrap statistics} \cr
+Tu, C.-Y., Chodorow, M., Brooks, P. J., Ezrina, E., & Valian, V. (under review).
+Inflated statistics lead to incorrect inference: How (not) to make
+cognitive network group comparisons.
+}
+\seealso{
+\code{\link{permutation_SemNeT}} for a permutation test and
+\code{\link{bootstrap_SemNeT}} for generating the bootstrap samples
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

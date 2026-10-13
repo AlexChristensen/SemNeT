@@ -7,24 +7,22 @@
 \method{plot}{bootstrap_SemNeT}(x, measures = c("aspl", "cc", "q"), ...)
 }
 \arguments{
-\item{x}{A \code{bootstrap_SemNeT} object from \code{\link{bootstrap_SemNeT}}}
+\item{x}{A \code{\link{bootstrap_SemNeT}} object}
 
 \item{measures}{Character.
-One or more of \code{"aspl"}, \code{"cc"}, \code{"q"}.
+One or more of \code{"aspl"}, \code{"cc"}, and \code{"q"}.
 Defaults to all three}
 
-\item{...}{Currently unused}
+\item{...}{Not used}
 }
 \value{
-A \code{ggplot} object, returned visibly (so it prints automatically
-at the console, and renders correctly inside \code{shiny::renderPlot()})
+Returns a \code{ggplot} object (printed at the console and
+compatible with \code{shiny::renderPlot()})
 }
 \description{
-Plots the bootstrapped distribution of each requested measure
-as a raincloud plot (Allen, Poggiali, Whitaker, Marshall, & Kievit, 2018) --
-a half (flat) violin showing the full distribution's shape, paired with a
-boxplot and the raw jittered bootstrap values -- one panel per measure,
-grouped side by side
+Plots each measure's bootstrap distribution as a raincloud plot
+(Allen et al., 2018): a half violin, boxplot, and the jittered bootstrap values,
+with one panel per measure and the groups side by side
 }
 \examples{
 # Get openness data
@@ -44,6 +42,7 @@ plot(boot_result)
 
 }
 \references{
+\strong{Raincloud plots} \cr
 Allen, M., Poggiali, D., Whitaker, K., Marshall, T. R., & Kievit, R. A. (2018).
 Raincloud plots: a multi-platform tool for robust data visualization.
 \emph{PeerJ Preprints}, \emph{6}, e27137v1.

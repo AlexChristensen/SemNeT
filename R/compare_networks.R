@@ -2,8 +2,8 @@
 #'
 #' @description Uses \code{\link[qgraph]{qgraph}} to plot networks side by
 #' side. Accepts any number of networks and arranges the plots using
-#' \code{floor(sqrt(length(...)))} side-by-side columns (e.g. 3 networks: 1
-#' row of 3; 6 networks: 2 rows of 3; 9 networks: 3 rows of 3)
+#' \code{floor(sqrt(length(...)))} rows (e.g. 3 networks: 1 row of 3; 6 networks:
+#' 2 rows of 3; 9 networks: 3 rows of 3)
 #'
 #' @param ... Named matrices or data frames.
 #' At least two network adjacency matrices, e.g.
@@ -67,10 +67,8 @@
 #'
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
-#' @importFrom graphics layout
-#'
 #' @export
-# Compare networks side by side
+# Compare networks ----
 # Updated 06.09.2026
 compare_networks <- function(
   ..., title, config = "spring",
@@ -79,178 +77,253 @@ compare_networks <- function(
 )
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   validated <- compare_networks_errors(list(...), title, config, placement, weighted, qgraph_args)
+
+  # Get networks
   networks <- validated$networks
+
+  # Get titles
   title <- validated$title
+
+  # Get {qgraph} arguments
   qgraph_args <- validated$qgraph_args
 
-  # `match.arg()` picks the *first* listed choice when 'placement' is
-  # missing, which is why "default" is listed first above
+  # Set placement
   placement <- match.arg(placement)
 
+  # Get network names
   network_names <- names(networks)
+
+  # Get number of networks
   n_networks <- length(networks)
 
-  # Build each network's own {qgraph} layout without plotting it yet --
-  # `averageLayout()` below (for `placement = "match"`) needs every layout
-  # already computed before it can average them into one shared arrangement
+  # Initialize layouts
   layouts <- vector("list", n_networks)
+
+  # Initialize labels
   labels <- vector("list", n_networks)
 
+  # Loop over networks
   for(i in seq_len(n_networks)){
 
+    # Get network
     network <- networks[[i]]
 
+    # Check for unweighted
     if(!weighted){
+
+      # Binarize network
       network <- binarize(network)
+
     }
 
+    # Remove self-loops
     diag(network) <- 0
 
+    # Get layout without plotting
     layouts[[i]] <- qgraph::qgraph(network, DoNotPlot = TRUE, layout = config)
+
+    # Get node labels
     labels[[i]] <- as.factor(colnames(network))
 
   }
 
-  # Arrange the plotting device into side-by-side panels
+  # Check for two networks
   if(n_networks == 2){
 
+    # Plot side by side
     layout(t(1:2))
 
   }else if(n_networks > 2){
 
-    grid_columns <- floor(sqrt(n_networks))
-    grid_rows <- ceiling(n_networks / grid_columns)
-    layout(t(matrix(seq_len(grid_columns * grid_rows), nrow = grid_rows, ncol = grid_columns)))
+    # Get number of rows
+    grid_rows <- floor(sqrt(n_networks))
+
+    # Get number of columns
+    grid_columns <- ceiling(n_networks / grid_rows)
+
+    # Plot in grid
+    layout(matrix(seq_len(grid_rows * grid_columns), nrow = grid_rows, ncol = grid_columns, byrow = TRUE))
 
   }
 
-  # Every layout was built with `DoNotPlot = TRUE` above purely so
-  # `averageLayout()` could use its coordinates without rendering anything --
-  # flip that back now that the plotting device is actually ready
+  # Loop over networks
   for(i in seq_len(n_networks)){
+
+    # Turn plotting back on
     layouts[[i]]$Arguments$DoNotPlot <- FALSE
+
   }
 
-  # A shared spatial layout (same node positions in every panel), or each
-  # network's own independently-computed layout
+  # Check for matched placement
   if(placement == "match"){
+
+    # Average layouts
     shared_layout <- qgraph::averageLayout(layouts)
+
   }else{
+
+    # Use configuration
     shared_layout <- config
+
   }
+
+  # Set layout
   qgraph_args$layout <- shared_layout
 
-  # Apply this function's own sensible defaults, without overriding
-  # anything the caller already set explicitly
+  # Get argument names
   qgraph_argument_names <- names(qgraph_args)
 
+  # Check for node size
   if(!"vsize" %in% qgraph_argument_names){
+
+    # Set node size
     qgraph_args$vsize <- 4
-  }
-  if(!"label.prop" %in% qgraph_argument_names){
-    qgraph_args$label.prop <- 1
-  }
-  if(!"aspect" %in% qgraph_argument_names){
-    qgraph_args$aspect <- FALSE
-  }
-  if(config == "spring" && !"repulsion" %in% qgraph_argument_names){
-    qgraph_args$repulsion <- 1.15
-  }
-  if(!weighted && !"edge.color" %in% qgraph_argument_names){
-    qgraph_args$edge.color <- "black"
+
   }
 
-  # Plot every network in turn, into the panel layout set up above
+  # Check for label proportion
+  if(!"label.prop" %in% qgraph_argument_names){
+
+    # Set label proportion
+    qgraph_args$label.prop <- 1
+
+  }
+
+  # Check for aspect
+  if(!"aspect" %in% qgraph_argument_names){
+
+    # Set aspect
+    qgraph_args$aspect <- FALSE
+
+  }
+
+  # Check for repulsion
+  if(config == "spring" && !"repulsion" %in% qgraph_argument_names){
+
+    # Set repulsion
+    qgraph_args$repulsion <- 1.15
+
+  }
+
+  # Check for edge color
+  if(!weighted && !"edge.color" %in% qgraph_argument_names){
+
+    # Set edge color
+    qgraph_args$edge.color <- "black"
+
+  }
+
+  # Loop over networks
   for(i in seq_len(n_networks)){
 
+    # Set network
     qgraph_args$input <- layouts[[i]]
+
+    # Set title
     qgraph_args$title <- title[[i]]
+
+    # Set labels
     qgraph_args$labels <- labels[[i]]
 
+    # Plot network
     do.call(qgraph::qgraph, args = qgraph_args)
 
   }
 
+  # Return nothing
   return(invisible(NULL))
 
 }
 
 #' @noRd
-# Argument errors for `compare_networks()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 compare_networks_errors <- function(networks, title, config, placement, weighted, qgraph_args)
 {
 
-  # At least two networks are required to compare anything
+  # '...' errors
   if(length(networks) < 2){
+
+    # Send error
     stop("In `compare_networks()`: at least two networks must be provided via `...`.", call. = FALSE)
+
   }
 
-  # Every network must be named -- required in place of the original's
-  # `substitute()`-based name-sniffing, and works correctly under `do.call()`
+  # Check for unnamed networks
   if(is.null(names(networks)) || any(names(networks) == "")){
+
+    # Send error
     stop(
       "In `compare_networks()`: every network passed via `...` must be named, e.g. `compare_networks(low = low_net, high = high_net)`.",
       call. = FALSE
     )
+
   }
 
-  # Every network's name must be unique -- unlike the other `...`-based
-  # functions in this package, nothing here is looked up by name internally
-  # (every network is indexed positionally), so a duplicate name can't cause
-  # silent data loss the way it can elsewhere; it would only produce two
-  # identically-titled panels by default, which this still catches clearly
+  # Check for duplicate names
   if(anyDuplicated(names(networks)) > 0){
+
+    # Send error
     stop("In `compare_networks()`: every network passed via `...` must have a unique name.", call. = FALSE)
+
   }
 
-  # Every network must be a square, numeric adjacency matrix
+  # Check each network
   networks <- lapply(networks, function(network) adjacency_matrix_error(network, "compare_networks"))
 
-  # 'title' defaults to the names given in `...`; otherwise must be a list
-  # with exactly one title per network
+  # 'title' errors
   if(missing(title)){
+
+    # Use network names
     title <- as.list(names(networks))
+
   }else{
 
+    # Check for list
     object_error(title, "list", "compare_networks")
+
+    # Check for one title per network
     length_error(title, length(networks), "compare_networks")
 
   }
 
-  # 'config' must be a single character string
-  object_error(config, "vector", "compare_networks")
-  typeof_error(config, "character", "compare_networks")
+  # 'config' errors
   length_error(config, 1, "compare_networks")
+  typeof_error(config, "character", "compare_networks")
 
-  # 'placement' must be one (and only one) of the documented options
+  # 'placement' errors
   length_error(placement, c(1, 2), "compare_networks")
+  typeof_error(placement, "character", "compare_networks")
 
-  # `placement = "match"` averages every network's layout together, which
-  # only makes sense when every network actually has the same nodes
+  # Check for matched placement
   if(length(placement) == 1 && placement == "match"){
 
+    # Get number of nodes of each network
     node_counts <- vapply(networks, ncol, numeric(1))
 
+    # Check for different numbers of nodes
     if(length(unique(node_counts)) > 1){
+
+      # Send error
       stop(
         "In `compare_networks()`: `placement = \"match\"` requires every network to have the same number of nodes.",
         call. = FALSE
       )
+
     }
 
   }
 
-  # 'weighted' must be a single logical value
-  object_error(weighted, "vector", "compare_networks")
-  typeof_error(weighted, "logical", "compare_networks")
+  # 'weighted' errors
   length_error(weighted, 1, "compare_networks")
+  typeof_error(weighted, "logical", "compare_networks")
 
-  # 'qgraph_args' must be a list
+  # 'qgraph_args' errors
   object_error(qgraph_args, "list", "compare_networks")
 
+  # Return validated input (in case of data frames or default 'title')
   return(list(networks = networks, title = title, qgraph_args = qgraph_args))
 
 }

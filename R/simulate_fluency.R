@@ -5,8 +5,13 @@
 #' is simulated from a Poisson distribution (see \code{\link{rpois}}), using
 #' frequencies from the \code{\link{animals.freq}} data; participants'
 #' individual responses are then simulated with a probability of endorsing
-#' each response equal to that response's simulated total over the number
-#' of participants
+#' each response equal to that response's simulated total (plus 1) over 1.05
+#' times the largest such total. The probability therefore does not depend on
+#' the number of participants, and every response is simulated independently of
+#' the others: the data contain no association between responses, so a network
+#' estimated from them (which still has its full complement of edges, e.g.
+#' \code{\link{tmfg}}) describes noise. Use them to try out functions, not as a
+#' model of semantic structure
 #'
 #' @param nodes Numeric.
 #' Number of nodes (unique responses) to simulate.
@@ -30,41 +35,41 @@
 #'
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
-#' @importFrom stats rpois
-#'
 #' @export
-# Simulate verbal fluency data
+# Simulate verbal fluency data ----
 # Updated 06.09.2026
 simulate_fluency <- function(nodes = 100, cases = 500, random = FALSE)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   simulate_fluency_errors(nodes, cases, random)
 
-  # Response frequencies to simulate each node's popularity from -- sampled
-  # (with replacement) when 'random' is requested, otherwise taken as-is in
-  # `animals.freq`'s existing order (only meaningful when 'nodes' doesn't
-  # exceed how many frequencies exist to take, checked in the errors above)
+  # Check for random frequencies
   if(random){
+
+    # Sample frequencies with replacement
     sampled_frequencies <- sample(SemNeT::animals.freq, size = nodes, replace = TRUE)
+
   }else{
+
+    # Take frequencies in order
     sampled_frequencies <- SemNeT::animals.freq[seq_len(nodes)]
+
   }
 
-  # Each response's simulated total endorsement count across all participants
+  # Simulate total endorsements of each node
   response_totals <- rpois(nodes, sampled_frequencies) + 1
 
-  # Convert totals to endorsement probabilities, scaled so even the most
-  # popular response has some chance of *not* being endorsed by a participant
+  # Convert totals to endorsement probabilities
   endorsement_probabilities <- response_totals / (max(response_totals) * 1.05)
 
-  # Initialize the response matrix
+  # Initialize response matrix
   response_matrix <- matrix(0, nrow = cases, ncol = nodes)
 
-  # Each node's responses are simulated independently, so this stays a loop
-  # rather than a single vectorized draw
+  # Loop over nodes
   for(node in seq_len(nodes)){
 
+    # Simulate responses of node
     response_matrix[, node] <- sample(
       c(0, 1), cases, replace = TRUE,
       prob = c(1 - endorsement_probabilities[node], endorsement_probabilities[node])
@@ -72,49 +77,51 @@ simulate_fluency <- function(nodes = 100, cases = 500, random = FALSE)
 
   }
 
-  # Guarantee every node has at least one response -- otherwise a node could
-  # simulate to a fully unused (all-zero) column, which is meaningless as a
-  # "response" and would break downstream functions that assume every column
-  # was actually given by someone
+  # Identify nodes without responses
   unused_nodes <- which(colSums(response_matrix) == 0)
 
+  # Check for unused nodes
   if(length(unused_nodes) > 0){
+
+    # Loop over unused nodes
     for(node in unused_nodes){
+
+      # Give node one response
       response_matrix[sample(cases, 1), node] <- 1
+
     }
+
   }
 
+  # Return response matrix
   return(response_matrix)
 
 }
 
 #' @noRd
-# Argument errors for `simulate_fluency()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 simulate_fluency_errors <- function(nodes, cases, random)
 {
 
-  # 'nodes' must be a single positive whole number
+  # 'nodes' errors
   length_error(nodes, 1, "simulate_fluency")
   typeof_error(nodes, "numeric", "simulate_fluency")
   range_error(nodes, c(1, Inf), "simulate_fluency")
 
-  # 'cases' must be a single positive whole number
+  # 'cases' errors
   length_error(cases, 1, "simulate_fluency")
   typeof_error(cases, "numeric", "simulate_fluency")
   range_error(cases, c(1, Inf), "simulate_fluency")
 
-  # 'random' must be a single logical value
-  object_error(random, "vector", "simulate_fluency")
-  typeof_error(random, "logical", "simulate_fluency")
+  # 'random' errors
   length_error(random, 1, "simulate_fluency")
+  typeof_error(random, "logical", "simulate_fluency")
 
-  # Without 'random', frequencies are taken in existing order from a
-  # fixed-length reference -- requesting more nodes than that has no
-  # well-defined behavior (the original recycled `animals.freq` instead,
-  # which risks the `rpois()`-internal "longer object length is not a
-  # multiple of shorter object length" warning rather than a clear error)
+  # Check for more nodes than reference frequencies
   if(!random && nodes > length(SemNeT::animals.freq)){
+
+    # Send error
     stop(
       paste0(
         "In `simulate_fluency()`: 'nodes' (", nodes, ") exceeds the number of available ",
@@ -123,6 +130,7 @@ simulate_fluency_errors <- function(nodes, cases, random)
       ),
       call. = FALSE
     )
+
   }
 
 }

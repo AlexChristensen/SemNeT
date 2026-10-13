@@ -7,20 +7,36 @@
 #' A preprocessed verbal fluency matrix where rows are participants and
 #' columns are the order of their verbal fluency responses. Content may be
 #' the raw word responses or an ordered numeric response matrix (see
-#' \code{responses_to_binary()})
+#' \code{responses2binary()})
 #'
 #' @param window Numeric.
 #' Size of window to look for co-occurrences in.
 #' Defaults to \code{2}
 #'
 #' @param alpha Numeric.
-#' Significance value.
+#' Significance level of the test of each pair of responses' co-occurrence
+#' against chance, following Goni et al. (2011): the pair's co-occurrence rate
+#' gets a two-sided \code{1 - alpha} Clopper-Pearson confidence interval, and an
+#' edge is kept when the rate expected by chance falls below the interval's
+#' lower bound (so each tail holds \code{alpha / 2}). Must be strictly between
+#' \code{0} and \code{1}. The tests are \strong{not} adjusted for the number of
+#' pairs tested.
 #' Defaults to \code{.05}
 #'
 #' @param enrich Boolean.
 #' Should the network be enriched by connecting all nodes within their
 #' respective modules?
 #' Defaults to \code{FALSE}
+#'
+#' @param cutoff Numeric.
+#' Height at which the hierarchical clustering of the generalized topological
+#' overlap dissimilarity is cut into modules when \code{enrich = TRUE}.
+#' Goni et al. (2011) chose their cutoff (0.58 in their data) so that it
+#' separated the blocks of the overlap matrix as well as possible, so there is
+#' \strong{no established value}: it depends on the data and should be
+#' inspected rather than assumed. A warning is given whenever
+#' \code{enrich = TRUE}.
+#' Defaults to \code{0.50}
 #'
 #' @return Returns an undirected semantic network
 #'
@@ -47,304 +63,422 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# Community network estimation
-# Updated 06.09.2026
-cn <- function(data, window = 2, alpha = .05, enrich = FALSE)
+# Community network ----
+# Updated 13.10.2026
+cn <- function(data, window = 2, alpha = .05, enrich = FALSE, cutoff = 0.50)
 {
 
-  # Validate and coerce input before any computation begins
-  data <- cn_errors(data, window, alpha, enrich)
+  # Argument errors
+  data <- cn_errors(data, window, alpha, enrich, cutoff)
 
-  # Statistically significant co-occurrence network
+  # Get significant co-occurrence network
   adjacency <- stat_cooccur(data, window = window, alpha = alpha)
 
-  # Isolated responses (no significant co-occurrence with anything) are
-  # dropped by retaining only the largest connected component
+  # Get connected components
   components <- suppressWarnings(igraph::components(convert2igraph(adjacency)))
+
+  # Get nodes of largest component
   largest_component <- which(components$membership == which.max(components$csize))
+
+  # Keep largest component
   adjacency <- adjacency[largest_component, largest_component]
 
-  # Optionally connect every node within the same module to every other node
+  # Check for enrichment
   if(enrich){
-    adjacency <- enrich_network(adjacency, gtom(adjacency))
+
+    # Send warning
+    warning(
+      "In `cn()`: the module `cutoff` (", cutoff, ") used for `enrich = TRUE` has no established value. ",
+      "Goni et al. (2011) chose theirs (0.58) to separate the blocks of their own overlap matrix, so it is data-dependent ",
+      "and should be checked for your data.",
+      call. = FALSE
+    )
+
+    # Connect nodes within modules
+    adjacency <- enrich_network(adjacency, gtom(adjacency), cutoff = cutoff)
+
   }
 
+  # Return network
   return(adjacency)
 
 }
 
 #' @noRd
-# Argument errors for `cn()`
-# Updated 06.09.2026
-cn_errors <- function(data, window, alpha, enrich)
+# Errors ----
+# Updated 13.10.2026
+cn_errors <- function(data, window, alpha, enrich, cutoff)
 {
 
-  # 'data' must be a raw (not-yet-binarized) response matrix -- co-occurrence
-  # windowing needs response order, which a plain 0/1 binary matrix has
-  # already discarded
+  # 'data' errors
   data <- ordered_response_matrix_error(data, "cn")
 
-  # 'window' must be a single positive whole number
+  # 'window' errors
   length_error(window, 1, "cn")
   typeof_error(window, "numeric", "cn")
   range_error(window, c(1, Inf), "cn")
 
-  # 'alpha' must be a single value between 0 and 1
+  # 'alpha' errors
   length_error(alpha, 1, "cn")
   typeof_error(alpha, "numeric", "cn")
   range_error(alpha, c(0, 1), "cn")
 
-  # 'enrich' must be a single logical value
-  object_error(enrich, "vector", "cn")
-  typeof_error(enrich, "logical", "cn")
-  length_error(enrich, 1, "cn")
+  # Check for limits of alpha
+  if(alpha <= 0 || alpha >= 1){
 
+    # Send error
+    stop("In `cn()`: 'alpha' must be strictly between 0 and 1.", call. = FALSE)
+
+  }
+
+  # 'enrich' errors
+  length_error(enrich, 1, "cn")
+  typeof_error(enrich, "logical", "cn")
+
+  # 'cutoff' errors
+  length_error(cutoff, 1, "cn")
+  typeof_error(cutoff, "numeric", "cn")
+
+  # Check for limits of cutoff
+  if(is.na(cutoff) || cutoff <= 0 || cutoff >= 1){
+
+    # Send error
+    stop("In `cn()`: 'cutoff' must be strictly between 0 and 1.", call. = FALSE)
+
+  }
+
+  # Return 'data' (in case of data frame)
   return(data)
 
 }
 
 #' @noRd
-# Word co-occurrence counts within a sliding window of response order
-# Used only by `stat_cooccur()` below
+# Co-occurrence counts ----
 # Updated 06.09.2026
 cooccur <- function(data, window = 2)
 {
 
+  # Ensure matrix
   mat <- as.matrix(data)
+
+  # Set empty responses to missing
   mat <- ifelse(mat == "", NA, mat)
 
-  # The full vocabulary observed across all participants
+  # Get vocabulary
   vocabulary <- sort(na.omit(unique(as.vector(mat))))
 
-  # Recode every response as its integer position in the vocabulary
-  numeric_mat <- apply(mat, 2, function(column) match(column, vocabulary))
+  # Recode responses as vocabulary positions
+  numeric_mat <- matrix(
+    apply(mat, 2, function(column) match(column, vocabulary)),
+    nrow = nrow(mat), ncol = ncol(mat)
+  )
 
-  # Pad both ends with NA so a window lookup never runs off the row
+  # Pad ends with missing
   padded <- cbind(
     matrix(NA, nrow = nrow(numeric_mat), ncol = window),
     numeric_mat,
     matrix(NA, nrow = nrow(numeric_mat), ncol = window)
   )
 
+  # Get number of positions
   n_positions <- ncol(padded)
+
+  # Initialize co-occurrence matrix
   co_occurrence <- matrix(0, nrow = length(vocabulary), ncol = length(vocabulary))
 
-  # For every participant, tally which words fell within 'window' positions
-  # of each other in their own response order. Looping participant-outer and
-  # only over the (small) set of words *that participant actually said* --
-  # rather than word-outer over the *entire* vocabulary for every participant,
-  # as a first version of this did -- computes the exact same commutative sum
-  # (matrix-cell increments don't depend on visiting order) over far fewer
-  # (participant, word) combinations: most vocabulary words were never said
-  # by most participants, and the original spent a `which()` scan finding
-  # that out empty-handed for every single one of them. Benchmarked ~2.5x
-  # faster on the bundled `open.clean` fixture, verified identical output
-  # (including when a participant repeats the same response, which changes
-  # nothing here since the original already unioned that word's neighbors
-  # across all of its positions before deduplicating)
+  # Loop over participants
   for(participant in seq_len(nrow(data))){
 
+    # Get row of participant
     row <- padded[participant, ]
+
+    # Get positions with responses
     present_positions <- which(!is.na(row))
 
+    # Check for no responses
     if(length(present_positions) == 0){
+
+      # Skip participant
       next
+
     }
 
+    # Get responses of participant
     words_here <- row[present_positions]
 
+    # Loop over unique responses
     for(word in unique(words_here)){
 
+      # Get positions of response
       positions_of_word <- present_positions[words_here == word]
 
+      # Get positions within window
       neighbor_positions <- unlist(lapply(positions_of_word, function(position){
         c(position - window:1, position + 1:window)
       }))
+
+      # Keep positions inside row
       neighbor_positions <- neighbor_positions[neighbor_positions >= 1 & neighbor_positions <= n_positions]
 
+      # Get neighboring responses
       neighboring_words <- row[neighbor_positions]
+
+      # Keep distinct neighbors
       neighboring_words <- setdiff(unique(neighboring_words[!is.na(neighboring_words)]), word)
 
+      # Count co-occurrences
       co_occurrence[word, neighboring_words] <- co_occurrence[word, neighboring_words] + 1
 
     }
 
   }
 
+  # Return co-occurrences
   return(co_occurrence)
 
 }
 
 #' @noRd
-# Relative frequency (proportion of participants) of each response
-# Used only by `stat_cooccur()` below
+# Relative frequency ----
 # Updated 06.09.2026
 rel_freq <- function(data)
 {
 
+  # Ensure matrix
   mat <- as.matrix(data)
+
+  # Set empty responses to missing
   mat <- ifelse(mat == "", NA, mat)
 
+  # Get vocabulary
   vocabulary <- sort(na.omit(unique(as.vector(mat))))
 
-  # For every word in the vocabulary, whether each participant's row
-  # contains it at least once -- vectorized via `sapply()`/`rowSums()` in
-  # place of the original's nested per-word, per-participant for-loops.
-  # `sapply()` only returns a proper (participants x vocabulary) matrix when
-  # each per-word result has length > 1; with exactly 1 participant, every
-  # per-word result collapses to a length-1 logical and `sapply()` silently
-  # returns a plain vector instead, which `colMeans()` below would then
-  # reject outright -- reshaping explicitly guards against that regardless
-  # of how many participants there are
+  # Identify participants giving each response
   said_by <- matrix(
     sapply(vocabulary, function(word) rowSums(mat == word, na.rm = TRUE) > 0),
     nrow = nrow(mat), ncol = length(vocabulary)
   )
 
+  # Return proportion of participants
   return(colMeans(said_by))
 
 }
 
-#' @importFrom stats binom.test
 #' @noRd
-# Statistical co-occurrence network estimation (Goni et al., 2011)
-# Used only by `cn()` above
+# Statistical co-occurrence (Goni et al., 2011) ----
 # Updated 06.09.2026
 stat_cooccur <- function(data, window = 2, alpha = .05)
 {
 
-  # An ordered numeric response matrix must first become word responses
+  # Check for ordered responses
   if(is.numeric(data)){
-    data <- binary_to_responses(data)
+
+    # Convert to word responses
+    data <- binary2responses(data)
+
   }
 
+  # Ensure matrix
   mat <- as.matrix(data)
+
+  # Replace bad responses with missing
   mat <- bad_response(mat)
 
+  # Get number of participants
   n_participants <- nrow(mat)
 
-  # Average number of responses given per participant
+  # Get mean number of responses
   mean_responses <- round(mean(rowSums(!is.na(mat))), 2)
 
+  # Get vocabulary
   vocabulary <- sort(na.omit(unique(as.vector(mat))))
+
+  # Get number of words
   n_words <- length(vocabulary)
 
+  # Initialize network
   adjacency <- matrix(0, nrow = n_words, ncol = n_words)
 
-  relative_frequency <- rel_freq(data)
-  co_occurrence <- cooccur(data, window = window)
+  # Get relative frequencies
+  relative_frequency <- rel_freq(mat)
 
-  # Probability that two words would co-occur by chance alone
+  # Get co-occurrences
+  co_occurrence <- cooccur(mat, window = window)
+
+  # Compute chance probability of co-occurrence
   chance_co_occurrence <- (2 / (mean_responses * (mean_responses - 1))) *
     ((window * mean_responses) - (window * (window + 1) / 2))
 
-  # An edge is retained when its observed co-occurrence significantly
-  # exceeds what chance alone (given each word's own frequency) would predict.
-  # With fewer than 2 words in the vocabulary, no pair exists to test at all --
-  # `1:(n_words - 1)` would otherwise silently count *down* (e.g. `1:0` is
-  # `c(1, 0)`, not empty) and the inner range would then index outside the
-  # 1x1 (or 0x0) 'adjacency' matrix, erroring instead of returning the
-  # already-correct all-zero result computed above
+  # Check for more than one word
   if(n_words > 1){
+
+    # Check for one response on average
+    if(mean_responses <= 1){
+
+      # Send error
+      stop(
+        "In `cn()`: participants must give more than one response on average (mean = ", mean_responses, ").",
+        call. = FALSE
+      )
+
+    }
+
+    # Loop over first words
     for(i in seq_len(n_words - 1)){
+
+      # Loop over second words
       for(j in (i + 1):n_words){
 
+        # Get observed co-occurrences
         observed <- co_occurrence[i, j]
 
+        # Check for repeated co-occurrence
         if(observed > 1){
 
+          # Compute expected co-occurrence by chance
           expected_by_chance <- relative_frequency[i] * relative_frequency[j] * chance_co_occurrence
-          confidence_interval <- binom.test(observed, n_participants, alpha)$conf.int
 
+          # Compute two-sided Clopper-Pearson interval
+          confidence_interval <- binom.test(
+            observed, n_participants, conf.level = 1 - alpha
+          )$conf.int
+
+          # Check for chance below lower bound
           if(expected_by_chance < confidence_interval[1]){
+
+            # Add edge
             adjacency[i, j] <- 1
+
+            # Add reverse edge
             adjacency[j, i] <- 1
+
           }
 
         }
 
       }
+
     }
+
   }
 
+  # Set column names
   colnames(adjacency) <- vocabulary
+
+  # Set row names
   row.names(adjacency) <- vocabulary
 
+  # Return network
   return(adjacency)
 
 }
 
 #' @noRd
-# Generalized topological overlap: how many neighbors two nodes share,
-# extended outward by 'steps' hops
-# Used only by `cn()` above, via `enrich = TRUE`
+# Generalized topological overlap ----
 # Updated 06.09.2026
 gtom <- function(A, steps = 2)
 {
 
+  # Initialize reachable nodes
   reachable <- A
+
+  # Initialize expanded network
   expanded <- reachable
+
+  # Get number of nodes
   n_nodes <- ncol(A)
 
+  # Loop over steps
   for(step in seq_len(steps)[-1]){
+
+    # Loop over nodes
     for(node in seq_len(n_nodes)){
 
+      # Get neighbors of node
       neighbors <- as.vector(unname(which(reachable[node, ] == 1)))
 
-      # A single neighbor's row needs re-wrapping as a matrix, or `apply()`
-      # below would iterate over its individual elements instead of the row
+      # Check for one neighbor
       if(length(neighbors) == 1){
+
+        # Keep row as matrix
         neighbor_rows <- t(as.matrix(reachable[neighbors, ]))
+
       }else{
+
+        # Get rows of neighbors
         neighbor_rows <- reachable[neighbors, ]
+
       }
 
+      # Get neighbors of neighbors
       neighbors_of_neighbors <- unname(unlist(apply(neighbor_rows, 1, function(row) which(row == 1))))
+
+      # Get all reachable nodes
       all_reachable <- setdiff(unique(neighbors_of_neighbors), node)
 
+      # Add reachable nodes
       expanded[node, all_reachable] <- 1
+
+      # Add reverse reachable nodes
       expanded[all_reachable, node] <- 1
 
     }
 
+    # Update reachable nodes
     reachable <- expanded
 
   }
 
+  # Compute numerator
   numerator <- reachable %*% reachable + A + diag(1, ncol(A))
 
+  # Get reachable totals
   reachable_totals <- colSums(reachable)
+
+  # Get totals by row
   totals_by_row <- matrix(rep(reachable_totals, ncol(A)), nrow = ncol(A), byrow = TRUE)
+
+  # Get totals by column
   totals_by_col <- t(totals_by_row)
 
+  # Compute denominator
   denominator <- -A + pmin(totals_by_row, totals_by_col) + 1
 
+  # Return overlap
   return(numerator / denominator)
 
 }
 
-#' @importFrom stats hclust cutree as.dist
 #' @noRd
-# Connect every node within the same module (via hierarchical clustering on
-# generalized topological overlap) to every other node in that module
-# Used only by `cn()` above, via `enrich = TRUE`
-# Updated 06.09.2026
-enrich_network <- function(A, GTOM)
+# Enrich network ----
+# Updated 13.10.2026
+enrich_network <- function(A, GTOM, cutoff = 0.50)
 {
 
+  # Compute dissimilarity
   dissimilarity <- as.dist(1 - GTOM, upper = TRUE)
+
+  # Cluster nodes
   linkage <- hclust(d = dissimilarity, method = "average")
 
-  # Module cut-height follows Goni et al. (2011)
-  modules <- cutree(linkage, h = 0.35)
+  # Cut dendrogram into modules
+  modules <- cutree(linkage, h = cutoff)
 
+  # Loop over modules
   for(module in seq_len(max(modules))){
+
+    # Get nodes of module
     members <- which(modules == module)
+
+    # Connect nodes of module
     A[members, members] <- 1
+
   }
 
+  # Remove self-loops
   diag(A) <- 0
 
+  # Return network
   return(A)
 
 }

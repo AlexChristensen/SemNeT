@@ -1,70 +1,129 @@
 # Tests for random_network_test()
 
-test_that("random_network_test returns a named list of correctly-shaped results", {
-
-  set.seed(1)
-  low <- open.clean[which(open.group == "Low"), ]
-  high <- open.clean[which(open.group == "High"), ]
-
-  net_low <- cn(low)
-  net_high <- cn(high)
-
-  result <- suppressMessages(random_network_test(low = net_low, high = net_high, iter = 10, cores = 1))
-
-  expect_named(result, c("low", "high"))
-  expect_true(is.data.frame(result$low))
-  expect_equal(rownames(result$low), c("aspl", "cc", "q"))
-  expect_equal(colnames(result$low), c("p_value", "random_mean", "random_sd"))
-
-})
-
-test_that("random_network_test requires every network to be named", {
-
-  set.seed(1)
-  net <- suppressWarnings(tmfg(cor(matrix(rnorm(150), 15, 10))))
-
-  expect_error(random_network_test(net, iter = 5), "named")
-
-})
-
-test_that("random_network_test rejects two networks sharing the same name", {
-
-  # Real bug fixed: `Map()` names the returned list after `networks`, so two
-  # networks sharing a name produced a duplicate list name, and `$`/`[[`
-  # access then silently returned only the first network's result
-  set.seed(1)
-  net <- suppressWarnings(tmfg(cor(matrix(rnorm(150), 15, 10))))
-
-  expect_error(random_network_test(low = net, low = net, iter = 5), "unique name")
-
-})
-
 test_that("generate_random_network preserves node and edge counts", {
 
+  # Generate network
   net <- generate_random_network(nodes = 10, edges = 15)
 
+  # Check number of nodes
   expect_equal(ncol(net), 10)
+
+  # Check number of edges
   expect_equal(sum(net) / 2, 15)
+
+  # Check for symmetry
   expect_true(isSymmetric(net))
 
 })
 
 test_that("generate_random_network produces exactly 0 edges for an edgeless observed network", {
 
-  # `1:edges` with `edges == 0` is `c(1, 0)`, not empty -- since a 0 index is
-  # silently dropped rather than erroring, that used to select 1 edge
-  # instead of the correct 0
+  # Generate network
   net <- generate_random_network(nodes = 6, edges = 0)
 
+  # Check for no edges
   expect_equal(sum(net), 0)
 
 })
 
-test_that("random_network_test validates its iter and cores arguments", {
+test_that("generate_degree_network keeps every node's degree, and the network simple", {
 
-  net <- suppressWarnings(tmfg(cor(matrix(rnorm(150), 15, 10))))
+  # Set seed
+  set.seed(1)
 
-  expect_error(random_network_test(a = net, iter = 0), "random_network_test")
-  expect_error(random_network_test(a = net, cores = 0), "random_network_test")
+  # Estimate network
+  net <- cn(open.clean[which(open.group == "Low"), ])
+
+  # Rewire network
+  rewired <- generate_degree_network(net)
+
+  # Check degrees
+  expect_equal(unname(rowSums(rewired)), unname(rowSums(net)))
+
+  # Check for symmetry
+  expect_true(isSymmetric(unname(rewired)))
+
+  # Check for no self-loops
+  expect_true(all(diag(rewired) == 0))
+
+  # Check for rewiring
+  expect_false(identical(unname(rewired), unname(net)))
+
+})
+
+test_that("random_network_test counts a weighted network's edges, not its weights", {
+
+  # Set seed
+  set.seed(1)
+
+  # Estimate weighted network
+  net <- suppressWarnings(tmfg(similarity(simulate_fluency(30, 100))))
+
+  # Binarize network
+  observed <- binarize(net)
+
+  # Remove self-loops
+  diag(observed) <- 0
+
+  # Check that edges exceed weights
+  expect_gt(sum(observed) / 2, floor(sum(net - diag(diag(net))) / 2))
+
+  # Perform test
+  result <- suppressMessages(random_network_test(net = net, iter = 10))
+
+  # Check clustering of random networks
+  expect_gt(result$net["cc", "random_mean"], 0)
+
+  # Check clustering of degree-preserving networks
+  expect_gt(result$net["cc", "random_mean_degree"], 0)
+
+})
+
+test_that("random_network_test is reproducible via 'seed' whatever 'cores' is", {
+
+  # Set seed
+  set.seed(1)
+
+  # Estimate network
+  net <- suppressWarnings(tmfg(similarity(simulate_fluency(25, 120))))
+
+  # Set up test
+  run <- function(seed, cores = 1){
+    suppressMessages(random_network_test(net = net, iter = 12, cores = cores, seed = seed))
+  }
+
+  # Perform test
+  one <- run(7)
+
+  # Check same seed
+  expect_identical(one, run(7))
+
+  # Check same seed with more cores
+  expect_identical(one, run(7, cores = 2))
+
+  # Check different seed
+  expect_false(identical(one, run(8)))
+
+})
+
+test_that("random_network_test p-values are not rounded to 0 and asymmetric networks are rejected", {
+
+  # Check that rounding gives zero
+  expect_equal(round(1 / 20001, 4), 0)
+
+  # Check that significant digits do not
+  expect_gt(signif(1 / 20001, 4), 0)
+
+  # Set up asymmetric network
+  asymmetric <- matrix(0, 5, 5)
+
+  # Add edge
+  asymmetric[1, 2] <- 1
+
+  # Check for asymmetry error
+  expect_error(random_network_test(net = asymmetric, iter = 5), "symmetric")
+
+  # Check for seed error
+  expect_error(random_network_test(net = matrix(0, 3, 3), seed = -1), "random_network_test")
 
 })

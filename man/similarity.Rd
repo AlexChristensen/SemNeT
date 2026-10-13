@@ -16,15 +16,33 @@ A binarized dataset of verbal fluency or linguistic data}
 \item{method}{Character.
 Type of similarity measure to compute. One of \code{"cosine"} (default),
 \code{"angular"}, \code{"cor"}, \code{"euclid"}, \code{"faith"},
-\code{"jaccard"}, \code{"phi"}, or \code{"rr"}. Defaults to \code{"cosine"}}
+\code{"jaccard"}, \code{"phi"}, or \code{"rr"}. Defaults to \code{"cosine"}.
+\code{"euclid"} is the Euclidean \emph{distance} between columns converted
+to a similarity, \eqn{1 / (1 + d)}, so that (like every other option) larger
+values mean more similar and the matrix can be used to estimate a network
+(e.g., \code{\link{tmfg}})}
 }
 \value{
-A symmetric similarity matrix
+A symmetric similarity matrix. The diagonal is set to 1
 }
 \description{
 Computes a similarity matrix between the columns of a
 binarized verbal fluency or linguistic dataset (see Choi, Cha, & Tappert,
 2010 for additional measures)
+}
+\details{
+\code{"angular"}, \code{"faith"}, \code{"jaccard"} and \code{"rr"}
+are computed from the 2 x 2 table of two columns' agreements and
+disagreements across participants, which needs 0/1 data (other values are an
+error); missing or infinite values are an error for every measure. A response nobody gave (an all-zero column) makes
+\code{"cosine"}, \code{"angular"} and \code{"jaccard"} undefined (\code{NaN}),
+and a response everybody gave (or nobody) makes \code{"cor"}/\code{"phi"}
+undefined; remove such responses first (see \code{\link{finalize}}). A
+participant who gave no response still counts as a case in which every
+response is absent, which matters for the measures that use joint absences
+(\code{"cor"}, \code{"phi"}, \code{"faith"}, \code{"rr"}). \code{"euclid"}
+mostly reflects how often each response was given: two rare responses that
+never co-occur look similar.
 }
 \examples{
 # Simulate a toy binarized dataset

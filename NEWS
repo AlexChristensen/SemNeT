@@ -1,0 +1,365 @@
+Changes in version 2.1.0
+
+Important statistical correction: bootstrap group comparisons
+
+o FIX: group tests in `bootstrap_test_SemNeT` and `test.bootSemNeT` inflated statistics by `sqrt(iter)` (Tu, Chodorow, Brooks, Ezrina, & Valian, under review); recompute any results
+
+o UPDATE: `bootstrap_test_SemNeT` now returns bootstrap intervals of within-iteration group contrasts (`ci_level`, `adjust`, `ci_type`, `power`, `legacy` arguments)
+
+o UPDATE: `bootstrap_test_SemNeT` node bootstraps are summarized descriptively (no interval or p-value)
+
+o UPDATE: `bootstrap_test_SemNeT` legacy parametric tests need `legacy = TRUE` and always warn
+
+o UPDATE: `bootstrap_SemNeT` `$summary` standard error is no longer divided by `sqrt(iter)`; observed (full-data) statistics are stored in `$observed`
+
+o ADD: `bootstrap_test_SemNeT` Wald `z`, `p_value`, and minimal detectable effect `mde` for normal intervals (the default)
+
+o ADD: `bootstrap_test_SemNeT` `bias_se` (|bias| / `se`; above about 0.25 the bootstrap is off-centre from the observed difference), printed as `bias/se`
+
+o ADD: `bootstrap_test_SemNeT` and `permutation_SemNeT` print a note under their summary tables that they should always be run together
+
+
+Other changes
+
+o FIX: `cn` `alpha` had no effect
+
+o FIX: `cn` counted co-occurrences on uncleaned responses, so placeholders (`" "`, `"NA"`) emptied the network
+
+o FIX: `nrw` counted every adjacent pair twice per participant; pairs are now counted once (counts are numbers of participants)
+
+o FIX: `pf` dropped zero-distance pairs, leaving identical responses unlinked
+
+o FIX: `binary2responses` ignored response order in an ordered numeric matrix
+
+o FIX: `permutation_SemNeT` computed `q` on the weighted network; all measures are now unweighted
+
+o FIX: `aspl` per-node averages use distances to the other nodes; weighted `aspl` rejects negative weights
+
+o FIX: `similarity` method `"euclid"` returned a distance, which `tmfg` treated as a similarity; it now returns `1 / (1 + d)`
+
+o FIX: `tmfg` stops on undefined similarities and on asymmetric input without `depend = TRUE`
+
+o FIX: `equate` rejects raw responses and duplicated response names
+
+o FIX: `forward_flow` treats `""`, `" "`, and `"NA"` as missing and requires `min_response` of at least 2
+
+o FIX: `q` with `signed = TRUE` weighted the negative term by N / (P - N) instead of N / (P + N) (Gomez et al., 2009); also fixed in {EGAnet}
+
+o FIX: `cohens_d` pools standard deviations by degrees of freedom (agrees with the equal-variance t-test) and handles groups of one
+
+o FIX: `random_walk` 5-unique-node statistic depended on the other network's walk; isolated start nodes and zero variation handled
+
+o FIX: `random_network_test` summed weights for edge counts; networks are binarized, p-values are Monte Carlo, and a degree-preserving null is added
+
+o UPDATE: `cn` gains `cutoff` for `enrich = TRUE` (default `0.50`, was a hardcoded `0.35`) and warns that there is no established value
+
+o UPDATE: `pf` now uses the response-order distance of Paulsen et al. (1996) and needs response order (raw or ordered responses, not 0/1 data)
+
+o UPDATE: `semantic_network_measures` defaults to `weighted = FALSE` (as documented) and gains `na.rm`, `signed`, and `type` (passed to `cc`, `q`, and `aspl`)
+
+o UPDATE: `cc` gains `na.rm` and no longer rounds per-node values; weighted `cc` divides weights by the largest absolute weight
+
+o UPDATE: `similarity` stops on missing or infinite values (and non-0/1 data for `"angular"`, `"faith"`, `"jaccard"`, `"rr"`); `finalize` stops on missing values and non-whole `minimum_cases`
+
+o UPDATE: `q` requires a symmetric network and returns `NaN` for a network without edges
+
+o UPDATE: `seed = 0` means random results, like `NULL`
+
+o UPDATE: `response_analysis` returns `vocabulary` (Jaccard overlap and rarefied richness) and ignores never-given responses in binary input
+
+o UPDATE: `random_walk` no longer reports p-values (they only reflect `iter`); differences, Monte Carlo intervals, and Cohen's d are given instead
+
+o UPDATE: `bootstrap_SemNeT` node bootstrap drops the same nodes from every group in an iteration
+
+o UPDATE: `bootstrap_SemNeT` retries draws only for correlation similarities (`"cor"`, `"phi"`); plot shows the full-data value
+
+o UPDATE: `permutation_SemNeT` tests several measures at once and returns `mde` and `diagnostics`
+
+o UPDATE: `permutation_SemNeT` gains two-sided options `"two_tailed_centered"` and `"two_tailed_doubled"`, tolerates floating-point ties, and aligns samples of different widths or vocabularies
+
+o UPDATE: Shiny Bootstrap tab shows intervals instead of t-test/ANOVA/ANCOVA; labels and captions updated
+
+o ADD: `aspl` `type` argument (`"arithmetic"`, the default and previous behavior, or `"harmonic"`)
+
+o ADD: `seed` for `bootstrap_SemNeT` and `permutation_SemNeT`; each resample gets its own seed, so results do not depend on `cores` or `set.seed`
+
+o ADD: `random_network_test` `seed` argument
+
+o ADD: `print` methods for `bootstrap_test_SemNeT` and `permutation_SemNeT`
+
+
+Changes in version 2.0.0
+
+o FIX: `equate` compared vocabulary size rather than shared words
+
+o FIX: duplicated group names passed via `...` silently hid results
+
+o FIX: weighted `CC` returned `NaN` for negative weights
+
+o FIX: `ASPL` zeroed unreachable pairs, understating ASPL in disconnected networks
+
+o FIX: `TMFG` with 4 nodes iterated backwards and fewer than 4 nodes gave silent `NA`s
+
+o FIX: `NRW` rejected valid ordered response matrices
+
+o FIX: `test.bootSemNeT` errored when all three measures were requested
+
+o FIX: `permSemNeT` dropped `NRW` `threshold` (`thresold` typo), `CN` `enrich`, and passed `threshold` as `window`
+
+o FIX: several `1:n` ranges ran backwards on empty or size-1 inputs
+
+o FIX: `q` is reproducible via `seed` (it depended on R's global RNG through `igraph::cluster_louvain`)
+
+o FIX: `forward_flow` `type = "free"` mismatched or crashed on numeric participant IDs (GitHub Issue #10)
+
+o FIX: Shiny Spreading Activation all-zero output and BRM upload failure (GitHub Issue #11)
+
+o FIX: Shiny app called unexported functions (`responses2binary`, `read_uploaded_file`) that failed under `library(SemNeT)`
+
+o FIX: Shiny background analyses ran sequentially and froze the app; they now run in the background with a live progress bar
+
+o FIX: Shiny progress bar jumped around with `cores > 1`, and `cores` above 1 failed inside background workers
+
+o UPDATE: full rebuild of the package's internals and the Shiny app; every pre-2.0.0 exported name still works
+
+o UPDATE: `TMFG`, `ASPL`, `CC`, `CN`, `NRW`, `PF`, and `Q` are now lowercase (`tmfg`, `aspl`, ...); the old names remain as wrappers
+
+o UPDATE: `bootSemNeT`, `test.bootSemNeT`, `randwalk`, `randnet.test`, `sim.fluency`, `response.analysis`, `semnetmeas`, and `compare_nets` are now `bootstrap_SemNeT`, `bootstrap_test_SemNeT`, `random_walk`, `random_network_test`, `simulate_fluency`, `response_analysis`, `semantic_network_measures`, and `compare_networks`; the old names remain as wrappers
+
+o UPDATE: `bootSemNeT`, `randwalk`, and `randnet.test` default to sequential processing instead of auto-detecting cores
+
+o UPDATE: `finalize` arguments renamed from `rmat` and `minCase` to `data` and `minimum_cases`
+
+o UPDATE: Shiny maximum `cores` is the host's core count minus one
+
+o UPDATE: `bootstrap_SemNeT` and `permutation_SemNeT` no longer hold every resampled network in memory (`keep_networks` argument); `random_network_test` reduces each random network immediately
+
+o UPDATE: dropped `pbapply`, `dplyr`, `plyr`, `magrittr`, `scales`, and `philentropy`; added `future`, `future.apply`, and `progressr`; `ggplot2` is now `Suggests`
+
+o UPDATE: compiled C code (Louvain, signed modularity, xoshiro256++) vendored from {EGAnet}; `NeedsCompilation` is now `yes`
+
+o UPDATE: one file per exported function, a consistent `bootstrap_SemNeT` result schema, vectorized loops, and removal of dead code
+
+o ADD: `permutation_SemNeT` (the old `permSemNeT` was internal and undocumented)
+
+o ADD: `forward_flow` is back, using user-supplied word embeddings (no network access)
+
+o ADD: `responses2binary` and `read_uploaded_file` are exported
+
+o ADD: `find_textcleaner_objects` and a Load Data picker in the Shiny app for {SemNetCleaner} objects
+
+
+Changes in version 1.4.4
+
+o FIX: minor fix to get back on CRAN
+
+o TODO: major refactor for the entire package to increase future reliability
+
+
+Changes in version 1.4.3
+
+o FIX: switching to different network estimations in Shiny app
+
+
+Changes in version 1.4.2
+
+o FIX: bug in reset of Shiny application
+
+o FIX: name ordering of `bootSemNeT` plots
+
+o FIX: p-value bug in random networks tests
+
+o ADD: t-tests to `test.bootSemNeT` and Shiny app
+
+
+Changes in version 1.4.1
+
+o FIX: unequal nodes and edges in `test.bootSemNeT` (GitHub Issue #3)
+
+o FIX: `PF` remove zeros bug (when there were no zero distances, then an empty matrix was given)
+
+o UPDATE: tooltips added to network estimation methods in Shiny
+
+o UPDATE: associated Shiny packages messages suppressed on Shiny startup
+
+o UPDATE: message for Shiny results output
+
+o UPDATE: `test.bootSemNeT` no longer uses number of nodes in ANCOVA
+
+o UPDATE: added minimum number (`type = "num"`) and proportion (`type = "prop"`) of co-occurrences argument to `NRW`
+
+o UPDATE: Shiny with new `NRW` arguments
+
+o UPDATE: Shiny now provides effect sizes for partial eta squared in Bootstrap Network Analyses tab
+
+
+Changes in version 1.4.0
+
+o FIX: `randwalk` bug with 'steps' and 'reps' argument
+
+o FIX: Shiny 'Clear Results' for new analyses
+
+o FIX: output for animation plots in Shiny
+
+o UPDATE: output names for `randwalk`
+
+o UPDATE: Shiny interface is condensed and more step-by-step progressive
+
+o UPDATE: Shiny includes random walk analysis
+
+o UPDATE: Shiny includes spreading activation analysis (thanks to Cythina Siew)
+
+o UPDATE: progress bar for some Shiny analyses
+
+o UPDATE: S3method for animation plots
+
+o UPDATE: citations added to Shiny analyses
+
+o UPDATE: ANOVAs controlling for the number of nodes and edges is now the statistical test in `test.bootSemNeT`
+
+o ADD: animation plot for spreading activation analysis in Shiny
+
+o ADD: permutation test to SemNeT (`permSemNeT) and Shiny
+
+o ADD: functions to convert data into other softwares format: SNAFU (`convert2snafu`) and igraph (`convert2igraph`)
+
+
+Changes in version 1.3.0
+
+o FIX: output of two-way ANOVA in `test.bootSemNeT`
+
+o FIX: 'groups' argument in `test.bootSemNeT`
+
+o UPDATE: added integration of SemNetCleaner output into `SemNeTShiny`
+
+o UPDATE: `compare.nets` has changed to `compare_nets`
+
+o UPDATE: `cosine` was added to internal functions to remove archived package from dependencies
+
+o ADD: Several semantic network estimation methods (see `CN`, `NRW`, and `PF`) -- these are included in the Shiny app
+
+o MOVE: `equate` and `finalize` moved from SemNetCleaner to SemNeT
+
+o REMOVE: foreach and doParallel dependencies were removed (all parallelization is through the pbapply package)
+
+o REMOVE: SemNetCleaner dependency was removed to allow SemNeT to operate independently -- all necessary functions from SemNetCleaner have been moved to internal functions
+
+o CHANGE: `partboot` is now `bootSemNeT`
+
+o CHANGE: `plot.partboot` is now `plot.bootSemNeT`
+
+o CHANGE: `partboot.test` is now `test.bootSemNeT`
+
+
+Changes in version 1.2.0
+
+o FIX: 'groups' argument in `org.plot`
+
+o UPDATE: moved several functions to internal to clean up package
+
+o ADD: Shiny app
+
+o ADD: binary responses matrices from animals verbal fluency data associated with the 'SemNetCleaner' package (open.animals)
+
+
+Changes in version 1.1.3
+
+o added extended ANOVA capabilities to `partboot.test` (e.g., two-way ANOVA)
+
+
+Changes in version 1.1.2
+
+o fixed bug for weighted modularity in `semnetmeas`
+
+o updated citation (PsyArXiv)
+
+o changed y-axis in plots for `partboot` to read as integers (as added black dot for mean in the scatterplots under the raincloud)
+
+o added vignette for analyzing semantic networks
+
+o added data for plots in vignette
+
+
+Changes in version 1.1.1
+
+o updated citation
+
+
+Changes in version 1.1.0
+
+o bug fixes
+
+o changed `semnetmeas` to allow calculation of any combination of measures
+
+o `partboot`, `partboot.test`, `plot.partboot`, `randnet.test`, and `compare.nets` now handle groups greater than 2
+
+
+Changes in version 1.0.0
+
+o serious, and I mean serious, revamp of functions (all for the better)
+
+o moved most functions over to 'SemNetCleaner' and now only consists of methods and measures for semantic network analysis
+
+o added a `sim.fluency` function for toy examples in CRAN checks
+
+o added two datasets 'one.result' and 'two.result' for toy examples in CRAN checks
+
+o `partboot.plot` changed to `plot.partboot` and added to S3 methods
+
+o `partboot.test` now outputs a list for each network measure
+
+
+Changes in version 0.9.9
+
+o animals.database: a database for animals was added
+
+o animals.misnomer: common misnomers for animals was added
+
+o textcleaner: added database functionality, which makes the cleaning process more accurate, efficient, and reproducible
+
+o several wrapper functions added to aid textcleaning from a database
+
+
+Changes in version 0.1.2
+
+o autoConverge: significantly improved interface
+
+o separated all function files into individual files
+
+o semnetcleaner (changed to textcleaner): added argument to input participants by row or column; ids now included for output; added output to show what spellcheck changed
+
+o destr: improved functionality to allow selection of separating character
+
+o randwalk: added a function to simulate random walks on the network to examine spontaenous spreading activation
+
+o bin2resp: a function to change cleaned binary response data back into character data for each participant
+
+
+Changes in version 0.1.1
+
+o cosine: added cosine similarity
+
+o semnetboot: changed name to partboot and added the cosine similarity
+
+o semnetmeas: moved from NetworkToolbox
+
+o plot.partboot: a function that generates "raindrop" plots for bootstrapped data
+
+o org.plot: an organization function for plot.partboot (not for individual use)
+
+o convert2cytoscape: added a function to convert a network matrix into a sparse matrix for Cytoscape visualization
+
+o added new examples with corresponding data files
+
+
+Changes in version 0.1.0
+
+o autoConverge: created an automated converge function to eliminate the manual converge process
+
+o autoDeStr: created an automated de-string function to eliminate most manual de-stringing
+
+o fine-tuned most functions
+
+o semnetboot: moved from package NetworkToolbox
+
+

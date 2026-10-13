@@ -4,7 +4,7 @@
 #' community detection algorithm
 #'
 #' @param A Matrix or data frame.
-#' An adjacency matrix of network data
+#' An adjacency matrix of network data. Must be symmetric
 #'
 #' @param resolution Numeric.
 #' Adjusts modularity to prefer smaller (\code{resolution > 1}) or larger
@@ -14,8 +14,8 @@
 #' @param seed Numeric.
 #' A seed for the Louvain algorithm's internal random number generator, for
 #' reproducible community detection.
-#' Defaults to \code{NULL} (not reproducible). Note this is independent of
-#' R's own \code{set.seed()} -- see Details
+#' Defaults to \code{NULL} (not reproducible); \code{0} also gives random
+#' results. Note this is independent of R's own \code{set.seed()} -- see Details
 #'
 #' @param signed Boolean.
 #' Whether modularity should be computed on the signed network (Gomez et
@@ -24,13 +24,23 @@
 #' Defaults to \code{FALSE} (the original, \code{abs()}-based behavior)
 #'
 #' @return Returns Q, a measure of how well the network partitions into
-#' distinct, densely-connected communities
+#' distinct, densely-connected communities. A network without edges has no
+#' defined modularity (\code{NaN})
 #'
 #' @details Community detection runs via a compiled Louvain implementation
 #' (Blondel et al., 2008) whose internal randomness depends only on
 #' \code{seed}, not on R's global random number generator -- unlike
 #' \code{igraph::cluster_louvain()}, calling \code{set.seed()} beforehand has
 #' no effect on \code{q()}'s reproducibility; pass \code{seed} directly instead.
+#' A given nonzero \code{seed} always gives the same partition; \code{seed = 0}
+#' (like \code{NULL}) seeds from the clock.
+#'
+#' With \code{signed = TRUE}, the partition (found on the absolute-value
+#' network) is scored as
+#' \eqn{Q = \frac{W^+}{W^+ + W^-} Q^+ - \frac{W^-}{W^+ + W^-} Q^-}
+#' (Gomez et al., 2009), where \eqn{W^+} and \eqn{W^-} are the total positive
+#' and absolute negative weights and \eqn{Q^+} and \eqn{Q^-} are the modularity
+#' of the positive and of the absolute negative edges.
 #'
 #' @examples
 #' # Pearson's correlation only for CRAN checks
@@ -57,91 +67,94 @@
 #' @useDynLib SemNeT, .registration = TRUE
 #'
 #' @export
-# Louvain community detection modularity
-# Updated 06.09.2026
+# Louvain modularity ----
+# Updated 13.10.2026
 q <- function(A, resolution = 1, seed = NULL, signed = FALSE)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   A <- q_errors(A, resolution, seed, signed)
 
-  # A node's own self-loop (e.g. TMFG's `diag(A) <- 1` convention) is never
-  # a real edge, and both `modularity_values()` and `signed_modularity()`
-  # treat every nonzero cell -- diagonal included -- as one. The original
-  # avoided this via `convert2igraph()`'s `diag = FALSE`; stripped here for
-  # the same reason before either computation ever sees the network
+  # Remove self-loops
   diag(A) <- 0
 
-  # Community membership is always found on the unsigned (absolute-value)
-  # network -- connection *strength*, not sign, is what determines which
-  # nodes cluster together, matching the original's `abs(A)` behavior
-  communities <- louvain(abs(A), resolution = resolution, seed = seed)
+  # Check for no edges
+  if(all(A == 0)){
 
-  # The unsigned modularity is already computed as a byproduct of finding
-  # the communities; the signed variant (Gomez et al., 2009) instead scores
-  # that same partition while discounting negative edges rather than
-  # folding them in as positive
-  if(signed){
-    return(signed_modularity(A, communities$membership, resolution))
+    # Return undefined modularity
+    return(NaN)
+
   }
 
+  # Find communities on absolute weights
+  communities <- louvain(abs(A), resolution = resolution, seed = seed)
+
+  # Check for signed modularity
+  if(signed){
+
+    # Return signed modularity of communities
+    return(signed_modularity(A, communities$membership, resolution))
+
+  }
+
+  # Return modularity
   return(communities$modularity)
 
 }
 
 #' @noRd
-# Argument errors for `q()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 q_errors <- function(A, resolution, seed, signed)
 {
 
-  # 'A' must be a square, numeric matrix (or coercible data.frame) --
-  # the original had no validation at all here
-  A <- adjacency_matrix_error(A, "q")
+  # 'A' errors
+  A <- adjacency_matrix_error(A, "q", require_symmetric = TRUE)
 
-  # 'resolution' must be a single positive number
+  # 'resolution' errors
   length_error(resolution, 1, "q")
   typeof_error(resolution, "numeric", "q")
   range_error(resolution, c(0, Inf), "q")
 
-  # 'seed' must be `NULL` or a single number
+  # Check for zero resolution
+  if(resolution <= 0){
+
+    # Send error
+    stop("In `q()`: 'resolution' must be greater than 0.", call. = FALSE)
+
+  }
+
+  # 'seed' errors
   if(!is.null(seed)){
     length_error(seed, 1, "q")
     typeof_error(seed, "numeric", "q")
+    range_error(seed, c(0, Inf), "q")
   }
 
-  # 'signed' must be a single logical value
-  object_error(signed, "vector", "q")
-  typeof_error(signed, "logical", "q")
+  # 'signed' errors
   length_error(signed, 1, "q")
+  typeof_error(signed, "logical", "q")
 
+  # Return 'A' (in case of data frame)
   return(A)
 
 }
 
 #' @noRd
-# Compiled Louvain community detection (Blondel et al., 2008)
-# Vendored from {EGAnet} (same author, see src/louvain.c) -- replaces
-# `igraph::cluster_louvain()`. Its randomness depends only on `seed`, not
-# R's global RNG, so results are reproducible regardless of R's RNG state,
-# call order, or parallel worker. Used only by `q()`, so kept local here
-# rather than in helpers.R
+# Louvain community detection (Blondel et al., 2008) ----
 # Updated 06.09.2026
 louvain <- function(network, resolution = 1, seed = NULL)
 {
 
-  # A `seed` of exactly 0 tells the C code "not reproducible, use clock
-  # time" -- `NULL` (the R-level default) maps onto that same convention
-  seed_value <- swiftelse(is.null(seed), 0, seed)
+  # Get seed for compiled code
+  seed_value <- compiled_seed(seed)
 
-  # `as.matrix()` is a generic with real `UseMethod()` dispatch overhead
-  # (benchmarked ~10x slower than a direct `is.matrix()` check) -- worth
-  # skipping here since this is an internal, `@noRd` function with exactly
-  # one caller (`q()`), which always hands it an already-validated matrix
+  # Ensure matrix
   if(!is.matrix(network)){
     network <- as.matrix(network)
   }
 
+  # Run compiled Louvain
   result <- .Call(
     "r_louvain",
     network, as.double(resolution), as.double(seed_value),
@@ -149,11 +162,10 @@ louvain <- function(network, resolution = 1, seed = NULL)
     PACKAGE = "SemNeT"
   )
 
-  # Only the finest/highest-modularity level is needed here -- the last row
-  # is always the level actually reached, regardless of how many aggregation
-  # levels ran
+  # Get final level
   final_level <- dim(result$memberships)[1]
 
+  # Return membership and modularity of final level
   return(list(
     membership = result$memberships[final_level, ],
     modularity = result$modularity[final_level]
@@ -162,21 +174,17 @@ louvain <- function(network, resolution = 1, seed = NULL)
 }
 
 #' @noRd
-# Signed modularity scoring (Gomez et al., 2009)
-# Vendored from {EGAnet} (same author, see src/signed_modularity.c) --
-# scores a given community partition while discounting negative edges,
-# rather than folding them in as positive via `abs()`. Used only by `q()`,
-# so kept local here rather than in helpers.R
+# Signed modularity (Gomez et al., 2009) ----
 # Updated 06.09.2026
 signed_modularity <- function(network, membership, resolution = 1)
 {
 
-  # Same rationale as `louvain()` above: skip `as.matrix()`'s dispatch
-  # overhead when the (internal-only) caller already has a plain matrix
+  # Ensure matrix
   if(!is.matrix(network)){
     network <- as.matrix(network)
   }
 
+  # Return signed modularity from compiled code
   .Call(
     "r_signed_modularity",
     network, as.integer(membership), as.double(resolution),

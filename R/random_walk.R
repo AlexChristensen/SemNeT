@@ -18,8 +18,10 @@
 #' Defaults to \code{"B"}
 #'
 #' @param reps Numeric.
-#' Number of repetitions of increments in 10 steps.
-#' Defaults to \code{20}
+#' Sets the largest number of steps tested, \code{reps * 10}: walks are run for
+#' \code{steps}, \code{steps + 10}, \code{steps + 20}, ... up to
+#' \code{reps * 10} steps (so \code{steps} cannot exceed \code{reps * 10}).
+#' Defaults to \code{20} (up to 200 steps)
 #'
 #' @param steps Numeric.
 #' Number of random steps to begin with.
@@ -33,9 +35,42 @@
 #' Number of computer processing cores to use.
 #' Defaults to \code{1}
 #'
+#' @details The comparison is descriptive. Each network's walks are
+#' \code{iter} simulated draws, and \code{iter} is chosen by the user, so the
+#' \emph{p}-value of a test on those draws would only reflect how many walks
+#' were simulated: any difference, however small, becomes \dQuote{significant}
+#' with enough of them. No \emph{p}-values are reported. Each statistic
+#' (number of unique nodes visited, similarity of the walk's end to its start,
+#' and the same at 5 unique nodes) is instead summarized by
+#' \itemize{
+#'
+#' \item the difference in means (\code{A} minus \code{B}) with a Monte Carlo
+#' 95\% interval, which describes the error from simulating a finite number
+#' of walks (and shrinks as \code{iter} grows), not uncertainty about the
+#' networks
+#'
+#' \item Cohen's \emph{d}, which does not depend on \code{iter}
+#'
+#' }
+#' Neither accounts for the uncertainty in the estimated networks; use
+#' \code{\link{bootstrap_SemNeT}} for that.
+#'
+#' Every walk starts at a node drawn at random from the nodes with at least one
+#' connection in each network (an isolated node cannot be walked from), and the
+#' two networks' walks share each step's random draw. When the pooled standard
+#' deviation of a statistic is 0, \eqn{d} is \code{0} for no difference in
+#' means and \code{Inf} (signed) for a difference, since any difference is then
+#' infinitely large in standard deviation units. The 5-unique-node statistic is
+#' measured at each network's own 5th distinct node (or its last, if the walk
+#' visited fewer).
+#'
 #' @return A list with \code{long} (every simulated summary statistic, all
-#' numeric) and \code{short} (a compact, correctly-typed summary with
-#' Mann-Whitney \emph{p}-values and effect directions)
+#' numeric: each network's mean and standard deviation, and the difference,
+#' its Monte Carlo interval limits, and Cohen's \emph{d} for each statistic)
+#' and \code{short} (a compact, correctly-typed summary with the difference,
+#' Cohen's \emph{d}, and a direction that is the network with the larger mean
+#' when \eqn{|d| \ge .2} (Cohen's small effect) and \code{"negligible"}
+#' otherwise)
 #'
 #' @examples
 #' # Simulate toy binarized datasets
@@ -63,109 +98,149 @@
 #'
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com> and Yoed Kenett <yoedkenett@gmail.com>
 #'
-#' @importFrom stats wilcox.test runif
-#'
 #' @export
-# Random walk simulation
-# Updated 06.09.2026
+# Random walk simulation ----
+# Updated 13.10.2026
 random_walk <- function(A, B, name_a = "A", name_b = "B", reps = 20, steps = 10, iter = 10000, cores = 1)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   validated <- random_walk_errors(A, B, name_a, name_b, reps, steps, iter, cores)
+
+  # Get first network
   A <- validated$A
+
+  # Get second network
   B <- validated$B
 
+  # Get number of nodes of first network
   n_a <- ncol(A)
+
+  # Get number of nodes of second network
   n_b <- ncol(B)
 
-  # Binary, self-loop-free transition structure for both networks
+  # Binarize first network
   A <- binarize(A)
+
+  # Binarize second network
   B <- binarize(B)
+
+  # Remove self-loops of first network
   diag(A) <- 0
+
+  # Remove self-loops of second network
   diag(B) <- 0
 
-  # Row-normalized transition probability matrices -- dividing a matrix by a
-  # vector the length of its row count recycles down each column, i.e. row
-  # by row, so this is `TA[i, j] <- A[i, j] / degree_a[i]` for every cell at
-  # once, in place of the original's double for-loop
+  # Get degree of first network
   degree_a <- colSums(A)
+
+  # Get degree of second network
   degree_b <- colSums(B)
+
+  # Get starting nodes of first network
+  start_a <- which(degree_a > 0)
+
+  # Get starting nodes of second network
+  start_b <- which(degree_b > 0)
+
+  # Check for no edges
+  if(length(start_a) == 0 || length(start_b) == 0){
+
+    # Send error
+    stop("In `random_walk()`: both networks must have at least one edge to walk on.", call. = FALSE)
+
+  }
+
+  # Get transition probabilities of first network
   transition_a <- A / degree_a
+
+  # Get transition probabilities of second network
   transition_b <- B / degree_b
 
-  # Shortest-path distances, used to measure how "close" a walk's endpoint
-  # is to its starting point. Unreachable node pairs are `Inf` (see
-  # `distance()`), which correctly makes `exp(-Inf) == 0` similarity below --
-  # the original's `distance()` silently zeroed those pairs instead, which
-  # made a truly unreachable pair look *maximally* similar (`exp(-0) == 1`)
+  # Get distances of first network
   distance_a <- distance(A)
+
+  # Get distances of second network
   distance_b <- distance(B)
 
-  # Every walk step needs its current node's transition-probability CDF.
-  # Since the transition matrices themselves never change across the
-  # thousands of simulated walks below, computing each row's cumulative sum
-  # once here -- instead of inside `simulate_walk()`, where it would
-  # otherwise be recomputed from scratch on every single step of every
-  # single walk -- turns a per-step `cumsum()` call into a single lookup
-  # (benchmarked ~20-25% faster per step; this line alone can run tens of
-  # millions of times across a full `random_walk()` call)
+  # Get cumulative transitions of first network
   cumulative_transition_a <- t(apply(transition_a, 1, cumsum))
+
+  # Get cumulative transitions of second network
   cumulative_transition_b <- t(apply(transition_b, 1, cumsum))
 
-  # One random walk of 'n_steps' steps over both networks simultaneously,
-  # starting from an independently-sampled node in each
+  # Simulate one walk on both networks
   simulate_walk <- function(n_steps, n_a, n_b, cumulative_transition_a, cumulative_transition_b, distance_a, distance_b)
   {
 
+    # Initialize visited nodes of first network
     visited_a <- numeric(n_steps)
+
+    # Initialize visited nodes of second network
     visited_b <- numeric(n_steps)
 
-    current_a <- sample(n_a, 1)
-    current_b <- sample(n_b, 1)
+    # Sample start of first network
+    current_a <- start_a[sample.int(length(start_a), 1)]
 
+    # Sample start of second network
+    current_b <- start_b[sample.int(length(start_b), 1)]
+
+    # Record start of first network
     visited_a[1] <- current_a
+
+    # Record start of second network
     visited_b[1] <- current_b
 
-    # `n_steps == 1` (reachable via `random_walk(A, B, steps = 1)`) would
-    # otherwise make `2:n_steps` count *down* (`2:1`, not empty): the loop
-    # would run once for `step = 2` (silently extending `visited_a`/`visited_b`
-    # past their intended length) and once more for `step = 1`, overwriting
-    # the starting node recorded just above with an unrelated later step
+    # Check for more than one step
     if(n_steps > 1){
+
+      # Loop over steps
       for(step in 2:n_steps){
 
-        # A single random draw is compared against both networks' transition
-        # CDFs, so a "high" vs. "low" draw has the same meaning in both walks
+        # Draw random number
         draw <- runif(1)
 
+        # Get next node of first network
         next_a <- which(cumulative_transition_a[current_a, ] > draw)[1]
+
+        # Get next node of second network
         next_b <- which(cumulative_transition_b[current_b, ] > draw)[1]
 
+        # Record next node of first network
         visited_a[step] <- next_a
+
+        # Record next node of second network
         visited_b[step] <- next_b
 
+        # Move first network
         current_a <- next_a
+
+        # Move second network
         current_b <- next_b
 
       }
+
     }
 
+    # Get unique nodes of first network
     unique_a <- unique(visited_a)
+
+    # Get unique nodes of second network
     unique_b <- unique(visited_b)
 
-    # Similarity between the walk's very first node and its very last
-    # distinct node -- a fully "wandering" walk revisits few nodes and ends
-    # up far (dissimilar) from where it started
+    # Get similarity of first and last node of first network
     similarity_a <- exp(-distance_a[visited_a[1], unique_a[length(unique_a)]])
+
+    # Get similarity of first and last node of second network
     similarity_b <- exp(-distance_b[visited_b[1], unique_b[length(unique_b)]])
 
-    # Same idea, but measured only 5 unique nodes into the walk (or fewer,
-    # if the walk visited fewer than 5 distinct nodes)
-    five_step_index <- min(5, length(unique_a), length(unique_b))
-    similarity_a_5 <- exp(-distance_a[visited_a[1], unique_a[five_step_index]])
-    similarity_b_5 <- exp(-distance_b[visited_b[1], unique_b[five_step_index]])
+    # Get similarity at five unique nodes of first network
+    similarity_a_5 <- exp(-distance_a[visited_a[1], unique_a[min(5, length(unique_a))]])
 
+    # Get similarity at five unique nodes of second network
+    similarity_b_5 <- exp(-distance_b[visited_b[1], unique_b[min(5, length(unique_b))]])
+
+    # Return statistics of walk
     return(list(
       unique = c(length(unique_a), length(unique_b)),
       similarity = c(similarity_a, similarity_b),
@@ -174,19 +249,19 @@ random_walk <- function(A, B, name_a = "A", name_b = "B", reps = 20, steps = 10,
 
   }
 
-  # Step counts to test: 'steps', then increasing by 10 for 'reps' levels
+  # Get step levels
   step_levels <- seq(steps, reps * 10, 10)
 
-  # Every step level's batch of simulations goes through `parallel_process()`
-  # in turn -- replaces the original's single hand-managed
-  # `parallel::makeCluster()` reused across every level with one
-  # cleanup-guaranteed call per level
+  # Send message
   message("Computing random walks...")
 
+  # Loop over step levels
   simulations_by_level <- lapply(seq_along(step_levels), function(level){
 
+    # Send progress message
     message(paste0("Repetition ", level, " of ", length(step_levels), " (", step_levels[level], " steps)"))
 
+    # Simulate walks of level
     parallel_process(
       iter,
       function(i) simulate_walk(step_levels[level], n_a, n_b, cumulative_transition_a, cumulative_transition_b, distance_a, distance_b),
@@ -196,27 +271,30 @@ random_walk <- function(A, B, name_a = "A", name_b = "B", reps = 20, steps = 10,
 
   })
 
-  # Every raw numeric summary statistic, one row per step level
+  # Format long results
   long_results <- format_random_walk_long(simulations_by_level, step_levels, name_a, name_b)
 
-  # A compact, correctly-typed summary -- the original built this as a
-  # single character matrix (numeric p-values and "< .001"/direction labels
-  # can't coexist in one matrix column type), which then required every
-  # downstream consumer to re-parse numbers back out of strings
+  # Format short results
   short_results <- format_random_walk_short(long_results, name_a, name_b)
 
+  # Return results
   return(list(long = long_results, short = short_results))
 
 }
 
 #' @noRd
-# Collect every simulated statistic across step levels into one long-format
-# numeric matrix
-# Updated 06.09.2026
+# Format long random walk results ----
+# Updated 13.10.2026
 format_random_walk_long <- function(simulations_by_level, step_levels, name_a, name_b)
 {
 
-  results <- matrix(NA, nrow = length(step_levels), ncol = 17)
+  # Set statistics
+  statistics <- c("uniq", "sim", "sim5")
+
+  # Initialize results
+  results <- matrix(NA, nrow = length(step_levels), ncol = 25)
+
+  # Set column names
   colnames(results) <- c(
     "Steps",
     paste("M.uniq", name_a, sep = "."), paste("SD.uniq", name_a, sep = "."),
@@ -225,21 +303,60 @@ format_random_walk_long <- function(simulations_by_level, step_levels, name_a, n
     paste("M.uniq", name_b, sep = "."), paste("SD.uniq", name_b, sep = "."),
     paste("M.sim", name_b, sep = "."), paste("SD.sim", name_b, sep = "."),
     paste("M.sim5", name_b, sep = "."), paste("SD.sim5", name_b, sep = "."),
-    "pu", "ps", "ps5", "g5ind"
+    paste0(rep(c("diff", "lower", "upper", "d"), times = 3), ".", rep(statistics, each = 4))
   )
 
+  # Summarize difference of a statistic
+  summarize_statistic <- function(values){
+
+    # Get paired differences
+    differences <- values[, 1] - values[, 2]
+
+    # Get Monte Carlo error
+    monte_carlo_error <- 1.96 * sd(differences) / sqrt(length(differences))
+
+    # Get pooled standard deviation
+    pooled_sd <- sqrt((var(values[, 1]) + var(values[, 2])) / 2)
+
+    # Compute effect size
+    effect <- if(isTRUE(pooled_sd > 0)){
+
+      # Standardize difference
+      mean(differences) / pooled_sd
+
+    }else if(isTRUE(pooled_sd == 0)){
+
+      # Set zero or infinite effect
+      sign(mean(differences)) * ifelse(mean(differences) == 0, 0, Inf)
+
+    }else{
+
+      # Set undefined effect
+      NA_real_
+
+    }
+
+    # Return difference, interval, and effect
+    c(mean(differences), mean(differences) - monte_carlo_error, mean(differences) + monte_carlo_error, effect)
+
+  }
+
+  # Loop over step levels
   for(level in seq_along(step_levels)){
 
+    # Get simulations of level
     simulations <- simulations_by_level[[level]]
 
+    # Get unique node counts
     unique_counts <- t(sapply(simulations, function(x) x$unique))
+
+    # Get similarities
     similarities <- t(sapply(simulations, function(x) x$similarity))
+
+    # Get five-unique-node similarities
     similarities_5 <- t(sapply(simulations, function(x) x$similarity_5))
 
-    p_unique <- suppressWarnings(wilcox.test(unique_counts[, 1], unique_counts[, 2])$p.value)
-    p_similarity <- suppressWarnings(wilcox.test(similarities[, 1], similarities[, 2])$p.value)
-    p_similarity_5 <- suppressWarnings(wilcox.test(similarities_5[, 1], similarities_5[, 2])$p.value)
-
+    # Set results of level
     results[level, ] <- c(
       step_levels[level],
       mean(unique_counts[, 1]), sd(unique_counts[, 1]),
@@ -248,37 +365,44 @@ format_random_walk_long <- function(simulations_by_level, step_levels, name_a, n
       mean(unique_counts[, 2]), sd(unique_counts[, 2]),
       mean(similarities[, 2]), sd(similarities[, 2]),
       mean(similarities_5[, 2]), sd(similarities_5[, 2]),
-      p_unique, p_similarity, p_similarity_5, 5
+      summarize_statistic(unique_counts), summarize_statistic(similarities), summarize_statistic(similarities_5)
     )
 
   }
 
+  # Return results
   return(results)
 
 }
 
-#' @noRd
-# Compact summary: p-values and which network "won" at each step level
-# Updated 06.09.2026
+# Format short random walk results ----
+# Updated 13.10.2026
 format_random_walk_short <- function(long_results, name_a, name_b)
 {
 
-  direction <- function(p_values, means_a, means_b){
+  # Label direction of effect
+  direction <- function(d){
     swiftelse(
-      p_values < .05,
-      swiftelse(means_a > means_b, paste(name_a, ">", name_b), paste(name_b, ">", name_a)),
-      "n.s."
+      is.na(d), "undefined",
+      swiftelse(
+        abs(d) < .2, "negligible",
+        swiftelse(d > 0, paste(name_a, ">", name_b), paste(name_b, ">", name_a))
+      )
     )
   }
 
+  # Return summary
   data.frame(
     Steps = long_results[, "Steps"],
-    `Unique Nodes (p-value)` = round(long_results[, "pu"], 3),
-    `Direction (Unique Nodes)` = direction(long_results[, "pu"], long_results[, 2], long_results[, 8]),
-    `Similarity (p-value)` = round(long_results[, "ps"], 3),
-    `Direction (Similarity)` = direction(long_results[, "ps"], long_results[, 4], long_results[, 10]),
-    `5-step Similarity (p-value)` = round(long_results[, "ps5"], 3),
-    `Direction (5-step Similarity)` = direction(long_results[, "ps5"], long_results[, 6], long_results[, 12]),
+    `Unique Nodes (difference)` = round(long_results[, "diff.uniq"], 3),
+    `Unique Nodes (d)` = round(long_results[, "d.uniq"], 3),
+    `Direction (Unique Nodes)` = direction(long_results[, "d.uniq"]),
+    `Similarity (difference)` = round(long_results[, "diff.sim"], 3),
+    `Similarity (d)` = round(long_results[, "d.sim"], 3),
+    `Direction (Similarity)` = direction(long_results[, "d.sim"]),
+    `5-step Similarity (difference)` = round(long_results[, "diff.sim5"], 3),
+    `5-step Similarity (d)` = round(long_results[, "d.sim5"], 3),
+    `Direction (5-step Similarity)` = direction(long_results[, "d.sim5"]),
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -286,31 +410,57 @@ format_random_walk_short <- function(long_results, name_a, name_b)
 }
 
 #' @noRd
-# Argument errors for `random_walk()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 random_walk_errors <- function(A, B, name_a, name_b, reps, steps, iter, cores)
 {
 
-  # 'A' and 'B' must each be a square, numeric matrix (or coercible data.frame)
-  A <- adjacency_matrix_error(A, "random_walk")
-  B <- adjacency_matrix_error(B, "random_walk")
+  # 'A' errors
+  A <- adjacency_matrix_error(A, "random_walk", require_symmetric = TRUE)
 
-  # 'name_a'/'name_b' must each be a single character string
-  object_error(name_a, "vector", "random_walk")
-  typeof_error(name_a, "character", "random_walk")
+  # 'B' errors
+  B <- adjacency_matrix_error(B, "random_walk", require_symmetric = TRUE)
+
+  # 'name_a' errors
   length_error(name_a, 1, "random_walk")
+  typeof_error(name_a, "character", "random_walk")
 
-  object_error(name_b, "vector", "random_walk")
-  typeof_error(name_b, "character", "random_walk")
+  # 'name_b' errors
   length_error(name_b, 1, "random_walk")
+  typeof_error(name_b, "character", "random_walk")
 
-  # 'reps'/'steps'/'iter'/'cores' must each be a single positive whole number
-  for(argument in list(reps = reps, steps = steps, iter = iter, cores = cores)){
-    length_error(argument, 1, "random_walk")
-    typeof_error(argument, "numeric", "random_walk")
-    range_error(argument, c(1, Inf), "random_walk")
+  # 'reps' errors
+  length_error(reps, 1, "random_walk")
+  typeof_error(reps, "numeric", "random_walk")
+  range_error(reps, c(1, Inf), "random_walk")
+
+  # 'steps' errors
+  length_error(steps, 1, "random_walk")
+  typeof_error(steps, "numeric", "random_walk")
+  range_error(steps, c(1, Inf), "random_walk")
+
+  # Check for steps beyond largest level
+  if(steps > reps * 10){
+
+    # Send error
+    stop(
+      "In `random_walk()`: 'steps' (", steps, ") cannot exceed 'reps * 10' (", reps * 10, "), the largest number of steps tested.",
+      call. = FALSE
+    )
+
   }
 
+  # 'iter' errors
+  length_error(iter, 1, "random_walk")
+  typeof_error(iter, "numeric", "random_walk")
+  range_error(iter, c(1, Inf), "random_walk")
+
+  # 'cores' errors
+  length_error(cores, 1, "random_walk")
+  typeof_error(cores, "numeric", "random_walk")
+  range_error(cores, c(1, Inf), "random_walk")
+
+  # Return 'A' and 'B' (in case of data frames)
   return(list(A = A, B = B))
 
 }

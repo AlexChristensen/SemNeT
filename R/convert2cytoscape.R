@@ -37,52 +37,57 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# Convert an adjacency matrix to Cytoscape's sparse format
+# Convert matrix to Cytoscape ----
 # Updated 06.09.2026
 convert2cytoscape <- function(A)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   A <- convert2cytoscape_errors(A)
 
+  # Get node names
   node_names <- colnames(as.data.frame(A))
+
+  # Get number of nodes
   n_nodes <- ncol(A)
 
-  # A node's self-loop is never a real edge to list
+  # Remove self-loops
   diag(A) <- 0
 
-  # Every (row, column) pair of the matrix, in the same column-major order
-  # `as.vector()` flattens the matrix itself in -- built once as plain
-  # integer/numeric vectors so the zero-weight filter below stays a safe
-  # numeric comparison, rather than the original's repeated per-node loop
-  # that reassigned individual matrix cells to node names (silently
-  # coercing the whole sparse matrix from numeric to character bit by bit)
+  # Get target node index of every cell
   to_index <- sort(rep(seq_len(n_nodes), n_nodes))
+
+  # Get source node index of every cell
   from_index <- rep(seq_len(n_nodes), n_nodes)
+
+  # Get weight of every cell
   weight <- as.vector(as.matrix(A))
 
-  # A weight of exactly 0 means "no edge" -- drop it before ever touching names
+  # Identify edges
   present <- weight != 0
 
+  # Set up sparse edge list
   sparse <- cbind(
     nodeTO = node_names[to_index[present]],
     nodeFROM = node_names[from_index[present]],
     nodeWEIGHT = weight[present]
   )
 
+  # Return edge list without quotes
   return(noquote(sparse))
 
 }
 
 #' @noRd
-# Argument errors for `convert2cytoscape()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 convert2cytoscape_errors <- function(A)
 {
 
-  # 'A' must be a square, numeric matrix (or coercible data.frame)
+  # 'A' errors
   A <- adjacency_matrix_error(A, "convert2cytoscape")
 
+  # Return 'A' (in case of data frame)
   return(A)
 
 }

@@ -1,45 +1,50 @@
-#' @importFrom utils packageVersion
 # Package startup hook
 
-# Print a styled startup message when the package is attached
+# Package startup ----
 # Updated 06.09.2026
 .onAttach <- function(libname, pkgname)
 {
 
-  # Build the version line, bolded and underlined
+  # Set up version message (bold and underlined)
   msg <- style_text(style_text(paste("\nSemNeT (version ", packageVersion("SemNeT"), ")", sep = ""), defaults = "underline"), defaults = "bold")
 
-  # Append the tutorial link
+  # Add tutorial link
   msg <- paste(msg, '\nFor help getting started, see <https://doi.org/10.1037/met0000463> \n')
 
-  # Append the issue tracker link
+  # Add issue tracker link
   msg <- paste(msg, "For bugs and errors, submit an issue to <https://github.com/AlexChristensen/SemNeT/issues>\n")
 
-  # Send the message to the console
+  # Send message to console
   packageStartupMessage(msg)
 
 }
 
 #' @noRd
-# Wrap text in ANSI styling codes, when the console supports it
+# Style text ----
 # Updated 06.09.2026
 style_text <- function(text, defaults = c("bold", "italics", "highlight", "underline", "strikethrough"))
 {
 
-  # Check whether the current console supports ANSI text styling
+  # Check console for text styling
   console_supports_text <- system_check()
 
-  # Bail out with the plain text if styling is not supported
+  # Check for no support
   if(!console_supports_text$text){
+
+    # Return plain text
     return(text)
+
   }
 
-  # No style requested defaults to no styling code
+  # Check for missing style
   if(missing(defaults)){
+
+    # Set no style
     style_number <- 0
+
   }else{
 
-    # Map the style name onto its ANSI code number
+    # Get ANSI code of style
     style_number <- switch(
       defaults,
       bold = 1,
@@ -51,32 +56,35 @@ style_text <- function(text, defaults = c("bold", "italics", "highlight", "under
 
   }
 
-  # Wrap the text in the ANSI escape codes and reset at the end
+  # Return styled text
   return(paste("\033[", style_number, ";m", text, "\033[0m", sep = ""))
 
 }
 
 #' @noRd
-# Check the operating system and console for ANSI text-styling support
+# System check ----
 # Updated 06.09.2026
 system_check <- function(...)
 {
 
-  # Lower-cased operating system name
+  # Get operating system
   operating_system <- unname(tolower(Sys.info()["sysname"]))
 
-  # Whether the session is running inside RStudio
+  # Check for RStudio
   is_rstudio <- Sys.getenv("RSTUDIO") == "1"
 
-  # ANSI styling is assumed supported by default
+  # Assume text styling is supported
   supports_text <- TRUE
 
-  # Non-RStudio, non-Linux consoles are assumed not to support it
+  # Check for unsupported console
   if(!is_rstudio && operating_system != "linux"){
+
+    # Set no support
     supports_text <- FALSE
+
   }
 
-  # Return the three checks as a named list
+  # Return checks
   return(
     list(
       operating_system = operating_system,

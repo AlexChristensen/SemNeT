@@ -1,223 +1,614 @@
 # Tests for bootstrap_test_SemNeT()
 
-make_two_group_boot <- function(seed = 1, iter = 20){
-  set.seed(seed)
-  low <- finalize(open.binary[which(open.group == "Low"), ], 2)
-  high <- finalize(open.binary[which(open.group == "High"), ], 2)
-  equated <- equate(low = low, high = high)
-  suppressMessages(
-    bootstrap_SemNeT(low = equated$low, high = equated$high, method = "tmfg", type = "node", prop = .5, iter = iter, cores = 1)
+# Make fake bootstrap ----
+# Updated 13.10.2026
+make_fake_boot <- function(values, type = "case", observed = "median")
+{
+
+  # Loop over groups
+  groups <- lapply(names(values), function(group_name){
+
+    # Get ASPL of group
+    aspl <- values[[group_name]]
+
+    # Set up measures
+    measures <- rbind(aspl = aspl, cc = aspl / 10, q = aspl / 100)
+
+    # Get observed ASPL
+    obs <- if(identical(observed, "median")){
+
+      # Use median
+      stats::median(aspl, na.rm = TRUE)
+
+    }else if(is.list(observed)){
+
+      # Use given value
+      observed[[group_name]]
+
+    }else{
+
+      # Use no value
+      NA
+
+    }
+
+    # Return group
+    list(
+      networks = NULL, measures = measures, edges = rep(10, length(aspl)), nodes = rep(20, length(aspl)),
+      observed = if(is.na(obs)) NULL else list(measures = c(aspl = obs, cc = obs / 10, q = obs / 100), edges = 10, nodes = 20),
+      summary = NULL
+    )
+
+  })
+
+  # Name groups
+  names(groups) <- names(values)
+
+  # Set up bootstrap
+  boot <- list(
+    groups = groups,
+    meta = list(prop = if(type == "node") .5 else NULL, iter = length(values[[1]]), type = type, method = "nrw")
   )
+
+  # Set class
+  class(boot) <- "bootstrap_SemNeT"
+
+  # Return bootstrap
+  return(boot)
+
 }
 
-make_three_group_boot <- function(seed = 1, iter = 20){
-  set.seed(seed)
-  mk <- function(s){ set.seed(s); m <- simulate_fluency(25, cases = 150); colnames(m) <- paste0("w", 1:25); m }
-  suppressMessages(
-    bootstrap_SemNeT(one = mk(seed + 1), two = mk(seed + 2), three = mk(seed + 3), method = "tmfg", type = "node", prop = .6, iter = iter, cores = 1)
-  )
-}
+test_that("bootstrap_test_SemNeT returns a percentile CI table of within-iteration contrasts", {
 
-test_that("bootstrap_test_SemNeT's t-test returns the consistent schema and can be requested for multiple measures at once", {
+  # Set seed
+  set.seed(1)
 
-  boot_result <- make_two_group_boot()
+  # Sample first group
+  a <- rnorm(2000, mean = 2.0, sd = .1)
 
-  # Real bug fixed: the original's `match.arg(measures)` (missing
-  # `several.ok = TRUE`) errored on its own documented default of all 3
-  # measures at once
-  result <- bootstrap_test_SemNeT(boot_result, test = "t-test", measures = c("aspl", "cc", "q"))
+  # Sample second group
+  b <- rnorm(2000, mean = 2.3, sd = .1)
 
+  # Make bootstrap
+  boot <- make_fake_boot(list(low = a, high = b))
+
+  # Perform tests
+  result <- bootstrap_test_SemNeT(boot, measures = c("aspl", "cc", "q"), ci_type = "percentile")
+
+  # Check class
   expect_s3_class(result, "bootstrap_test_SemNeT")
-  expect_named(result, c("test", "measures", "groups", "results"))
-  expect_named(result$results, "Proportion (0.5)")
-  expect_named(result$results$`Proportion (0.5)`, c("aspl", "cc", "q"))
-  expect_named(result$results$`Proportion (0.5)`$aspl, c("table", "post_hoc", "adjusted_means"))
-  expect_null(result$results$`Proportion (0.5)`$aspl$post_hoc)
-  expect_null(result$results$`Proportion (0.5)`$aspl$adjusted_means)
-  expect_equal(nrow(result$results$`Proportion (0.5)`$aspl$table), 1)
 
-})
+  # Check names
+  expect_named(result, c("test", "measures", "groups", "results", "meta", "ci_level", "power", "adjust", "ci_type", "legacy"))
 
-test_that("bootstrap_test_SemNeT's t-test matches a direct t.test/cohens_d on the same bootstrapped values", {
+  # Check for no legacy tests
+  expect_false(result$legacy)
 
-  boot_result <- make_two_group_boot()
+  # Check conditions
+  expect_named(result$results, "Case")
 
-  result <- bootstrap_test_SemNeT(boot_result, test = "t-test", measures = "aspl")
-  table <- result$results$`Proportion (0.5)`$aspl$table
+  # Check measures
+  expect_named(result$results$Case, c("aspl", "cc", "q"))
 
-  low_values <- boot_result$groups$low$measures["aspl", ]
-  high_values <- boot_result$groups$high$measures["aspl", ]
+  # Check elements of measure
+  expect_named(result$results$Case$aspl, c("table", "differences"))
 
-  expected <- t.test(low_values, high_values, var.equal = TRUE)
+  # Get table
+  table <- result$results$Case$aspl$table
 
-  expect_equal(table$t_statistic, round(unname(expected$statistic), 3))
-  expect_equal(table$cohens_d, round(cohens_d(low_values, high_values), 3))
+  # Check rows
+  expect_equal(nrow(table), 1)
 
-})
-
-test_that("bootstrap_test_SemNeT disambiguates two `...` objects that would otherwise share a condition label", {
-
-  # Real bug fixed: two `bootstrap_SemNeT` objects of the same `type`/`prop`
-  # (or two case-resampled objects) both got the label "Proportion (0.5)" (or
-  # "Case"). `names(results) <-` then created a duplicate list name, and `$`/
-  # `[[` access -- the documented way to read a result out -- silently
-  # returned only the first match, making the second object's results
-  # unreachable with no error
-  boot_a <- make_two_group_boot(seed = 1)
-  boot_b <- make_two_group_boot(seed = 2)
-
-  result <- bootstrap_test_SemNeT(boot_a, boot_b, test = "t-test", measures = "aspl")
-
-  expect_length(result$results, 2)
-  expect_length(unique(names(result$results)), 2)
-
-  # Both entries are actually reachable, and aren't the same result reused
-  table_1 <- result$results[[1]]$aspl$table
-  table_2 <- result$results[[2]]$aspl$table
-  expect_false(isTRUE(all.equal(table_1$t_statistic, table_2$t_statistic)))
-
-})
-
-test_that("bootstrap_test_SemNeT's ANOVA works for 3+ groups and reports a Tukey post-hoc", {
-
-  boot_result <- make_three_group_boot()
-
-  result <- bootstrap_test_SemNeT(boot_result, test = "ANOVA", measures = "aspl")
-  entry <- result$results$`Proportion (0.6)`$aspl
-
-  expect_true(all(c("term", "sumsq", "df", "statistic", "p.value", "partial_eta_squared") %in% names(entry$table)))
-  expect_true("Group" %in% entry$table$term)
-  expect_false(is.na(entry$table$partial_eta_squared[entry$table$term == "Group"]))
-  expect_true(is.na(entry$table$partial_eta_squared[entry$table$term == "Residuals"]))
-  expect_equal(nrow(entry$post_hoc), 3) # 3 pairwise comparisons among 3 groups
-  expect_equal(nrow(entry$adjusted_means), 3)
-
-})
-
-test_that("bootstrap_test_SemNeT's ANCOVA is allowed with only two groups and excludes the covariate's eta-squared", {
-
-  boot_result <- make_two_group_boot()
-
-  result <- bootstrap_test_SemNeT(boot_result, test = "ANCOVA", measures = "aspl")
-  table <- result$results$`Proportion (0.5)`$aspl$table
-
-  expect_true("Edges" %in% table$term)
-  expect_true(is.na(table$partial_eta_squared[table$term == "Edges"]))
-  expect_false(is.na(table$partial_eta_squared[table$term == "Group"]))
-
-})
-
-test_that("bootstrap_test_SemNeT's ANCOVA with 3+ groups reports a Tukey post-hoc despite the continuous covariate", {
-
-  # `TukeyHSD()` on a model with a continuous covariate (Edges) alongside the
-  # factor of interest (Group) only returns comparisons for the factor --
-  # confirms `anova_table()`'s `TukeyHSD(model)[[factor_names]]` indexing
-  # doesn't break when a covariate is also in the model
-  boot_result <- make_three_group_boot()
-
-  result <- bootstrap_test_SemNeT(boot_result, test = "ANCOVA", measures = "aspl")
-  entry <- result$results$`Proportion (0.6)`$aspl
-
-  expect_true("Edges" %in% entry$table$term)
-  expect_true("Group" %in% entry$table$term)
-  expect_equal(nrow(entry$post_hoc), 3) # 3 pairwise comparisons among 3 groups
-
-})
-
-test_that("bootstrap_test_SemNeT supports a multi-factor design via a custom formula", {
-
-  set.seed(5)
-  mk <- function(s){ set.seed(s); m <- simulate_fluency(25, cases = 120); colnames(m) <- paste0("w", 1:25); m }
-  boot4 <- suppressMessages(bootstrap_SemNeT(
-    hihi = mk(1), hilo = mk(2), lohi = mk(3), lolo = mk(4),
-    method = "tmfg", type = "node", prop = .5, iter = 15, cores = 1
+  # Check columns
+  expect_named(table, c(
+    "term", "contrast", "mean_1", "se_1", "mean_2", "se_2", "mean_diff", "observed_diff", "bias", "se", "bias_se", "z", "mde",
+    "ci_lower", "ci_upper", "p_value", "n_boot", "direction"
   ))
 
+  # Compute differences
+  d <- a - b
+
+  # Check bias relative to standard error
+  expect_equal(table$bias_se, abs(mean(d) - table$observed_diff) / sd(d))
+
+  # Check contrast
+  expect_equal(table$contrast, "low - high")
+
+  # Check mean difference
+  expect_equal(table$mean_diff, mean(d))
+
+  # Check standard error
+  expect_equal(table$se, sd(d))
+
+  # Check lower bound
+  expect_equal(table$ci_lower, unname(quantile(d, .025)))
+
+  # Check upper bound
+  expect_equal(table$ci_upper, unname(quantile(d, .975)))
+
+  # Check number of samples
+  expect_equal(table$n_boot, 2000)
+
+  # Check direction
+  expect_equal(table$direction, "low < high")
+
+  # Check for no p-value
+  expect_true(is.na(table$p_value))
+
+  # Check dimensions of differences
+  expect_equal(dim(result$results$Case$aspl$differences), c(2000, 1))
+
+})
+
+test_that("bootstrap_test_SemNeT uses normal intervals by default", {
+
+  # Set seed
+  set.seed(1)
+
+  # Sample first group
+  a <- rnorm(2000, mean = 2.0, sd = .1)
+
+  # Sample second group
+  b <- rnorm(2000, mean = 2.3, sd = .1)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(low = a, high = b))
+
+  # Perform tests
+  result <- bootstrap_test_SemNeT(boot, measures = "aspl")
+
+  # Check interval type
+  expect_equal(result$ci_type, "normal")
+
+  # Get table
+  table <- result$results$Case$aspl$table
+
+  # Compute differences
+  d <- a - b
+
+  # Get observed difference
+  observed <- table$observed_diff
+
+  # Check lower bound
+  expect_lt(abs(table$ci_lower - (observed + qnorm(.025) * sd(d))), 1e-3)
+
+  # Check upper bound
+  expect_lt(abs(table$ci_upper - (observed + qnorm(.975) * sd(d))), 1e-3)
+
+  # Check p-value
+  expect_lt(abs(table$p_value - 2 * pnorm(-abs(observed) / sd(d))), 1e-3)
+
+  # Check direction
+  expect_equal(table$direction, "low < high")
+
+  # Check Wald statistic
+  expect_lt(abs(table$z - observed / sd(d)), 1e-2)
+
+  # Check p-value from Wald statistic
+  expect_lt(abs(table$p_value - 2 * pnorm(-abs(table$z))), 1e-3)
+
+  # Check for no Wald statistic with percentile intervals
+  expect_true(is.na(bootstrap_test_SemNeT(boot, measures = "aspl", ci_type = "percentile")$results$Case$aspl$table$z))
+
+  # Perform tests with higher level
+  wide <- bootstrap_test_SemNeT(boot, measures = "aspl", ci_level = .99)$results$Case$aspl$table
+
+  # Check lower bound
+  expect_lt(wide$ci_lower, table$ci_lower)
+
+  # Check upper bound
+  expect_gt(wide$ci_upper, table$ci_upper)
+
+  # Make bootstrap without observed statistics
+  boot_no_obs <- make_fake_boot(list(low = a, high = b), observed = NA)
+
+  # Check message
+  expect_message(
+    table_no_obs <- bootstrap_test_SemNeT(boot_no_obs, measures = "aspl")$results$Case$aspl$table,
+    "no observed"
+  )
+
+  # Check for missing statistics
+  expect_true(all(is.na(table_no_obs[, c("z", "ci_lower", "ci_upper", "p_value")])))
+
+  # Check standard error
+  expect_equal(table_no_obs$se, sd(d))
+
+})
+
+test_that("normal-interval p-values agree with whether the interval excludes 0", {
+
+  # Set seed
+  set.seed(3)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(
+    a = rnorm(1000, 2.00, .1), b = rnorm(1000, 2.02, .1), c = rnorm(1000, 2.05, .1)
+  ))
+
+  # Loop over adjustments
+  for(adjust in c("none", "bonferroni")){
+
+    # Loop over levels
+    for(level in c(.8, .9, .95, .99)){
+
+      # Get table
+      table <- bootstrap_test_SemNeT(boot, measures = "aspl", ci_level = level, adjust = adjust)$results$Case$aspl$table
+
+      # Identify intervals excluding zero
+      excludes_zero <- table$ci_lower > 0 | table$ci_upper < 0
+
+      # Check agreement with p-value
+      expect_equal(table$p_value < 1 - level, excludes_zero)
+
+    }
+
+  }
+
+})
+
+test_that("bootstrap_test_SemNeT intervals do not shrink as the number of bootstrap iterations grows", {
+
+  # Set seed
+  set.seed(2)
+
+  # Sample first group
+  a <- rnorm(500, mean = 2.00, sd = .1)
+
+  # Sample second group
+  b <- rnorm(500, mean = 2.01, sd = .1)
+
+  # Make small bootstrap
+  small <- make_fake_boot(list(a = a, b = b))
+
+  # Make large bootstrap
+  large <- make_fake_boot(list(a = rep(a, 4), b = rep(b, 4)))
+
+  # Perform tests on small bootstrap
+  table_small <- bootstrap_test_SemNeT(small, measures = "aspl")$results$Case$aspl$table
+
+  # Perform tests on large bootstrap
+  table_large <- bootstrap_test_SemNeT(large, measures = "aspl")$results$Case$aspl$table
+
+  # Check standard error
+  expect_equal(table_small$se, table_large$se, tolerance = .01)
+
+  # Check lower bound
+  expect_equal(table_small$ci_lower, table_large$ci_lower, tolerance = .01)
+
+  # Check upper bound
+  expect_equal(table_small$ci_upper, table_large$ci_upper, tolerance = .01)
+
+  # Perform legacy tests on small bootstrap
+  legacy_small <- suppressWarnings(bootstrap_test_SemNeT(small, measures = "aspl", legacy = TRUE))$results$Case$aspl$table
+
+  # Perform legacy tests on large bootstrap
+  legacy_large <- suppressWarnings(bootstrap_test_SemNeT(large, measures = "aspl", legacy = TRUE))$results$Case$aspl$table
+
+  # Check that legacy statistic grows
+  expect_equal(abs(legacy_large$t_statistic / legacy_small$t_statistic), 2, tolerance = .01)
+
+})
+
+test_that("bootstrap_test_SemNeT tests every pairwise contrast for 3+ groups", {
+
+  # Set seed
+  set.seed(3)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(one = rnorm(300, 1, .1), two = rnorm(300, 2, .1), three = rnorm(300, 3, .1)))
+
+  # Get table
+  table <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
+
+  # Check contrasts
+  expect_equal(table$contrast, c("one - two", "one - three", "two - three"))
+
+  # Check directions
+  expect_true(all(table$direction != "n.s."))
+
+})
+
+test_that("bootstrap_test_SemNeT's 'bonferroni' widens intervals and scales p-values", {
+
+  # Set seed
+  set.seed(4)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(one = rnorm(1000, 1, .5), two = rnorm(1000, 1.1, .5), three = rnorm(1000, 1.2, .5)))
+
+  # Get unadjusted table
+  none <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
+
+  # Get adjusted table
+  bonferroni <- bootstrap_test_SemNeT(boot, measures = "aspl", adjust = "bonferroni")$results$Case$aspl$table
+
+  # Check lower bounds
+  expect_true(all(bonferroni$ci_lower <= none$ci_lower))
+
+  # Check upper bounds
+  expect_true(all(bonferroni$ci_upper >= none$ci_upper))
+
+  # Check p-values
+  expect_equal(bonferroni$p_value, pmin(1, none$p_value * 3), tolerance = 1e-8)
+
+})
+
+test_that("bootstrap_test_SemNeT supports 'ci_level'", {
+
+  # Set seed
+  set.seed(5)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(a = rnorm(1000), b = rnorm(1000)))
+
+  # Get narrow table
+  narrow <- bootstrap_test_SemNeT(boot, measures = "aspl", ci_level = .8)$results$Case$aspl$table
+
+  # Get wide table
+  wide <- bootstrap_test_SemNeT(boot, measures = "aspl", ci_level = .99)$results$Case$aspl$table
+
+  # Check lower bound
+  expect_true(wide$ci_lower < narrow$ci_lower)
+
+  # Check upper bound
+  expect_true(wide$ci_upper > narrow$ci_upper)
+
+})
+
+test_that("bootstrap_test_SemNeT ignores missing bootstrap values pairwise and reports n_boot", {
+
+  # Set seed
+  set.seed(6)
+
+  # Sample first group
+  a <- rnorm(100)
+
+  # Sample second group
+  b <- rnorm(100)
+
+  # Set missing values
+  a[1:10] <- NA
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(a = a, b = b))
+
+  # Get table
+  table <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
+
+  # Check number of samples
+  expect_equal(table$n_boot, 90)
+
+  # Check lower bound
+  expect_false(is.na(table$ci_lower))
+
+})
+
+test_that("bootstrap_test_SemNeT tests main effects of a multi-factor design and interactions via a formula", {
+
+  # Set seed
+  set.seed(8)
+
+  # Set number of samples
+  n <- 400
+
+  # Sample high-high group
+  hihi <- rnorm(n, 1)
+
+  # Sample high-low group
+  hilo <- rnorm(n, 2)
+
+  # Sample low-high group
+  lohi <- rnorm(n, 3)
+
+  # Sample low-low group
+  lolo <- rnorm(n, 5)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(hihi = hihi, hilo = hilo, lohi = lohi, lolo = lolo))
+
+  # Set up design
   groups_df <- matrix(
     c("high", "high", "high", "low", "low", "high", "low", "low"),
     ncol = 2, byrow = TRUE,
     dimnames = list(c("hihi", "hilo", "lohi", "lolo"), c("gf", "caq"))
   )
 
-  result <- bootstrap_test_SemNeT(boot4, test = "ANOVA", formula = "y ~ gf*caq", groups = groups_df, measures = "aspl")
-  table <- result$results$`Proportion (0.5)`$aspl$table
+  # Test main effects
+  main <- bootstrap_test_SemNeT(boot, groups = groups_df, measures = "aspl")$results$Case$aspl
 
-  expect_true(all(c("gf", "caq", "gf:caq") %in% table$term))
-  expect_equal(nrow(result$results$`Proportion (0.5)`$aspl$adjusted_means), 4)
+  # Check terms
+  expect_equal(main$table$term, c("gf", "caq"))
 
-})
+  # Check contrasts
+  expect_equal(main$table$contrast, c("high - low", "high - low"))
 
-test_that("bootstrap_test_SemNeT's additive multi-factor default (no formula) reports every factor's adjusted means", {
+  # Check first main effect
+  expect_equal(main$table$mean_diff[1], mean((hihi + hilo) / 2 - (lohi + lolo) / 2))
 
-  # Real bug fixed: with no interaction term in the model (the documented
-  # default for a multi-column 'groups' with no 'formula'), picking the
-  # "last" effects::allEffects() term silently reported only one factor's
-  # adjusted means and dropped the other entirely
-  set.seed(5)
-  mk <- function(s){ set.seed(s); m <- simulate_fluency(25, cases = 120); colnames(m) <- paste0("w", 1:25); m }
-  boot4 <- suppressMessages(bootstrap_SemNeT(
-    hihi = mk(1), hilo = mk(2), lohi = mk(3), lolo = mk(4),
-    method = "tmfg", type = "node", prop = .5, iter = 15, cores = 1
-  ))
+  # Check second main effect
+  expect_equal(main$table$mean_diff[2], mean((hihi + lohi) / 2 - (hilo + lolo) / 2))
 
-  groups_df <- matrix(
-    c("high", "high", "high", "low", "low", "high", "low", "low"),
-    ncol = 2, byrow = TRUE,
-    dimnames = list(c("hihi", "hilo", "lohi", "lolo"), c("gf", "caq"))
-  )
+  # Test with interaction
+  full <- bootstrap_test_SemNeT(boot, groups = groups_df, formula = "y ~ gf * caq", measures = "aspl")$results$Case$aspl
 
-  result <- bootstrap_test_SemNeT(boot4, test = "ANOVA", groups = groups_df, measures = "aspl")
-  table <- result$results$`Proportion (0.5)`$aspl$table
-  adjusted_means <- result$results$`Proportion (0.5)`$aspl$adjusted_means
+  # Check terms
+  expect_equal(full$table$term, c("gf", "caq", "gf:caq"))
 
-  expect_true(all(c("gf", "caq") %in% table$term))
-  expect_false("gf:caq" %in% table$term)
-  expect_type(adjusted_means, "list")
-  expect_named(adjusted_means, c("gf", "caq"))
-  expect_true(all(vapply(adjusted_means, is.data.frame, logical(1))))
+  # Check interaction
+  expect_equal(full$table$mean_diff[3], mean((hihi - hilo) - (lohi - lolo)))
+
+  # Check for no mean of side
+  expect_true(is.na(full$table$mean_1[3]))
+
+  # Check dimensions of differences
+  expect_equal(dim(full$differences), c(n, 3))
 
 })
 
 test_that("bootstrap_test_SemNeT's custom formula only replaces the standalone 'y' outcome placeholder", {
 
-  # Real bug fixed: `gsub("y", "Measure", formula)` corrupted any factor name
-  # that merely *contained* a "y" (e.g. "yob"), not just the placeholder --
-  # a word-boundary match fixes this
-  set.seed(5)
-  mk <- function(s){ set.seed(s); m <- simulate_fluency(25, cases = 120); colnames(m) <- paste0("w", 1:25); m }
-  boot4 <- suppressMessages(bootstrap_SemNeT(
-    hihi = mk(1), hilo = mk(2), lohi = mk(3), lolo = mk(4),
-    method = "tmfg", type = "node", prop = .5, iter = 15, cores = 1
-  ))
+  # Set seed
+  set.seed(9)
 
+  # Make bootstrap
+  boot <- make_fake_boot(list(hihi = rnorm(50), hilo = rnorm(50), lohi = rnorm(50), lolo = rnorm(50)))
+
+  # Set up design
   groups_df <- matrix(
     c("high", "high", "high", "low", "low", "high", "low", "low"),
     ncol = 2, byrow = TRUE,
     dimnames = list(c("hihi", "hilo", "lohi", "lolo"), c("gf", "yob"))
   )
 
-  result <- bootstrap_test_SemNeT(boot4, test = "ANOVA", formula = "y ~ gf*yob", groups = groups_df, measures = "aspl")
-  table <- result$results$`Proportion (0.5)`$aspl$table
+  # Get table
+  table <- bootstrap_test_SemNeT(boot, formula = "y ~ gf*yob", groups = groups_df, measures = "aspl")$results$Case$aspl$table
 
+  # Check terms
   expect_true(all(c("gf", "yob", "gf:yob") %in% table$term))
 
 })
 
-test_that("bootstrap_test_SemNeT validates its input", {
+test_that("bootstrap_test_SemNeT reports the minimal detectable effect", {
 
-  boot_result <- make_two_group_boot()
-  boot_result_bad_class <- boot_result
-  class(boot_result_bad_class) <- "not_a_boot_object"
+  # Set seed
+  set.seed(22)
 
-  expect_error(bootstrap_test_SemNeT(boot_result_bad_class), "bootstrap_SemNeT")
-  expect_error(bootstrap_test_SemNeT(boot_result, measures = c("aspl", "not_a_measure")), "bootstrap_test_SemNeT")
+  # Sample first group
+  a <- rnorm(1000, 2.0, .1)
 
-  three_group <- make_three_group_boot()
-  groups_df <- matrix(c("a", "b"), ncol = 2, dimnames = list("one", c("g1", "g2")))
-  expect_error(
-    bootstrap_test_SemNeT(three_group, test = "t-test", groups = matrix(c("a", "a", "b", "b", "c", "c"), ncol = 2, dimnames = list(c("one", "two", "three"), c("g1", "g2")))),
-    "multi-factor"
+  # Sample second group
+  b <- rnorm(1000, 2.1, .1)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(a = a, b = b))
+
+  # Compute differences
+  d <- a - b
+
+  # Get table
+  table <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
+
+  # Check minimal detectable effect
+  expect_equal(table$mde, (qnorm(.975) + qnorm(.8)) * sd(d))
+
+  # Check higher power
+  expect_gt(bootstrap_test_SemNeT(boot, measures = "aspl", power = .9)$results$Case$aspl$table$mde, table$mde)
+
+  # Check higher level
+  expect_gt(bootstrap_test_SemNeT(boot, measures = "aspl", ci_level = .99)$results$Case$aspl$table$mde, table$mde)
+
+  # Make bootstrap of three groups
+  three <- make_fake_boot(list(a = a, b = b, c = rnorm(1000, 2.2, .1)))
+
+  # Get adjusted table
+  bonferroni <- bootstrap_test_SemNeT(three, measures = "aspl", adjust = "bonferroni")$results$Case$aspl$table
+
+  # Check adjusted minimal detectable effect
+  expect_equal(bonferroni$mde[1], (qnorm(1 - .05 / 6) + qnorm(.8)) * sd(three$groups$a$measures["aspl", ] - three$groups$b$measures["aspl", ]))
+
+  # Check percentile intervals
+  expect_equal(bootstrap_test_SemNeT(boot, measures = "aspl", ci_type = "percentile")$results$Case$aspl$table$mde, table$mde)
+
+  # Make bootstrap without observed statistics
+  no_obs <- make_fake_boot(list(a = a, b = b), observed = NA)
+
+  # Check without observed statistics
+  expect_equal(suppressMessages(bootstrap_test_SemNeT(no_obs, measures = "aspl"))$results$Case$aspl$table$mde, table$mde)
+
+  # Check for error with invalid power
+  expect_error(bootstrap_test_SemNeT(boot, power = 1), "'power'")
+
+  # Check for error with multiple powers
+  expect_error(bootstrap_test_SemNeT(boot, power = c(.5, .8)), "length")
+
+})
+
+test_that("bootstrap differences that do not vary give an undefined test, not p = 0", {
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(a = rep(2, 20), b = rep(3, 20)), observed = list(a = 2, b = 3))
+
+  # Check warning
+  expect_warning(
+    result <- bootstrap_test_SemNeT(boot, measures = "aspl"), "do not vary"
   )
-  expect_error(bootstrap_test_SemNeT(boot_result, test = "ANOVA"), "2 levels")
+
+  # Get table
+  table <- result$results$Case$aspl$table
+
+  # Check p-value
+  expect_true(is.na(table$p_value))
+
+  # Check Wald statistic
+  expect_true(is.na(table$z))
+
+  # Check lower bound
+  expect_true(is.na(table$ci_lower))
+
+  # Check direction
+  expect_equal(table$direction, "undefined")
+
+  # Check standard error
+  expect_equal(table$se, 0)
+
+})
+
+test_that("a very large |z| gives a tiny positive p-value, not exactly 0", {
+
+  # Set seed
+  set.seed(9)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(low = rnorm(500, 2, .05), high = rnorm(500, 3, .05)))
+
+  # Get table
+  table <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
+
+  # Check Wald statistic
+  expect_gt(abs(table$z), 9)
+
+  # Check p-value above zero
+  expect_gt(table$p_value, 0)
+
+  # Check p-value
+  expect_equal(table$p_value, 2 * pnorm(-abs(table$z)))
+
+})
+
+test_that("stored statistics are not rounded, so they agree exactly with each other", {
+
+  # Set seed
+  set.seed(8)
+
+  # Make bootstrap
+  boot <- make_fake_boot(list(low = rnorm(500, 2.0123, .0337), high = rnorm(500, 2.0771, .0341)))
+
+  # Get table
+  table <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
+
+  # Check Wald statistic
+  expect_equal(table$z, table$observed_diff / table$se)
+
+  # Check p-value
+  expect_equal(table$p_value, 2 * pnorm(-abs(table$z)))
+
+  # Check lower bound
+  expect_equal(table$ci_lower, table$observed_diff + qnorm(.025) * table$se)
+
+  # Check upper bound
+  expect_equal(table$ci_upper, table$observed_diff + qnorm(.975) * table$se)
+
+  # Check minimal detectable effect
+  expect_equal(table$mde, (qnorm(.975) + qnorm(.8)) * table$se)
+
+  # Check that standard error is not rounded
+  expect_false(isTRUE(all.equal(table$se, round(table$se, 4), tolerance = 0)))
+
+  # Capture printed output
+  printed <- paste(capture.output(print(bootstrap_test_SemNeT(boot, measures = "aspl"))), collapse = "\n")
+
+  # Check printed output
+  expect_match(printed, "ASPL")
 
 })

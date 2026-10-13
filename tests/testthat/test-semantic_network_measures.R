@@ -1,46 +1,129 @@
 # Tests for semantic_network_measures()
 
-test_that("semantic_network_measures returns all three measures by default, correctly named", {
+test_that("semantic_network_measures passes na.rm on to cc", {
 
-  set.seed(1)
-  cordata <- cor(matrix(rnorm(15 * 20), nrow = 15, ncol = 20))
-  net <- suppressWarnings(tmfg(cordata))
+  # Set up network
+  A <- matrix(0, 5, 5)
 
-  result <- semantic_network_measures(net, seed = 2)
+  # Add triangle
+  A[1, 2] <- A[2, 1] <- A[2, 3] <- A[3, 2] <- A[1, 3] <- A[3, 1] <- 1
 
-  expect_named(result, c("aspl", "cc", "q"))
-  expect_equal(unname(result["aspl"]), as.numeric(aspl(binarize(net))))
-  expect_equal(unname(result["cc"]), as.numeric(cc(binarize(net))))
+  # Add tail
+  A[3, 4] <- A[4, 3] <- A[4, 5] <- A[5, 4] <- 1
 
-  # 'weighted = FALSE' (the default) binarizes before *every* measure,
-  # including 'q' -- so the comparison must run 'q' on the binarized
-  # network too, not the original signed one. Compiled Louvain's randomness
-  # depends only on 'seed' now (not R's `set.seed()`), so this only holds
-  # when the same explicit seed is used both times
-  expect_equal(unname(result["q"]), as.numeric(q(binarize(net), seed = 2)))
+  # Check default
+  expect_equal(unname(semantic_network_measures(A, measures = "cc")), as.numeric(cc(A)))
+
+  # Check removal of missing
+  expect_equal(unname(semantic_network_measures(A, measures = "cc", na.rm = TRUE)), as.numeric(cc(A, na.rm = TRUE)))
+
+  # Check that removal raises clustering
+  expect_gt(
+    semantic_network_measures(A, measures = "cc", na.rm = TRUE),
+    semantic_network_measures(A, measures = "cc")
+  )
+
+  # Check that ASPL is unaffected
+  expect_equal(
+    semantic_network_measures(A, measures = "aspl", na.rm = TRUE),
+    semantic_network_measures(A, measures = "aspl")
+  )
+
+  # Check for error
+  expect_error(semantic_network_measures(A, na.rm = "yes"), "semantic_network_measures")
 
 })
 
-test_that("semantic_network_measures respects a subset request, in the order given", {
+test_that("semantic_network_measures passes 'signed' through to q (weighted networks only)", {
 
-  set.seed(1)
-  cordata <- cor(matrix(rnorm(15 * 20), nrow = 15, ncol = 20))
-  net <- suppressWarnings(tmfg(cordata))
+  # Set up network
+  net <- matrix(0, 6, 6)
 
-  result <- semantic_network_measures(net, measures = c("q", "cc"))
+  # Add communities
+  net[1, 2] <- net[2, 3] <- net[1, 3] <- net[4, 5] <- net[5, 6] <- net[4, 6] <- 1
 
-  expect_named(result, c("q", "cc"))
-  expect_length(result, 2)
+  # Add negative edge between communities
+  net[3, 4] <- -1
+
+  # Make network symmetric
+  net <- net + t(net)
+
+  # Compute unsigned modularity
+  unsigned <- semantic_network_measures(net, measures = "q", weighted = TRUE, seed = 1)
+
+  # Compute signed modularity
+  signed <- semantic_network_measures(net, measures = "q", weighted = TRUE, seed = 1, signed = TRUE)
+
+  # Check signed modularity
+  expect_equal(unname(signed), q(net, seed = 1, signed = TRUE))
+
+  # Check unsigned modularity
+  expect_equal(unname(unsigned), q(net, seed = 1))
+
+  # Check that they differ
+  expect_false(isTRUE(all.equal(unname(unsigned), unname(signed))))
+
+  # Check for warning without weights
+  expect_warning(
+    semantic_network_measures(net, measures = "q", seed = 1, signed = TRUE), "no effect"
+  )
+
+  # Check for no warning without modularity
+  expect_no_warning(semantic_network_measures(net, measures = c("aspl", "cc"), signed = TRUE))
+
+  # Check that clustering is unaffected
+  expect_equal(
+    semantic_network_measures(net, measures = "cc", weighted = TRUE, signed = TRUE),
+    semantic_network_measures(net, measures = "cc", weighted = TRUE)
+  )
+
+  # Check for error
+  expect_error(semantic_network_measures(net, signed = "yes"), "signed|logical")
 
 })
 
-test_that("semantic_network_measures validates its input", {
+test_that("semantic_network_measures passes 'type' through to aspl", {
 
-  set.seed(1)
-  cordata <- cor(matrix(rnorm(15 * 20), nrow = 15, ncol = 20))
-  net <- suppressWarnings(tmfg(cordata))
+  # Set up network
+  net <- matrix(0, 6, 6)
 
-  expect_error(semantic_network_measures(net, measures = "not_a_measure"), "semantic_network_measures")
-  expect_error(semantic_network_measures(net, weighted = "yes"), "semantic_network_measures")
+  # Add two disconnected triangles
+  net[1, 2] <- net[2, 3] <- net[1, 3] <- net[4, 5] <- net[5, 6] <- net[4, 6] <- 1
+
+  # Make network symmetric
+  net <- net + t(net)
+
+  # Compute arithmetic ASPL
+  arithmetic <- semantic_network_measures(net, measures = "aspl")
+
+  # Compute harmonic ASPL
+  harmonic <- semantic_network_measures(net, measures = "aspl", type = "harmonic")
+
+  # Check arithmetic ASPL
+  expect_equal(unname(arithmetic), as.numeric(aspl(net)))
+
+  # Check value of arithmetic ASPL
+  expect_equal(unname(arithmetic), 1)
+
+  # Check harmonic ASPL
+  expect_equal(unname(harmonic), as.numeric(aspl(net, type = "harmonic")))
+
+  # Check ordering
+  expect_gt(harmonic, arithmetic)
+
+  # Check explicit arithmetic
+  expect_equal(semantic_network_measures(net, measures = "aspl", type = "arithmetic"), arithmetic)
+
+  # Check that clustering is unaffected
+  expect_equal(
+    semantic_network_measures(net, measures = "cc", type = "harmonic"),
+    semantic_network_measures(net, measures = "cc")
+  )
+
+  # Check for unknown type
+  expect_error(semantic_network_measures(net, type = "geometric"), "arg")
+
+  # Check for non-character type
+  expect_error(semantic_network_measures(net, type = 1), "character|type")
 
 })

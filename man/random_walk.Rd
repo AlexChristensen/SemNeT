@@ -31,8 +31,10 @@ Label for network \code{B} in the output.
 Defaults to \code{"B"}}
 
 \item{reps}{Numeric.
-Number of repetitions of increments in 10 steps.
-Defaults to \code{20}}
+Sets the largest number of steps tested, \code{reps * 10}: walks are run for
+\code{steps}, \code{steps + 10}, \code{steps + 20}, ... up to
+\code{reps * 10} steps (so \code{steps} cannot exceed \code{reps * 10}).
+Defaults to \code{20} (up to 200 steps)}
 
 \item{steps}{Numeric.
 Number of random steps to begin with.
@@ -48,12 +50,46 @@ Defaults to \code{1}}
 }
 \value{
 A list with \code{long} (every simulated summary statistic, all
-numeric) and \code{short} (a compact, correctly-typed summary with
-Mann-Whitney \emph{p}-values and effect directions)
+numeric: each network's mean and standard deviation, and the difference,
+its Monte Carlo interval limits, and Cohen's \emph{d} for each statistic)
+and \code{short} (a compact, correctly-typed summary with the difference,
+Cohen's \emph{d}, and a direction that is the network with the larger mean
+when \eqn{|d| \ge .2} (Cohen's small effect) and \code{"negligible"}
+otherwise)
 }
 \description{
 Simulates random walks over two networks to examine the
 characteristics of spontaneous spreading activation (see Kenett & Austerweil, 2016)
+}
+\details{
+The comparison is descriptive. Each network's walks are
+\code{iter} simulated draws, and \code{iter} is chosen by the user, so the
+\emph{p}-value of a test on those draws would only reflect how many walks
+were simulated: any difference, however small, becomes \dQuote{significant}
+with enough of them. No \emph{p}-values are reported. Each statistic
+(number of unique nodes visited, similarity of the walk's end to its start,
+and the same at 5 unique nodes) is instead summarized by
+\itemize{
+
+\item the difference in means (\code{A} minus \code{B}) with a Monte Carlo
+95\% interval, which describes the error from simulating a finite number
+of walks (and shrinks as \code{iter} grows), not uncertainty about the
+networks
+
+\item Cohen's \emph{d}, which does not depend on \code{iter}
+
+}
+Neither accounts for the uncertainty in the estimated networks; use
+\code{\link{bootstrap_SemNeT}} for that.
+
+Every walk starts at a node drawn at random from the nodes with at least one
+connection in each network (an isolated node cannot be walked from), and the
+two networks' walks share each step's random draw. When the pooled standard
+deviation of a statistic is 0, \eqn{d} is \code{0} for no difference in
+means and \code{Inf} (signed) for a difference, since any difference is then
+infinitely large in standard deviation units. The 5-unique-node statistic is
+measured at each network's own 5th distinct node (or its last, if the walk
+visited fewer).
 }
 \examples{
 # Simulate toy binarized datasets

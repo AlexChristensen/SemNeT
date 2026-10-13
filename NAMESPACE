@@ -2,6 +2,8 @@
 
 S3method(plot,bootSemNeT)
 S3method(plot,bootstrap_SemNeT)
+S3method(print,bootstrap_test_SemNeT)
+S3method(print,permutation_SemNeT)
 export(ASPL)
 export(CC)
 export(CN)
@@ -11,6 +13,7 @@ export(Q)
 export(SemNeTShiny)
 export(TMFG)
 export(aspl)
+export(binary2responses)
 export(bootSemNeT)
 export(bootstrap_SemNeT)
 export(bootstrap_test_SemNeT)
@@ -35,7 +38,7 @@ export(randwalk)
 export(read_uploaded_file)
 export(response.analysis)
 export(response_analysis)
-export(responses_to_binary)
+export(responses2binary)
 export(semantic_network_measures)
 export(semnetmeas)
 export(sim.fluency)
@@ -58,11 +61,14 @@ importFrom(stats,
   mcnemar.test,
   na.omit,
   pnorm,
+  qnorm,
+  quantile,
   rpois,
   runif,
   sd,
   t.test,
-  wilcox.test
+  terms,
+  var
 )
 importFrom(utils,
   combn,

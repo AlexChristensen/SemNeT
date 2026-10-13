@@ -51,8 +51,8 @@ returns \code{NULL} invisibly
 \description{
 Uses \code{\link[qgraph]{qgraph}} to plot networks side by
 side. Accepts any number of networks and arranges the plots using
-\code{floor(sqrt(length(...)))} side-by-side columns (e.g. 3 networks: 1
-row of 3; 6 networks: 2 rows of 3; 9 networks: 3 rows of 3)
+\code{floor(sqrt(length(...)))} rows (e.g. 3 networks: 1 row of 3; 6 networks:
+2 rows of 3; 9 networks: 3 rows of 3)
 }
 \examples{
 # Simulate datasets

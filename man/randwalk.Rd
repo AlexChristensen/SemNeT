@@ -32,7 +32,11 @@ See \code{\link{random_walk}}
 }
 \description{
 Backward-compatible wrapper for \code{\link{random_walk}} --
-\code{randwalk()} was renamed \code{random_walk()} in SemNeT 2.0.0
+\code{randwalk()} was renamed \code{random_walk()} in SemNeT 2.0.0.
+\strong{Output changed:} the Wilcoxon \emph{p}-values are gone (they only
+reflected how many walks were simulated) and \code{$short} is a data frame
+of differences, Cohen's \emph{d}, and directions; see
+\code{\link{random_walk}}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

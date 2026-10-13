@@ -17,33 +17,29 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# Convert a matrix to igraph's format
+# Convert matrix to igraph ----
 # Updated 06.09.2026
 convert2igraph <- function(A)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   A <- convert2igraph_errors(A)
 
-  # Nodes with zero strength (no edges at all) have no place in a network --
-  # zero the diagonal first so a node's own self-loop weight doesn't mask it
-  # having no real connections to anything else. The diagonal is never
-  # restored afterward: `graph_from_adjacency_matrix()` below is told
-  # `diag = FALSE`, so whatever value sits on the diagonal is ignored either way
+  # Remove self-loops
   diag(A) <- 0
 
+  # Identify nodes without edges
   unconnected <- colSums(A) == 0
+
+  # Check for unconnected nodes
   if(any(unconnected)){
+
+    # Remove unconnected nodes
     A <- A[!unconnected, !unconnected]
+
   }
 
-  # Build the {igraph} network directly from the adjacency matrix. The
-  # original round-tripped through `qgraph::qgraph()` purely to get an
-  # {igraph} object back out of it -- an entire dependency (`qgraph`) used
-  # for nothing but a conversion {igraph} already does natively.
-  # `suppressWarnings()` matches `EGAnet::convert2igraph()`'s own defensive
-  # wrapping of this exact call, and the original `CN.R` already needed to
-  # suppress warnings from this same conversion when detecting components
+  # Return {igraph} network
   return(
     suppressWarnings(
       igraph::graph_from_adjacency_matrix(
@@ -55,14 +51,15 @@ convert2igraph <- function(A)
 }
 
 #' @noRd
-# Argument errors for `convert2igraph()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 convert2igraph_errors <- function(A)
 {
 
-  # 'A' must be a square, numeric matrix (or coercible data.frame)
+  # 'A' errors
   A <- adjacency_matrix_error(A, "convert2igraph")
 
+  # Return 'A' (in case of data frame)
   return(A)
 
 }

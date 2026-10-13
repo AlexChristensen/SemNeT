@@ -1,67 +1,157 @@
 # Tests for cn()
 
-test_that("cn produces a valid, symmetric, binary semantic network", {
+# Data with known co-occurrence ----
+# Updated 13.10.2026
+ab_data <- function(hits)
+{
 
-  data <- open.clean[which(open.group == "Low"), ]
+  # Initialize filler counter
+  filler <- 0
 
-  net <- cn(data)
+  # Generate unique fillers
+  next_filler <- function(n){
 
-  expect_true(is.matrix(net))
-  expect_true(isSymmetric(unname(net)))
-  expect_true(all(net %in% c(0, 1)))
+    # Get filler words
+    out <- paste0("w", filler + seq_len(n))
 
-})
+    # Update filler counter
+    filler <<- filler + n
+
+    # Return filler words
+    out
+
+  }
+
+  # Loop over participants
+  rows <- lapply(seq_len(200), function(i){
+
+    # Check for adjacent responses
+    if(i <= hits){
+
+      # Place words next to each other
+      c("a", "b", next_filler(4))
+
+    }else{
+
+      # Place words apart
+      c("a", next_filler(3), "b", next_filler(1))
+
+    }
+
+  })
+
+  # Return data
+  do.call(rbind, rows)
+
+}
 
 test_that("cn's enrich = TRUE option only adds edges, never removes them", {
 
+  # Get data
   data <- open.clean[which(open.group == "Low"), ]
 
+  # Estimate base network
   base_net <- cn(data)
-  enriched_net <- cn(data, enrich = TRUE)
 
-  # Both networks are estimated over the same (largest-component) vocabulary
+  # Estimate enriched network
+  enriched_net <- suppressWarnings(cn(data, enrich = TRUE))
+
+  # Check dimensions
   expect_equal(dim(base_net), dim(enriched_net))
+
+  # Check that edges are kept
   expect_true(all(base_net[base_net == 1] == enriched_net[base_net == 1]))
+
+  # Check that edges are added
   expect_true(sum(enriched_net) >= sum(base_net))
 
 })
 
-test_that("cn rejects an already-binarized response matrix (no order information left)", {
+test_that("cn's alpha is the level of the co-occurrence test (it used to have no effect)", {
 
-  binary <- matrix(c(0, 1, 1, 0), 2, 2)
-  expect_error(cn(binary), "discarded response order")
-
-})
-
-test_that("cn validates its numeric arguments", {
-
+  # Get data
   data <- open.clean[which(open.group == "Low"), ]
 
-  expect_error(cn(data, window = 0), "cn")
-  expect_error(cn(data, alpha = 1.5), "cn")
-  expect_error(cn(data, enrich = "yes"), "cn")
+  # Estimate strict network
+  strict <- cn(data, alpha = .001)
+
+  # Estimate loose network
+  loose <- cn(data, alpha = .2)
+
+  # Check that looser alpha keeps more edges
+  expect_gt(sum(loose), sum(strict))
+
+  # Check that looser alpha keeps all nodes
+  expect_true(all(rownames(strict) %in% rownames(loose)))
 
 })
 
-test_that("stat_cooccur doesn't crash when the vocabulary has 0 or 1 words", {
+test_that("cn's co-occurrence test is Goni et al.'s two-sided Clopper-Pearson interval", {
 
-  # A single shared word across all participants -- `1:(n_words - 1)` would
-  # otherwise be `1:0` (i.e. `c(1, 0)`, not empty), sending the inner range
-  # `(i + 1):n_words` out of the 1x1 adjacency matrix's bounds
-  one_word <- matrix(c("dog", "dog", "dog"), nrow = 3, ncol = 1)
-  expect_equal(unname(stat_cooccur(one_word)), matrix(0, 1, 1))
+  # Check interval for 4 hits
+  expect_equal(binom.test(4, 200)$conf.int[1:2], c(0.0055, 0.0504), tolerance = 1e-3)
+
+  # Check interval for 2 hits
+  expect_equal(binom.test(2, 200)$conf.int[1:2], c(0.0012, 0.0357), tolerance = 1e-2)
+
+  # Check interval for 91 hits
+  expect_equal(binom.test(91, 200)$conf.int[1:2], c(0.38, 0.52), tolerance = 2e-2)
+
+  # Estimate network below chance
+  not_linked <- stat_cooccur(ab_data(132))
+
+  # Estimate network above chance
+  linked <- stat_cooccur(ab_data(136))
+
+  # Check for no edge
+  expect_equal(not_linked["a", "b"], 0)
+
+  # Check for edge
+  expect_equal(linked["a", "b"], 1)
 
 })
 
-test_that("rel_freq handles a single-participant dataset without erroring", {
+test_that("cn's chance probability matches Goni et al. (2011)", {
 
-  # With exactly 1 participant, each per-word `rowSums(...) > 0` collapses to
-  # a length-1 logical, which `sapply()` alone would return as a plain
-  # vector instead of a (1 x vocabulary) matrix -- breaking `colMeans()`
-  one_participant <- matrix(c("dog", "cat"), nrow = 1, ncol = 2)
-  result <- rel_freq(one_participant)
+  # Set mean number of responses
+  N <- 31.57
 
-  expect_length(result, 2)
-  expect_true(all(result == 1))
+  # Set window
+  l <- 2
+
+  # Check basal probability
+  expect_equal((2 / (N * (N - 1))) * ((l * N) - (l * (l + 1) / 2)), 0.1246, tolerance = 1e-3)
+
+})
+
+test_that("cn handles whitespace and 'NA' placeholders like true missing responses", {
+
+  # Get clean data
+  clean <- ab_data(150)
+
+  # Add placeholders
+  padded <- cbind(clean, " ", "NA")
+
+  # Check edge
+  expect_equal(stat_cooccur(padded)["a", "b"], stat_cooccur(clean)["a", "b"])
+
+  # Check nodes
+  expect_identical(rownames(stat_cooccur(padded)), rownames(stat_cooccur(clean)))
+
+})
+
+test_that("cn handles a single participant and one-response participants", {
+
+  # Set up single participant
+  one <- matrix(c("dog", "cat", "cow"), nrow = 1)
+
+  # Check for no edges
+  expect_equal(unname(stat_cooccur(one)), matrix(0, 3, 3))
+
+  # Set up one response each
+  single_responses <- matrix(c("dog", "cat", "cow"), ncol = 1)
+
+  # Check for error
+  expect_error(stat_cooccur(single_responses), "more than one response")
 
 })

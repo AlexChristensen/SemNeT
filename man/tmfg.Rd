@@ -14,10 +14,12 @@ tmfg(data, depend = FALSE)
 A square association matrix (e.g. a correlation or similarity matrix)}
 
 \item{depend}{Boolean.
-Is the network a dependency (directed) network?
-Defaults to \code{FALSE}. Set to \code{TRUE} to generate a TMFG-filtered
-dependency network, where the direction of each edge follows whichever of
-the two asymmetric values is larger}
+Is \code{data} an asymmetric dependency matrix? Without it, \code{data} must
+be symmetric.
+Defaults to \code{FALSE}. With \code{TRUE}, each edge is placed using the
+larger of its two asymmetric values, but the returned network's links are
+still symmetric (both cells of a retained edge are filled, each with its own
+value from \code{data}), so it is not a directed network}
 }
 \value{
 Returns a TMFG-filtered adjacency matrix
@@ -28,9 +30,13 @@ filtering method (\strong{please see and cite Massara et al., 2016}). The
 TMFG method uses a structural constraint that limits the number of
 zero-order correlations included in the network (3\emph{n} - 6, where
 \emph{n} is the number of variables). Construction begins by forming a
-tetrahedron from the four nodes with the largest sum of correlations, then
-iteratively adds each remaining node to the connected set of three nodes
-(a triangle) it correlates with most strongly, until every node is included.
+tetrahedron from the four nodes with the largest strength (the sum of their
+absolute associations that exceed the matrix's average absolute association,
+diagonal included), then iteratively adds each remaining node to the
+connected set of three nodes (a triangle) it is most strongly associated with,
+until every node is included. Edges are chosen on absolute association
+(a strong negative association is a strong edge); the signed values are kept
+in the returned network.
 }
 \details{
 The TMFG method applies a structural constraint on the network,

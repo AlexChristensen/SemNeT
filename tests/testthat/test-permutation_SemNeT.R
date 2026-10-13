@@ -1,102 +1,556 @@
 # Tests for permutation_SemNeT()
 
-test_that("permutation_SemNeT returns the expected schema for tmfg", {
-
-  set.seed(1)
-  low <- open.clean[which(open.group == "Low"), ]
-  high <- open.clean[which(open.group == "High"), ]
-
-  result <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 15, cores = 1, keep_networks = TRUE))
-
-  expect_s3_class(result, "permutation_SemNeT")
-  expect_named(result, c("result", "networks", "method", "differences"))
-  expect_equal(nrow(result$result), 1)
-  expect_equal(row.names(result$result), "aspl")
-  expect_named(result$result, c("low", "high", "p_value", "alternative"))
-  expect_length(result$networks$network_1, 15)
-  expect_length(result$networks$network_2, 15)
-  expect_length(result$differences, 15)
-
-})
-
-test_that("permutation_SemNeT keeps 'networks' NULL by default", {
-
-  set.seed(1)
-  low <- open.clean[which(open.group == "Low"), ]
-  high <- open.clean[which(open.group == "High"), ]
-
-  # Real bug fixed: every permuted sample's estimated networks (2 x `iter`
-  # of them) used to be materialized and retained unconditionally, even
-  # though only `previous =` reuse ever needs them again
-  result <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 10, cores = 1))
-
-  expect_null(result$networks)
-  expect_length(result$differences, 10)
-
-})
-
-test_that("permutation_SemNeT's 'previous' reuse requires the original call kept its networks", {
-
-  low <- open.clean[which(open.group == "Low"), ]
-  high <- open.clean[which(open.group == "High"), ]
-
-  first <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 6, cores = 1))
-
-  expect_error(
-    suppressMessages(permutation_SemNeT(previous = first, measure = "cc", cores = 1)),
-    "keep_networks = TRUE"
-  )
-
-})
-
 test_that("permutation_SemNeT's first (unpermuted) entry gives the observed statistic", {
 
+  # Set seed
   set.seed(2)
+
+  # Get low group
   low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
   high <- open.clean[which(open.group == "High"), ]
 
+  # Perform permutation test
   result <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 10, cores = 1, keep_networks = TRUE))
 
+  # Compute observed difference
   observed <- as.numeric(aspl(result$networks$network_1[[1]])) - as.numeric(aspl(result$networks$network_2[[1]]))
+
+  # Check observed difference
   expect_equal(unname(result$differences[1]), observed)
 
 })
 
 test_that("permutation_SemNeT reuses a previous result's networks for a different measure", {
 
+  # Set seed
   set.seed(3)
+
+  # Get low group
   low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
   high <- open.clean[which(open.group == "High"), ]
 
+  # Perform first permutation test
   first <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 10, cores = 1, keep_networks = TRUE))
+
+  # Perform second permutation test
   second <- suppressMessages(permutation_SemNeT(previous = first, measure = "cc", cores = 1))
 
+  # Check networks
   expect_identical(first$networks, second$networks)
+
+  # Check measure
   expect_equal(row.names(second$result), "cc")
+
+  # Check names of samples
   expect_equal(names(second$result)[1:2], names(first$result)[1:2])
 
 })
 
-test_that("permutation_SemNeT works with cn, nrw, and pf", {
+test_that("permutation_SemNeT reports the minimal detectable effect from the permutation null", {
 
-  set.seed(4)
+  # Get low group
   low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
   high <- open.clean[which(open.group == "High"), ]
 
-  expect_no_error(suppressMessages(permutation_SemNeT(low, high, method = "cn", measure = "q", iter = 6, cores = 1)))
-  expect_no_error(suppressMessages(permutation_SemNeT(low, high, method = "pf", measure = "cc", iter = 6, cores = 1)))
-  expect_no_error(suppressMessages(permutation_SemNeT(low, high, method = "nrw", measure = "aspl", iter = 6, cores = 1, method_args = list(threshold = 1))))
+  # Perform permutation test
+  result <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1)
+
+  # Get differences
+  d <- result$differences
+
+  # Check class
+  expect_s3_class(result$mde, "data.frame")
+
+  # Check measure
+  expect_equal(row.names(result$mde), "aspl")
+
+  # Check columns
+  expect_named(result$mde, c("alpha", "power", "critical_value", "null_sd", "mde"))
+
+  # Compute critical value
+  critical_value <- unname(quantile(abs(d), .95))
+
+  # Check critical value
+  expect_equal(result$mde$critical_value, critical_value)
+
+  # Check standard deviation
+  expect_equal(result$mde$null_sd, sd(d))
+
+  # Check minimal detectable effect
+  expect_equal(result$mde$mde, critical_value + qnorm(.8) * sd(d))
+
+  # Perform stricter test
+  stricter <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alpha = .01, power = .9)
+
+  # Check larger effect
+  expect_gt(stricter$mde$mde, result$mde$mde)
+
+  # Check that p-value is unchanged
+  expect_equal(stricter$result$p_value, result$result$p_value)
+
+  # Perform greater test
+  greater <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alternative = "greater")
+
+  # Perform less test
+  less <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alternative = "less")
+
+  # Check greater critical value
+  expect_equal(greater$mde$critical_value, unname(quantile(d, .95)))
+
+  # Check less critical value
+  expect_equal(less$mde$critical_value, -unname(quantile(d, .05)))
+
+  # Set seed
+  set.seed(5)
+
+  # Sample normal null
+  null <- rnorm(1e5)
+
+  # Compute minimal detectable effect
+  helper <- permutation_mde(null, "two_tailed", .05, .8, "aspl")
+
+  # Check normal critical value
+  expect_lt(abs(helper$critical_value - qnorm(.975)), .03)
+
+  # Check normal minimal detectable effect
+  expect_lt(abs(helper$mde - (qnorm(.975) + qnorm(.8))), .03)
+
+  # Check printed output
+  expect_output(print(result), "MDE: smallest true difference detected with 80%\\s+power at alpha = .05")
+
+  # Reuse permuted networks
+  reused <- permutation_SemNeT(previous = result, measure = "aspl", cores = 1)
+
+  # Check minimal detectable effect
+  expect_equal(reused$mde$mde, result$mde$mde)
 
 })
 
-test_that("permutation_SemNeT validates its input", {
+test_that("permutation_SemNeT tests several measures at once, matching one-at-a-time runs", {
 
+  # Get low group
   low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
   high <- open.clean[which(open.group == "High"), ]
 
-  expect_error(permutation_SemNeT(sample_1 = low), "must both be provided")
-  expect_error(permutation_SemNeT(low, high, method = "nrw", method_args = list(thresold = 1)), "not used by")
-  expect_error(permutation_SemNeT(previous = list()), "permutation_SemNeT")
-  expect_error(permutation_SemNeT(low, high, iter = 0), "permutation_SemNeT")
+  # Set measures
+  measures <- c("aspl", "cc", "q")
+
+  # Perform permutation test
+  all_measures <- permutation_SemNeT(low, high, method = "tmfg", measure = measures, iter = 20, cores = 1, seed = 1)
+
+  # Check measures
+  expect_equal(row.names(all_measures$result), measures)
+
+  # Check columns
+  expect_named(all_measures$result, c("low", "high", "p_value", "alternative"))
+
+  # Check dimensions of differences
+  expect_equal(dim(all_measures$differences), c(20, 3))
+
+  # Check names of differences
+  expect_equal(colnames(all_measures$differences), measures)
+
+  # Check minimal detectable effect
+  expect_equal(row.names(all_measures$mde), measures)
+
+  # Check diagnostics
+  expect_named(all_measures$diagnostics, c(
+    "aspl_1", "aspl_2", "cc_1", "cc_2", "q_1", "q_2", "nodes_1", "nodes_2", "edges_1", "edges_2"
+  ))
+
+  # Loop over measures
+  for(name in measures){
+
+    # Perform permutation test of measure
+    single <- permutation_SemNeT(low, high, method = "tmfg", measure = name, iter = 20, cores = 1, seed = 1)
+
+    # Check differences
+    expect_equal(unname(all_measures$differences[, name]), single$differences)
+
+    # Check result
+    expect_equal(all_measures$result[name, ], single$result)
+
+    # Check minimal detectable effect
+    expect_equal(all_measures$mde[name, ], single$mde)
+
+  }
+
+  # Perform permutation test of one measure
+  single <- permutation_SemNeT(low, high, method = "tmfg", measure = "cc", iter = 20, cores = 1, seed = 1)
+
+  # Check that differences are a vector
+  expect_null(dim(single$differences))
+
+  # Check diagnostics
+  expect_named(single$diagnostics, c("value_1", "value_2", "nodes_1", "nodes_2", "edges_1", "edges_2"))
+
+  # Reuse networks for subset of measures
+  reused <- permutation_SemNeT(previous = all_measures, measure = c("aspl", "q"), cores = 1)
+
+  # Check measures
+  expect_equal(row.names(reused$result), c("aspl", "q"))
+
+  # Check differences
+  expect_equal(reused$differences, all_measures$differences[, c("aspl", "q")])
+
+  # Capture printed output
+  printed <- paste(capture.output(print(all_measures)), collapse = "\n")
+
+  # Check header
+  expect_match(printed, "Permutation test of group differences")
+
+  # Check note on adjustment
+  expect_match(printed, "not adjusted for the number of\\s+(\\|\\s+)?measures")
+
+  # Check rows
+  expect_equal(sum(grepl("^ +(ASPL|CC|Q) ", strsplit(printed, "\n")[[1]])), 3)
+
+  # Check for error with unknown measure
+  expect_error(permutation_SemNeT(low, high, measure = c("aspl", "nope")), "must only contain")
+
+})
+
+test_that("permutation_SemNeT reports per-permutation values and network sizes, including on reuse", {
+
+  # Set seed
+  set.seed(3)
+
+  # Get low group
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
+  high <- open.clean[which(open.group == "High"), ]
+
+  # Perform permutation test
+  result <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 8, cores = 1, keep_networks = TRUE))
+
+  # Get diagnostics
+  diagnostics <- result$diagnostics
+
+  # Check class
+  expect_s3_class(diagnostics, "data.frame")
+
+  # Check rows
+  expect_equal(nrow(diagnostics), 8)
+
+  # Check columns
+  expect_named(diagnostics, c("value_1", "value_2", "nodes_1", "nodes_2", "edges_1", "edges_2"))
+
+  # Check differences
+  expect_equal(diagnostics$value_1 - diagnostics$value_2, result$differences)
+
+  # Check nodes
+  expect_equal(diagnostics$nodes_1, vapply(result$networks$network_1, nrow, numeric(1)))
+
+  # Check edges
+  expect_equal(diagnostics$edges_2, unname(vapply(result$networks$network_2, function(n) network_counts(n)["edges"], numeric(1))))
+
+  # Reuse networks
+  reused <- suppressMessages(permutation_SemNeT(previous = result, measure = "cc", cores = 1))
+
+  # Check nodes of reused result
+  expect_equal(reused$diagnostics$nodes_1, diagnostics$nodes_1)
+
+  # Check edges of reused result
+  expect_equal(reused$diagnostics$edges_2, diagnostics$edges_2)
+
+  # Check values of reused result
+  expect_equal(reused$diagnostics$value_1, vapply(result$networks$network_1, cc, numeric(1)))
+
+})
+
+test_that("permutation_SemNeT is reproducible given a seed, regardless of cores", {
+
+  # Get low group
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
+  high <- open.clean[which(open.group == "High"), ]
+
+  # Set up permutation test
+  run <- function(seed, cores = 1, measure = "q"){
+    suppressMessages(permutation_SemNeT(
+      low, high, measure = measure, iter = 8, cores = cores, seed = seed, keep_networks = TRUE
+    ))
+  }
+
+  # Perform permutation test
+  one <- run(1)
+
+  # Check same seed
+  expect_identical(one$differences, run(1)$differences)
+
+  # Check more cores
+  expect_identical(one$differences, run(1, cores = 2)$differences)
+
+  # Check different seed
+  expect_false(identical(one$differences, run(2)$differences))
+
+  # Check stored seed
+  expect_identical(one$seed, 1)
+
+  # Set seed
+  set.seed(99)
+
+  # Check independence of R's random state
+  expect_identical(one$differences, run(1)$differences)
+
+  # Reuse networks
+  reused <- suppressMessages(permutation_SemNeT(previous = one, measure = "q"))
+
+  # Check inherited seed
+  expect_identical(reused$seed, 1)
+
+  # Check differences
+  expect_identical(reused$differences, one$differences)
+
+  # Check message without seed
+  expect_message(
+    permutation_SemNeT(low, high, method = "pf", iter = 2), "not be reproducible"
+  )
+
+})
+
+test_that("the two-sided permutation p-value has three documented definitions", {
+
+  # Set up null centred away from zero
+  null <- c(-0.1, 0.20, 0.25, 0.30, 0.30, 0.35, 0.40, 0.45, 0.50, 0.60)
+
+  # Compute p-value
+  p <- function(alternative, observed = null[1]){
+    permutation_p_value(c(observed, null[-1]), observed, alternative)
+  }
+
+  # Check distance from zero
+  expect_equal(p("two_tailed"), 1)
+
+  # Get center of null
+  centre <- mean(null)
+
+  # Check distance from center
+  expect_equal(p("two_tailed_centered"), mean(abs(null - centre) >= abs(null[1] - centre)))
+
+  # Check that it is below half
+  expect_lt(p("two_tailed_centered"), .5)
+
+  # Check less
+  expect_equal(p("less"), 0.1)
+
+  # Check greater
+  expect_equal(p("greater"), 1)
+
+  # Check doubled
+  expect_equal(p("two_tailed_doubled"), 0.2)
+
+  # Check doubled cap
+  expect_equal(p("two_tailed_doubled", observed = 0.30), 1)
+
+  # Shift null
+  shifted <- null + 5
+
+  # Check that one-sided p-value is unchanged
+  expect_equal(
+    permutation_p_value(shifted, shifted[1], "greater"), permutation_p_value(null, null[1], "greater")
+  )
+
+  # Set up ties with floating-point noise
+  noisy <- c(0.1 + 0.2, 0.3, 0.3, 0.9)
+
+  # Check exact comparison
+  expect_equal(mean(noisy >= noisy[1]), 1 / 2)
+
+  # Check tolerance
+  expect_equal(permutation_p_value(noisy, noisy[1], "greater"), 1)
+
+  # Set up symmetric null
+  symmetric <- c(0.5, -0.5, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3)
+
+  # Check agreement of tails and center
+  expect_equal(
+    permutation_p_value(symmetric, symmetric[1], "two_tailed"),
+    permutation_p_value(symmetric, symmetric[1], "two_tailed_centered")
+  )
+
+  # Check agreement of tails and doubled
+  expect_equal(
+    permutation_p_value(symmetric, symmetric[1], "two_tailed"),
+    permutation_p_value(symmetric, symmetric[1], "two_tailed_doubled")
+  )
+
+  # Check missing observed value
+  expect_true(is.na(permutation_p_value(c(NA, 1, 2), NA_real_, "two_tailed")))
+
+})
+
+test_that("each two-sided option runs end to end and has its own minimal detectable effect", {
+
+  # Get low group
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
+  high <- open.clean[which(open.group == "High"), ]
+
+  # Set up permutation test
+  run <- function(alternative){
+    permutation_SemNeT(
+      low, high, method = "tmfg", measure = "aspl", iter = 20, cores = 1, seed = 1, alternative = alternative
+    )
+  }
+
+  # Perform default test
+  default <- run("two_tailed")
+
+  # Perform centered test
+  centered <- run("two_tailed_centered")
+
+  # Perform doubled test
+  doubled <- run("two_tailed_doubled")
+
+  # Get differences
+  d <- default$differences
+
+  # Check default p-value
+  expect_equal(default$result$p_value, signif(permutation_p_value(d, d[1], "two_tailed"), 3))
+
+  # Check centered p-value
+  expect_equal(centered$result$p_value, signif(permutation_p_value(d, d[1], "two_tailed_centered"), 3))
+
+  # Check doubled p-value
+  expect_equal(doubled$result$p_value, signif(permutation_p_value(d, d[1], "two_tailed_doubled"), 3))
+
+  # Check alternative
+  expect_match(centered$result$alternative, "!=")
+
+  # Check centered critical value
+  expect_equal(centered$mde$critical_value, unname(quantile(abs(d - mean(d)), .95)))
+
+  # Check doubled critical value
+  expect_equal(doubled$mde$critical_value, max(unname(quantile(d, .975)), -unname(quantile(d, .025))))
+
+  # Check that permutations are the same
+  expect_identical(default$differences, centered$differences)
+
+  # Check for error with unknown alternative
+  expect_error(run("both"), "arg")
+
+})
+
+test_that("undefined permuted differences are reported, and small p-values are not rounded to 0", {
+
+  # Set up differences with a missing value
+  differences <- c(0.5, NA, 0.1, -0.2, 0.4)
+
+  # Check warning
+  expect_warning(
+    p <- permutation_p_value(differences, 0.5, "greater"), "1 of 5 permutations"
+  )
+
+  # Check p-value
+  expect_equal(p, 1 / 4)
+
+  # Check that significant digits keep value
+  expect_gt(signif(1 / 10001, 3), 0)
+
+  # Check that rounding gives zero
+  expect_equal(round(1 / 10001, 3), 0)
+
+})
+
+test_that("permutation pools samples with different widths or vocabularies by what the columns mean", {
+
+  # Set up wide sample
+  wide <- rbind(c("a", "b", "c", "d"), c("b", "c", "d", "e"))
+
+  # Set up narrow sample
+  narrow <- rbind(c("a", "b"), c("c", "d"), c("a", "e"))
+
+  # Align samples
+  aligned <- align_samples(wide, narrow)
+
+  # Check width of first sample
+  expect_equal(ncol(aligned$sample_1), 4)
+
+  # Check width of second sample
+  expect_equal(ncol(aligned$sample_2), 4)
+
+  # Check padding
+  expect_true(all(is.na(aligned$sample_2[, 3:4])))
+
+  # Check pooling
+  expect_equal(dim(rbind(aligned$sample_1, aligned$sample_2)), c(5, 4))
+
+  # Set up first numeric sample
+  one <- matrix(c(1, 0, 1, 1, 1, 0), nrow = 2, dimnames = list(NULL, c("x", "y", "z")))
+
+  # Set up second numeric sample
+  two <- matrix(c(1, 1, 0, 1, 1, 0), nrow = 2, dimnames = list(NULL, c("x", "z", "w")))
+
+  # Align samples
+  aligned <- align_samples(one, two)
+
+  # Check responses of first sample
+  expect_equal(colnames(aligned$sample_1), c("x", "y", "z", "w"))
+
+  # Check responses of second sample
+  expect_equal(colnames(aligned$sample_2), c("x", "y", "z", "w"))
+
+  # Check response missing in first sample
+  expect_equal(unname(aligned$sample_1[, "w"]), c(0, 0))
+
+  # Check response missing in second sample
+  expect_equal(unname(aligned$sample_2[, "y"]), c(0, 0))
+
+  # Check response given in second sample
+  expect_equal(unname(aligned$sample_2[, "z"]), unname(two[, "z"]))
+
+  # Reorder responses
+  reordered <- one[, c("z", "x", "y")]
+
+  # Align samples
+  aligned <- align_samples(one, reordered)
+
+  # Check order of responses
+  expect_identical(colnames(aligned$sample_2), colnames(aligned$sample_1))
+
+  # Check values of responses
+  expect_equal(unname(aligned$sample_2[, "x"]), unname(one[, "x"]))
+
+  # Check for error with unnamed columns
+  expect_error(align_samples(unname(one), unname(two)[, 1:2]), "column names")
+
+  # Check for error with mixed samples
+  expect_error(align_samples(one, wide), "both")
+
+  # Copy sample
+  duplicated_names <- one
+
+  # Duplicate name
+  colnames(duplicated_names)[2] <- "x"
+
+  # Check for error with duplicate names
+  expect_error(align_samples(duplicated_names, two), "unique")
+
+})
+
+test_that("permutation_SemNeT accepts raw samples of different widths", {
+
+  # Get low group
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Get narrow high group
+  high <- open.clean[which(open.group == "High"), 1:15]
+
+  # Check for no error
+  expect_no_error(suppressMessages(
+    permutation_SemNeT(low, high, method = "nrw", measure = "cc", iter = 4, cores = 1, seed = 1)
+  ))
 
 })

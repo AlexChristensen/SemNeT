@@ -17,7 +17,10 @@ test.bootSemNeT(
 See \code{\link{bootstrap_test_SemNeT}}}
 
 \item{test}{Character.
-See \code{\link{bootstrap_test_SemNeT}}}
+\code{"ANCOVA"}, \code{"ANOVA"}, or \code{"t-test"} (the default). Kept
+only for backward compatibility: the parametric test is \strong{not} run
+(it is invalid). The comparisons returned are determined by
+\code{groups}/\code{formula} (see \code{\link{bootstrap_test_SemNeT}})}
 
 \item{measures}{Character.
 One or more of \code{"ASPL"}, \code{"CC"}, \code{"Q"}.
@@ -35,7 +38,18 @@ See \code{\link{bootstrap_test_SemNeT}}
 \description{
 Backward-compatible wrapper for
 \code{\link{bootstrap_test_SemNeT}} -- \code{test.bootSemNeT()} was
-renamed \code{bootstrap_test_SemNeT()} in SemNeT 2.0.0. Only accepts
+renamed \code{bootstrap_test_SemNeT()} in SemNeT 2.0.0.
+
+\strong{Legacy warning:} before SemNeT 2.1.0, this function ran
+\emph{t}-tests/ANOVAs/ANCOVAs on the bootstrap replicates themselves, which
+is statistically invalid (the replicates are not independent observations,
+and the bootstrap standard deviation -- already a standard error -- was
+divided by \code{sqrt(iter)}, inflating test statistics by roughly
+\code{sqrt(iter)}). It now always warns and returns the results of
+\code{bootstrap_test_SemNeT()}: by default a Wald test of each contrast
+using the bootstrap standard error (with normal intervals), or percentile
+intervals, which have no \emph{p}-value.
+Results from earlier versions should be recomputed. Only accepts
 objects produced by this package's own \code{\link{bootSemNeT}} /
 \code{\link{bootstrap_SemNeT}}, not a raw object saved from SemNeT
 \code{< 2.0.0}

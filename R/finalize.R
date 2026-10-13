@@ -24,22 +24,21 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# Finalize a response matrix
+# Finalize response matrix ----
 # Updated 06.09.2026
 finalize <- function(data, minimum_cases = 2)
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   data <- finalize_errors(data, minimum_cases)
 
-  # Keep only responses given by at least 'minimum_cases' participants
+  # Identify responses given by enough participants
   kept_responses <- which(colSums(data) >= minimum_cases)
 
-  # No response met the threshold -- the original silently returned a
-  # useless 0-column matrix here, which would then fail confusingly in
-  # whatever downstream function received it (e.g. `equate()`, a network
-  # estimator). A clear error at the source is easier to act on
+  # Check for no remaining responses
   if(length(kept_responses) == 0){
+
+    # Send error
     stop(
       paste0(
         "In `finalize()`: no response was given by at least 'minimum_cases' (",
@@ -48,39 +47,61 @@ finalize <- function(data, minimum_cases = 2)
       ),
       call. = FALSE
     )
+
   }
 
+  # Return kept responses
   return(data[, kept_responses, drop = FALSE])
 
 }
 
 #' @noRd
-# Argument errors for `finalize()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 finalize_errors <- function(data, minimum_cases)
 {
 
-  # 'data' must be a matrix or a data.frame, already binary (or coercible).
-  # `response_matrix_error()` also accepts raw (not-yet-binarized) word
-  # responses -- appropriate for `pf()`/`tmfg()`, which convert that
-  # themselves, but `finalize()`'s own body (`colSums()`) assumes numeric
-  # 0/1 content and would otherwise fail with a confusing base-R error
-  # ("'x' must be numeric or complex") instead of a clear one
+  # 'data' errors
   data <- response_matrix_error(data, "finalize")
 
+  # Check for raw responses
   if(is.character(data) || is.factor(data)){
+
+    # Send error
     stop(
       "In `finalize()`: 'data' contains raw (not-yet-binarized) word responses.\n",
       "'data' must already be a binary (0/1) response matrix.",
       call. = FALSE
     )
+
   }
 
-  # 'minimum_cases' must be a single non-negative whole number
+  # Check for missing values
+  if(anyNA(data)){
+
+    # Send error
+    stop(
+      "In `finalize()`: 'data' has missing values.\n",
+      "Every response of every participant must be 0 or 1 (not given or given).",
+      call. = FALSE
+    )
+
+  }
+
+  # 'minimum_cases' errors
   length_error(minimum_cases, 1, "finalize")
   typeof_error(minimum_cases, "numeric", "finalize")
   range_error(minimum_cases, c(0, Inf), "finalize")
 
+  # Check for whole number
+  if(minimum_cases != round(minimum_cases)){
+
+    # Send error
+    stop("In `finalize()`: 'minimum_cases' must be a whole number.", call. = FALSE)
+
+  }
+
+  # Return 'data' (in case of data frame)
   return(data)
 
 }

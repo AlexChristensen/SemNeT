@@ -26,7 +26,12 @@ See \code{\link{random_network_test}}
 \description{
 Backward-compatible wrapper for
 \code{\link{random_network_test}} -- \code{randnet.test()} was renamed
-\code{random_network_test()} in SemNeT 2.0.0
+\code{random_network_test()} in SemNeT 2.0.0.
+\strong{Output changed:} the \emph{p}-values are now Monte Carlo
+\emph{p}-values, computed for Erdos-Renyi and degree-preserving random
+networks (\code{p_value}, \code{p_value_degree}, ...), and a network's edge
+count is the number of nonzero cells (weights are no longer summed); see
+\code{\link{random_network_test}}
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

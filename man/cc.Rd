@@ -5,7 +5,7 @@
 \alias{CC}
 \title{Clustering Coefficient}
 \usage{
-cc(A, weighted = FALSE)
+cc(A, weighted = FALSE, na.rm = FALSE)
 
 CC(A, weighted = FALSE)
 }
@@ -14,12 +14,25 @@ CC(A, weighted = FALSE)
 An adjacency matrix of network data}
 
 \item{weighted}{Boolean.
-Is the network weighted?
+Is the network weighted? The weighted coefficient (Rubinov & Sporns, 2010)
+is defined for weights scaled by the network's largest absolute weight, so
+the weights are divided by it first: CC does not depend on the scale of the
+weights, and for a signed network a node's coefficient can be negative.
 Defaults to \code{FALSE}. Set to \code{TRUE} for weighted measures of CC}
+
+\item{na.rm}{Boolean.
+A node with fewer than two neighbors has no possible triangle, so its
+clustering coefficient is undefined. Should those nodes be left out of the
+average (\code{TRUE}), or counted as having a clustering coefficient of 0
+(\code{FALSE})?
+Counting them as 0 lowers CC in sparse networks (e.g., \code{\link{cn}},
+\code{\link{nrw}}) in proportion to how many such nodes there are.
+Defaults to \code{FALSE}}
 }
 \value{
 Returns the network's CC. The per-node clustering coefficient is
-attached as the \code{"node"} attribute, rather than being computed and discarded
+attached as the \code{"node"} attribute (\code{NA} for a node with fewer than
+two neighbors when \code{na.rm = TRUE}), rather than being computed and discarded
 }
 \description{
 Computes the global clustering coefficient (CC) of a network

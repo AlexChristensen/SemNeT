@@ -11,84 +11,212 @@ permutation_SemNeT(
   method_args = list(),
   sim = "cosine",
   minimum_cases = 2,
-  measure = c("aspl", "cc", "q"),
-  alternative = c("two_tailed", "less", "greater"),
+  measure = "aspl",
+  alternative = c("two_tailed", "two_tailed_centered", "two_tailed_doubled", "less",
+    "greater"),
   iter = 1000,
   cores = 1,
   previous = NULL,
-  keep_networks = FALSE
+  keep_networks = TRUE,
+  seed = NULL,
+  alpha = 0.05,
+  power = 0.8
 )
 }
 \arguments{
 \item{sample_1}{Matrix or data frame.
-Response matrix to be compared with \code{sample_2}}
+Response matrix to be compared with \code{sample_2}. The two samples are
+pooled by rows, so their columns are lined up first: raw responses of
+different widths are padded with missing responses, and numeric matrices are
+matched by column (response) name}
 
 \item{sample_2}{Matrix or data frame.
 Response matrix to be compared with \code{sample_1}}
 
-\item{method}{Character.
-Network estimation method to use: \code{"tmfg"}, \code{"cn"}, \code{"nrw"},
-or \code{"pf"} -- see \code{\link{tmfg}}, \code{\link{cn}}, \code{\link{nrw}},
-and \code{\link{pf}}}
+\item{method}{Character (length = 1).
+Network estimation method.
+Defaults to \code{"tmfg"}.
+Available options:
+
+\itemize{
+
+\item \code{"tmfg"} --- See \code{\link{tmfg}}
+
+\item \code{"cn"} --- See \code{\link{cn}}
+
+\item \code{"nrw"} --- See \code{\link{nrw}}
+
+\item \code{"pf"} --- See \code{\link{pf}}
+
+}}
 
 \item{method_args}{List.
-Additional arguments passed on to the chosen \code{method}'s own function.
-Defaults to \code{list()} (every method's own defaults apply)}
+Additional arguments passed to \code{method}'s function.
+Defaults to \code{list()} (the method's defaults)}
 
-\item{sim}{Character.
-Similarity measure to use, \code{method = "tmfg"} only.
-Defaults to \code{"cosine"}. See \code{\link{similarity}} for other options}
+\item{sim}{Character (length = 1).
+Similarity measure for \code{method = "tmfg"}.
+Defaults to \code{"cosine"}.
+See \code{\link{similarity}} for other options}
 
-\item{minimum_cases}{Numeric.
+\item{minimum_cases}{Numeric (length = 1).
 \strong{Only} for \code{method = "tmfg"}.
-Minimum number of participants required to have given a response for that
-response to be kept, via \code{\link{finalize}}, before equating the two
-samples' vocabularies via \code{\link{equate}}.
+Minimum number of participants who gave a response for it to be kept
+(\code{\link{finalize}}) before the samples' vocabularies are equated
+(\code{\link{equate}}).
 Defaults to \code{2}}
 
 \item{measure}{Character.
-Global network measure to compare: one of \code{"aspl"}, \code{"cc"}, or \code{"q"}}
+One or more of \code{"aspl"}, \code{"cc"}, and \code{"q"}
+(e.g., \code{c("aspl", "cc", "q")} for all three).
+Every measure is computed from the same permuted networks, so testing
+several costs little more than one.
+Defaults to \code{"aspl"}}
 
-\item{alternative}{Character.
-Alternative hypothesis: \code{"two_tailed"}, \code{"less"}, or \code{"greater"}.
-Defaults to \code{"two_tailed"}}
+\item{alternative}{Character (length = 1).
+Alternative hypothesis.
+Defaults to \code{"two_tailed"}.
+Available options:
 
-\item{iter}{Numeric.
-Number of permuted samples to generate.
+\itemize{
+
+\item \code{"two_tailed"} --- \code{sample_1} differs from \code{sample_2};
+the \emph{p}-value is the proportion of permuted differences \eqn{T^*} with
+\eqn{|T^*| \ge |T_{obs}|} (distance from 0)
+
+\item \code{"two_tailed_centered"} --- same hypothesis, but the distance is
+measured from the permutation null's mean \eqn{\bar{T}^*}:
+\eqn{|T^* - \bar{T}^*| \ge |T_{obs} - \bar{T}^*|}
+
+\item \code{"two_tailed_doubled"} --- same hypothesis, with the \emph{p}-value
+twice the smaller one-sided \emph{p}-value (at most 1)
+
+\item \code{"less"} --- \code{sample_1} is less than \code{sample_2}
+
+\item \code{"greater"} --- \code{sample_1} is greater than \code{sample_2}
+
+}}
+
+\item{iter}{Numeric (length = 1).
+Number of permutations (the first is the observed data).
 Defaults to \code{1000}}
 
-\item{cores}{Numeric.
-Number of processing cores to use.
+\item{cores}{Numeric (length = 1).
+Number of processing cores.
 Defaults to \code{1} (sequential)}
 
-\item{previous}{A \code{permutation_SemNeT} object from a previous call.
-Reuses its already-permuted networks to test a different \code{measure}
-without regenerating and re-estimating every permuted sample from scratch.
-Requires that original call to have used \code{keep_networks = TRUE}.
+\item{previous}{\code{\link{permutation_SemNeT}} object.
+Reuses the previous call's permuted networks to test other \code{measure}s
+without re-estimating them (requires \code{keep_networks = TRUE} in that call).
 Defaults to \code{NULL}}
 
-\item{keep_networks}{Boolean.
-Whether every permuted sample's estimated networks should be kept in the
-result, in addition to the measure values already computed from them. Only
-needed to test a second \code{measure} later via \code{previous} -- a full
-set of \code{iter} dense networks per sample can be large, and no other use
-needs them. Defaults to \code{FALSE}}
+\item{keep_networks}{Boolean (length = 1).
+Should every permuted network be kept?
+Only needed to test other measures later with \code{previous}
+and can be large.
+Defaults to \code{TRUE}}
+
+\item{seed}{Numeric (length = 1).
+Defaults to \code{NULL} or random results (\code{previous}'s \code{seed}
+when it is used); \code{0} is random too.
+Set a nonzero value for reproducible results.
+Each permutation (and its \code{\link{q}} community detection) gets its own
+seed, so results do not depend on \code{set.seed()} or \code{cores}}
+
+\item{alpha}{Numeric (length = 1).
+Significance level for the critical value of the minimal detectable effect
+(\code{mde}) between 0 and 1 (exclusive). Does not change the \emph{p}-value.
+Defaults to \code{.05}}
+
+\item{power}{Numeric (length = 1).
+Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
+Defaults to \code{.80}}
 }
 \value{
-Returns a list of class \code{"permutation_SemNeT"}:
-\item{result}{A data frame with \code{sample_1}'s and \code{sample_2}'s
-observed \code{measure}, the permutation \emph{p}-value, and the direction
-of the (in)equality tested}
-\item{networks}{A list of \code{network_1}/\code{network_2}, the networks
-estimated for every permuted sample (its first entry is each original,
-unpermuted sample), or \code{NULL} unless \code{keep_networks = TRUE} --
-reusable via \code{previous} only when kept}
-\item{method}{The \code{method} that was used}
-\item{differences}{The observed measure difference for every permutation}
+Returns a list containing:
+
+\item{result}{A data frame with one row per \code{measure} containing each
+sample's observed value, the permutation \emph{p}-value (\code{p_value}), and
+the alternative tested (\code{alternative})}
+
+\item{networks}{A list of \code{network_1} and \code{network_2}, the networks
+of every permuted sample (the first entry is the observed data); \code{NULL}
+unless \code{keep_networks = TRUE}}
+
+\item{method}{The \code{method} used}
+
+\item{seed}{The \code{seed} used (\code{NULL} if none)}
+
+\item{differences}{The measure difference for every permutation: a vector for
+one \code{measure}, or a permutations x measures matrix for several}
+
+\item{diagnostics}{A data frame with a row per permutation containing each
+sample's measure value (\code{value_1} and \code{value_2}, or
+\code{<measure>_1} and \code{<measure>_2} for several measures) and each
+network's \code{nodes_1}, \code{nodes_2}, \code{edges_1}, and \code{edges_2}}
+
+\item{mde}{A data frame with one row per \code{measure} containing \code{alpha},
+\code{power}, \code{critical_value}, \code{null_sd}, and \code{mde}}
 }
 \description{
-Computes a permutation test to determine whether there's a
-difference in a global network measure between two samples
+Tests whether global network measures differ between two samples
+by comparing the observed difference with a null distribution from randomly
+re-dealing the pooled participants into two samples
+}
+\details{
+Always run \code{\link{bootstrap_test_SemNeT}} (on
+\code{\link{bootstrap_SemNeT}} results) alongside this function and report
+both: the permutation test asks whether group membership matters, whereas the
+bootstrap shows how precisely each group's networks and their difference are
+estimated.
+
+The null hypothesis is that the participants' group labels are
+exchangeable: both groups' participants come from the same population of
+responses. A rejection therefore says the groups differ in their responses
+(their vocabularies, how many responses they give, and the size of the
+resulting networks as well as their structure); it does not by itself show a
+difference in semantic structure. \code{diagnostics} shows how the networks'
+sizes vary across permutations.
+
+The permutation null answers a different question than a bootstrap
+interval, so their spreads need not agree: a permutation pools both groups'
+participants and re-deals them, so the permuted networks' node and edge counts
+(which ASPL and CC depend on) vary, whereas a case bootstrap
+(\code{\link{bootstrap_SemNeT}}) resamples within each group. Use
+\code{diagnostics} to see how the network sizes vary.
+
+The three two-sided definitions agree when the null is centred on 0 and
+symmetric, which is the case when the two groups have (about) the same size.
+With unequal group sizes the permutation null is generally not centred on 0,
+because the measures (e.g., ASPL, CC) depend on a network's size. All three
+are valid tests of the same null (the participants' group labels are
+exchangeable) because the observed difference is one of the permutations.
+\code{"two_tailed"} also counts the size-induced offset as evidence;
+\code{"two_tailed_centered"} measures how far the observed difference is
+from what the group sizes alone produce, assuming the null is roughly
+symmetric about its mean; \code{"two_tailed_doubled"} makes no symmetry
+assumption. The one-sided tests are unaffected by centring.
+
+When several \code{measure}s are tested, each is tested against its own null:
+the \emph{p}-values and \code{mde} are \emph{not} adjusted for the number of
+measures.
+
+The minimal detectable effect (\code{mde}) is the smallest true difference
+the test would detect with probability \code{power}, at the study's sample
+sizes (it does not transfer to other sample sizes and, apart from the observed
+difference being one of the \code{iter} permuted values, does not depend on
+the observed difference). The permutation null gives the critical value \eqn{c}
+without assuming normality: the \code{1 - alpha} quantile of \eqn{|T^*|}
+(\code{"two_tailed"}), of \eqn{|T^* - \bar{T}^*|}
+(\code{"two_tailed_centered"}; the \code{mde} is then a difference from the
+null's mean), the larger of the \code{1 - alpha/2} quantile of \eqn{T^*} and
+the negated \code{alpha/2} quantile (\code{"two_tailed_doubled"}),
+\eqn{T^*} (\code{"greater"}), or \eqn{-T^*} (\code{"less"}) over the
+permuted differences. The distribution under an
+alternative is not identified by permuting labels, so it is approximated as
+normal with the null's standard deviation \eqn{\mathrm{SD}_0}:
+\eqn{\mathrm{MDE} \approx c + z_{\mathrm{power}}\,\mathrm{SD}_0}. Use at least
+1000 permutations for a stable critical value.
 }
 \examples{
 # Get openness data -- equating (see `equate()`) requires named responses
@@ -99,13 +227,22 @@ high <- open.clean[which(open.group == "High"), ]
 # aspl
 perm_aspl <- permutation_SemNeT(
   low, high, method = "tmfg", measure = "aspl", iter = 100, cores = 2,
-  keep_networks = TRUE
+  keep_networks = TRUE, seed = 1234
 )
 
 # cc, reusing the same permuted networks
 perm_cc <- permutation_SemNeT(previous = perm_aspl, measure = "cc", cores = 2)
+
+# all three measures at once
+perm_all <- permutation_SemNeT(
+  low, high, method = "tmfg", measure = c("aspl", "cc", "q"), iter = 100,
+  cores = 2, seed = 1234
+)
 }
 
+}
+\seealso{
+\code{\link{bootstrap_test_SemNeT}} for bootstrap tests of group differences
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

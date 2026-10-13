@@ -10,9 +10,26 @@
 #' @param method Character.
 #' Type of similarity measure to compute. One of \code{"cosine"} (default),
 #' \code{"angular"}, \code{"cor"}, \code{"euclid"}, \code{"faith"},
-#' \code{"jaccard"}, \code{"phi"}, or \code{"rr"}. Defaults to \code{"cosine"}
+#' \code{"jaccard"}, \code{"phi"}, or \code{"rr"}. Defaults to \code{"cosine"}.
+#' \code{"euclid"} is the Euclidean \emph{distance} between columns converted
+#' to a similarity, \eqn{1 / (1 + d)}, so that (like every other option) larger
+#' values mean more similar and the matrix can be used to estimate a network
+#' (e.g., \code{\link{tmfg}})
 #'
-#' @return A symmetric similarity matrix
+#' @return A symmetric similarity matrix. The diagonal is set to 1
+#'
+#' @details \code{"angular"}, \code{"faith"}, \code{"jaccard"} and \code{"rr"}
+#' are computed from the 2 x 2 table of two columns' agreements and
+#' disagreements across participants, which needs 0/1 data (other values are an
+#' error); missing or infinite values are an error for every measure. A response nobody gave (an all-zero column) makes
+#' \code{"cosine"}, \code{"angular"} and \code{"jaccard"} undefined (\code{NaN}),
+#' and a response everybody gave (or nobody) makes \code{"cor"}/\code{"phi"}
+#' undefined; remove such responses first (see \code{\link{finalize}}). A
+#' participant who gave no response still counts as a case in which every
+#' response is absent, which matters for the measures that use joint absences
+#' (\code{"cor"}, \code{"phi"}, \code{"faith"}, \code{"rr"}). \code{"euclid"}
+#' mostly reflects how often each response was given: two rare responses that
+#' never co-occur look similar.
 #'
 #' @examples
 #' # Simulate a toy binarized dataset
@@ -28,68 +45,73 @@
 #'
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
-#' @importFrom stats cor dist
-#'
 #' @export
-# Similarity measures
+# Similarity measures ----
 # Updated 06.09.2026
 similarity <- function(data, method = c("cosine", "angular", "cor", "euclid", "faith", "jaccard", "phi", "rr"))
 {
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   data <- similarity_errors(data, method)
 
-  # `match.arg()` picks the *first* listed choice when 'method' is missing,
-  # which is why "cosine" is listed first above -- it's the documented default
+  # Set method
   method <- match.arg(method)
 
-  # Cosine is already a single vectorized matrix computation
+  # Check for cosine
   if(method == "cosine"){
+
+    # Return cosine similarity
     return(cosine(as.matrix(data)))
+
   }
 
-  # `cor`/`phi` are mathematically identical for binary data -- the Pearson
-  # correlation of two 0/1 columns *is* the phi coefficient. The original
-  # package tried to compute a separate "phi" formula but placed it in
-  # unreachable code, so both names have always resolved to `cor()` in
-  # practice; this makes that the documented behavior instead of dead code
+  # Check for correlation
   if(method %in% c("cor", "phi")){
+
+    # Return correlation (phi for binary data)
     return(cor(data))
+
   }
 
-  # Euclidean distance between columns, always returned as a plain matrix
-  # (the original returned a `dist` object here, but a matrix everywhere
-  # else -- an inconsistent return type depending on 'method')
+  # Check for Euclidean
   if(method == "euclid"){
-    return(as.matrix(dist(t(data), diag = TRUE, upper = TRUE)))
+
+    # Return Euclidean distance as similarity
+    return(1 / (1 + as.matrix(dist(t(data), diag = TRUE, upper = TRUE))))
+
   }
 
-  # Everything else ("angular", "faith", "jaccard", "rr") is a function of
-  # the four cells of every pairwise 2x2 contingency table:
-  #   a = both columns 1, b = row-column 1 only, c = column-column 1 only, d = both 0
-  # All four quantities are obtainable from one matrix product plus the
-  # column sums, in place of the original's per-pair for-loop over `data`
+  # Ensure matrix
   binary_matrix <- as.matrix(data)
+
+  # Get number of cases
   n_cases <- nrow(binary_matrix)
+
+  # Get number of nodes
   n_nodes <- ncol(binary_matrix)
 
-  # a[i, j] = number of participants giving both response i and response j
+  # Get responses given by both (a)
   a <- crossprod(binary_matrix)
 
-  # Total times each response was given -- recycled down columns (every
-  # column of this matrix equals 'ones', so entry [i, j] is ones[i])
+  # Get times each response was given
   ones <- colSums(binary_matrix)
+
+  # Get times each response was given by row
   ones_by_row <- matrix(ones, nrow = n_nodes, ncol = n_nodes)
+
+  # Get times each response was given by column
   ones_by_col <- t(ones_by_row)
 
-  # b[i, j] = response i given, j not; c[i, j] = response j given, i not
+  # Get responses given by row only (b)
   b <- ones_by_row - a
+
+  # Get responses given by column only (c)
   c <- ones_by_col - a
+
+  # Get responses given by neither (d)
   d <- n_cases - a - b - c
 
-  # Compute the requested measure across the whole matrix at once -- each
-  # formula below is symmetric in (i, j), so no separate lower-triangle
-  # fill-and-mirror step is needed the way the original required
+  # Compute similarity
   mat <- switch(
     method,
     angular = 1 - (2 * acos(a / sqrt(ones_by_row * ones_by_col)) / pi),
@@ -98,36 +120,72 @@ similarity <- function(data, method = c("cosine", "angular", "cor", "euclid", "f
     rr      = a / (a + b + c + d)
   )
 
-  # Self-similarity is always 1, regardless of formula edge cases at a==ones
+  # Set self-similarity to one
   diag(mat) <- 1
 
+  # Set column names
   colnames(mat) <- colnames(data)
+
+  # Set row names
   row.names(mat) <- colnames(data)
 
+  # Return similarity
   return(mat)
 
 }
 
 #' @noRd
-# Argument errors for `similarity()`
-# Updated 06.09.2026
+# Errors ----
+# Updated 13.10.2026
 similarity_errors <- function(data, method)
 {
 
-  # 'data' must be a matrix or a data.frame (coercible to a matrix)
+  # 'data' errors
   object_error(data, c("matrix", "data.frame"), "similarity")
 
-  # Coerce a data.frame input into a plain matrix
+  # Check for data frame
   if(is.data.frame(data)){
+
+    # Convert to matrix
     data <- as.matrix(data)
+
   }
 
-  # 'data' must hold numeric values
+  # Check for numeric
   typeof_error(data, "numeric", "similarity")
 
-  # 'method' must be one (and only one) of the documented options
-  length_error(method, c(1, 8), "similarity")
+  # Check for missing or infinite values
+  if(!all(is.finite(data))){
 
+    # Send error
+    stop(
+      "In `similarity()`: 'data' has missing or infinite values.\n",
+      "Every response of every participant must be 0 or 1 (not given or given).",
+      call. = FALSE
+    )
+
+  }
+
+  # 'method' errors
+  length_error(method, c(1, 8), "similarity")
+  typeof_error(method, "character", "similarity")
+
+  # Get chosen method
+  chosen <- if(length(method) == 8) method[1] else method
+
+  # Check for binary methods without binary data
+  if(chosen %in% c("angular", "faith", "jaccard", "rr") && !all(data %in% c(0, 1))){
+
+    # Send error
+    stop(
+      "In `similarity()`: method '", chosen, "' needs binary (0/1) data, but 'data' has other values.\n",
+      "Convert the responses first (see `responses2binary()`).",
+      call. = FALSE
+    )
+
+  }
+
+  # Return 'data' (in case of data frame)
   return(data)
 
 }

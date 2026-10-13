@@ -8,8 +8,10 @@
 
 /* Vendored verbatim from {EGAnet}'s src/xoshiro.c (same author). Only
    `next()`/`seed_xoshiro256()`/`splitmix64()` are used by `louvain.c` here;
-   the `r_xoshiro_*` R-callable functions below are kept for fidelity to the
-   original file but aren't registered in this package's init.c. */
+   `r_xoshiro_seeds()`, `r_xoshiro_shuffle()`, and `r_xoshiro_shuffle_replace()`
+   are registered in init.c (reproducible seeds and resampling for
+   `bootstrap_SemNeT()`/`permutation_SemNeT()`); the remaining `r_xoshiro_*`
+   functions are kept for fidelity to the original file but aren't registered. */
 
 #include <stdint.h>
 #include <R.h>

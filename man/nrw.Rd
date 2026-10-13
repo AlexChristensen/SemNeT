@@ -14,19 +14,24 @@ nrw(data, type = c("num", "prop"), threshold = 0)
 A preprocessed verbal fluency matrix where rows are participants and
 columns are the order of their verbal fluency responses. Content may be
 the raw word responses or an ordered numeric response matrix (see
-\code{responses_to_binary()})}
+\code{responses2binary()})}
 
 \item{type}{Character.
 Type of \code{threshold} to apply. One of:
 \itemize{
-\item \code{"num"} --- Minimum number of co-occurrences
-\item \code{"prop"} --- Minimum proportion of co-occurrences
+\item \code{"num"} --- Minimum number of participants in whose responses
+the two responses were adjacent
+\item \code{"prop"} --- Minimum proportion of participants in whose
+responses the two responses were adjacent
 }
 Defaults to \code{"num"}}
 
 \item{threshold}{Numeric.
 Value of the minimum number or proportion of co-occurrences.
-Defaults to \code{0} for both \code{"num"} and \code{"prop"}}
+Defaults to \code{0} for both \code{"num"} and \code{"prop"}.
+With a \code{threshold} above 0, responses left with no link are dropped
+from the network; at \code{0} every response is kept (including one that
+was never adjacent to a different response)}
 }
 \value{
 Returns an undirected semantic network

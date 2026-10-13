@@ -31,7 +31,12 @@
 #' @param min_response Numeric.
 #' Minimum number of responses a participant (\code{type = "fluency"}) or
 #' participant-cue pair (\code{type = "free"}) must have to compute forward
-#' flow for it. Defaults to \code{3}
+#' flow for it (at least 2: the first response has no earlier response to be
+#' measured against). Blank-like responses (\code{""}, \code{" "},
+#' \code{"NA"}) are treated as missing, and responses are counted before any
+#' not found in \code{embeddings} are dropped. A response a participant
+#' repeats has a distance of 0 to its earlier occurrence, and is kept.
+#' Defaults to \code{3}
 #'
 #' @param max_response Numeric.
 #' Maximum number of responses to use, keeping only the first \code{n}.
@@ -88,183 +93,245 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com> & Brendan Baker <bsb5477@psu.edu>
 #'
 #' @export
-# Forward flow -- see NEWS.md for why this no longer auto-downloads a semantic space
+# Forward flow ----
 # Updated 07.09.2026
 forward_flow <- function(response_matrix, embeddings, min_response = 3, max_response = NULL, type = c("fluency", "free"), cores = 1)
 {
 
+  # Argument errors
   validated <- forward_flow_errors(response_matrix, embeddings, min_response, max_response, type, cores)
 
+  # Check for fluency data
   if(validated$type == "fluency"){
+
+    # Return fluency forward flow
     return(forward_flow_fluency(validated$response_matrix, validated$embeddings, min_response, max_response, cores))
+
   }
 
+  # Return free association forward flow
   return(forward_flow_free(validated$response_matrix, validated$embeddings, min_response, max_response, cores))
 
 }
 
 #' @noRd
-# One participant's (or one participant-cue's) response-by-response forward
-# flow -- the semantic distance of each response to the mean of every
-# response before it. A response with no matching `embeddings` row becomes
-# an all-`NA` (then all-zero via `cosine()`) vector, which comes out as
-# `NaN` similarity and is excluded by `na.rm = TRUE` below, rather than
-# corrupting every flow value it touches
+# Response flow ----
 # Updated 07.09.2026
 response_flow <- function(responses, embeddings)
 {
 
+  # Lower case responses
   responses <- tolower(responses)
+
+  # Get number of responses
   n <- length(responses)
 
+  # Check for one response or fewer
   if(n <= 1){
+
+    # Return undefined flow
     return(list(flow = NA_real_, mean_flow = NA_real_))
+
   }
 
+  # Get vectors of responses
   vectors <- t(embeddings[match(responses, rownames(embeddings)), , drop = FALSE])
 
-  # One cosine similarity matrix for the whole sequence, computed once --
-  # each response's forward flow only ever needs its own row against the
-  # columns that precede it, so there's no need to recompute this per response
+  # Get similarities between responses
   similarities <- cosine(vectors)
 
+  # Get flow of each response
   flow <- vapply(2:n, function(i) mean(1 - similarities[i, seq_len(i - 1)], na.rm = TRUE), numeric(1))
 
-  # A response with zero matched vocabulary among the responses before it (or
-  # a participant/cue with zero matched vocabulary at all) hits `mean()` of
-  # an empty, fully-`na.rm`'d vector, which is `NaN`, not `NA` -- normalized
-  # here so "no data" is always `NA`, never a stray `NaN` in the output
+  # Set undefined flow to missing
   flow[is.nan(flow)] <- NA_real_
+
+  # Get mean flow
   mean_flow <- mean(flow, na.rm = TRUE)
+
+  # Set undefined mean flow to missing
   mean_flow <- swiftelse_scalar(is.nan(mean_flow), NA_real_, mean_flow)
 
+  # Return flow
   return(list(flow = flow, mean_flow = mean_flow))
 
 }
 
 #' @noRd
-# `type = "fluency"`: one row per participant, one raw response per column
+# Forward flow of fluency data ----
 # Updated 07.09.2026
 forward_flow_fluency <- function(response_matrix, embeddings, min_response, max_response, cores)
 {
 
+  # Get participant IDs
   ids <- rownames(response_matrix)
 
+  # Check for no IDs
   if(is.null(ids)){
+
+    # Number participants
     ids <- as.character(seq_len(nrow(response_matrix)))
+
   }
 
+  # Loop over participants
   response_list <- lapply(seq_len(nrow(response_matrix)), function(i){
 
-    # `response_matrix[i, ]` is already a plain vector -- `response_matrix`
-    # was coerced to a matrix by `response_matrix_error()`, and indexing a
-    # single row out of a matrix always drops to a vector
-    responses <- stats::na.omit(response_matrix[i, ])
+    # Replace bad responses with missing
+    responses <- bad_response(response_matrix[i, ])
 
+    # Remove missing responses
+    responses <- responses[!is.na(responses)]
+
+    # Check for maximum responses
     if(!is.null(max_response)){
+
+      # Keep first responses
       responses <- utils::head(responses, max_response)
+
     }
 
-    # Below `min_response`: `character(0)` short-circuits to `NA` inside
-    # `response_flow()`'s own `n <= 1` check, same as any other participant
-    # with too few usable responses
+    # Check for too few responses
     if(length(responses) < min_response){
+
+      # Return no responses
       return(character(0))
+
     }
 
+    # Return responses
     return(responses)
 
   })
 
-  # Shrinking `embeddings` down to only the vocabulary actually used keeps
-  # memory flat regardless of how large the full embedding matrix is
+  # Get vocabulary
   vocabulary <- unique(tolower(unlist(response_list)))
+
+  # Keep embeddings of vocabulary
   shrunk <- embeddings[rownames(embeddings) %in% vocabulary, , drop = FALSE]
 
+  # Compute flow of each participant
   results <- parallel_process(
     length(response_list),
     function(i) response_flow(response_list[[i]], shrunk),
     cores = cores
   )
 
+  # Set up mean flow
   mean_flow <- data.frame(
     ID = ids,
     FF = vapply(results, function(result) result$mean_flow, numeric(1)),
     stringsAsFactors = FALSE
   )
 
+  # Get flow of each response
   response_flow_list <- lapply(results, function(result) result$flow)
+
+  # Name flow by participant
   names(response_flow_list) <- ids
 
+  # Return flow
   return(list(mean_flow = mean_flow, response_flow = response_flow_list))
 
 }
 
 #' @noRd
-# `type = "free"`: long-format ID/Cue/Response data, one response per row.
-# Every participant-cue pair meeting `min_response` becomes one item to
-# parallelize over (there are usually far more of these than participants)
+# Forward flow of free association data ----
 # Updated 07.09.2026
 forward_flow_free <- function(response_matrix, embeddings, min_response, max_response, cores)
 {
 
+  # Get participant IDs
   ids <- unique(response_matrix$ID)
+
+  # Get number of rows
   n_rows <- nrow(response_matrix)
 
-  # Group row indices by participant, then by cue within each participant, in
-  # one `split()` pass over the table -- re-scanning the *entire* table once
-  # per participant (`response_matrix$ID == id`, as this used to do) is
-  # effectively quadratic in the number of rows for a dataset with many
-  # participants (benchmarked ~50x faster at 2,400 participants / 360,000
-  # rows, identical output)
+  # Split rows by participant
   rows_by_id <- split(seq_len(n_rows), factor(response_matrix$ID, levels = ids))
 
-  # Pre-allocated to the maximum possible size (one entry per row) and
-  # trimmed at the end -- growing these with `c()`/`[[<-` one participant-cue
-  # pair at a time would reintroduce the same quadratic cost this fix removes
+  # Initialize responses of cues
   cue_responses <- vector("list", n_rows)
+
+  # Initialize IDs of cues
   cue_ids <- character(n_rows)
+
+  # Initialize names of cues
   cue_names <- character(n_rows)
+
+  # Initialize number of groups
   n_groups <- 0L
 
+  # Loop over participants
   for(id in names(rows_by_id)){
 
+    # Get rows of participant
     rows <- rows_by_id[[id]]
+
+    # Get cues of participant
     cue_levels <- unique(response_matrix$Cue[rows])
+
+    # Split rows by cue
     rows_by_cue <- split(rows, factor(response_matrix$Cue[rows], levels = cue_levels))
 
+    # Loop over cues
     for(cue in names(rows_by_cue)){
 
+      # Get responses to cue
       responses <- response_matrix$Response[rows_by_cue[[cue]]]
 
+      # Check for maximum responses
       if(!is.null(max_response)){
+
+        # Keep first responses
         responses <- utils::head(responses, max_response)
+
       }
 
+      # Check for enough responses
       if(length(responses) >= min_response){
+
+        # Update number of groups
         n_groups <- n_groups + 1L
+
+        # Store responses
         cue_responses[[n_groups]] <- responses
+
+        # Store ID
         cue_ids[n_groups] <- id
+
+        # Store cue
         cue_names[n_groups] <- cue
+
       }
 
     }
 
   }
 
+  # Trim responses
   cue_responses <- cue_responses[seq_len(n_groups)]
+
+  # Trim IDs
   cue_ids <- cue_ids[seq_len(n_groups)]
+
+  # Trim cues
   cue_names <- cue_names[seq_len(n_groups)]
 
+  # Get vocabulary
   vocabulary <- unique(tolower(unlist(cue_responses)))
+
+  # Keep embeddings of vocabulary
   shrunk <- embeddings[rownames(embeddings) %in% vocabulary, , drop = FALSE]
 
+  # Compute flow of each participant-cue
   results <- parallel_process(
     length(cue_responses),
     function(i) response_flow(cue_responses[[i]], shrunk),
     cores = cores
   )
 
+  # Set up mean flow of cues
   mean_response_flow <- data.frame(
     ID = cue_ids,
     Cue = cue_names,
@@ -272,103 +339,158 @@ forward_flow_free <- function(response_matrix, embeddings, min_response, max_res
     stringsAsFactors = FALSE
   )
 
-  # Every participant gets a row, even one whose every cue fell below
-  # `min_response` (`FF` is `NA` for them, rather than the participant
-  # silently disappearing from the output)
+  # Average flow across cues
   by_id <- if(nrow(mean_response_flow) > 0){
+
+    # Aggregate by participant
     stats::aggregate(FF ~ ID, data = mean_response_flow, FUN = mean, na.rm = TRUE)
+
   }else{
+
+    # Set empty result
     data.frame(ID = character(0), FF = numeric(0), stringsAsFactors = FALSE)
+
   }
 
+  # Keep every participant
   mean_flow <- merge(data.frame(ID = ids, stringsAsFactors = FALSE), by_id, by = "ID", all.x = TRUE)
 
-  # Same fix as the grouping step above: group each participant's qualifying
-  # (id, cue) result indices once via `split()`, instead of re-scanning
-  # `cue_ids` (length = number of qualifying participant-cue pairs) once per
-  # participant
+  # Split results by participant
   result_index_by_id <- split(seq_along(cue_ids), factor(cue_ids, levels = ids))
 
+  # Initialize flow of responses
   response_flow_list <- vector("list", length(ids))
+
+  # Name flow by participant
   names(response_flow_list) <- ids
 
+  # Loop over participants
   for(id in ids){
-    # `[[` on a list indexes *positionally* when given a numeric value --
-    # `ids` can itself be numeric (e.g. integer participant IDs), so an
-    # unconverted `id` here would silently look up the wrong participant (or
-    # throw "subscript out of bounds" once an ID exceeds the number of
-    # participants) instead of doing the name-based lookup this needs
+
+    # Get name of participant
     id_name <- as.character(id)
+
+    # Get results of participant
     id_index <- result_index_by_id[[id_name]]
+
+    # Get flow of each cue
     per_cue <- lapply(results[id_index], function(result) result$flow)
+
+    # Name flow by cue
     names(per_cue) <- cue_names[id_index]
+
+    # Store flow of participant
     response_flow_list[[id_name]] <- per_cue
+
   }
 
+  # Return flow
   return(list(mean_flow = mean_flow, mean_response_flow = mean_response_flow, response_flow = response_flow_list))
 
 }
 
 #' @noRd
-# Argument errors for `forward_flow()`
-# Updated 07.09.2026
+# Errors ----
+# Updated 13.10.2026
 forward_flow_errors <- function(response_matrix, embeddings, min_response, max_response, type, cores)
 {
 
+  # 'type' errors
+  length_error(type, c(1, 2), "forward_flow")
+  typeof_error(type, "character", "forward_flow")
+
+  # Match type
   type <- match.arg(type, c("fluency", "free"))
 
+  # 'response_matrix' errors
   if(type == "fluency"){
 
+    # Check for response matrix
     response_matrix <- response_matrix_error(response_matrix, "forward_flow")
 
   }else{
 
+    # Check for matrix or data frame
     object_error(response_matrix, c("matrix", "data.frame"), "forward_flow")
 
+    # Check for matrix
     if(is.matrix(response_matrix)){
+
+      # Convert to data frame
       response_matrix <- as.data.frame(response_matrix, stringsAsFactors = FALSE)
+
     }
 
+    # Check for required columns
     if(!all(c("ID", "Cue", "Response") %in% colnames(response_matrix))){
+
+      # Send error
       stop(
         "In `forward_flow()`: `type = \"free\"` requires columns \"ID\", \"Cue\", and \"Response\" in `response_matrix`.",
         call. = FALSE
       )
+
     }
 
   }
 
+  # 'embeddings' errors
   object_error(embeddings, c("matrix", "data.frame"), "forward_flow")
 
+  # Check for data frame
   if(is.data.frame(embeddings)){
+
+    # Convert to matrix
     embeddings <- as.matrix(embeddings)
+
   }
 
+  # Check for numeric
   typeof_error(embeddings, "numeric", "forward_flow")
 
+  # Check for row names
   if(is.null(rownames(embeddings))){
+
+    # Send error
     stop(
       "In `forward_flow()`: `embeddings` must have row names identifying each vocabulary term.",
       call. = FALSE
     )
+
   }
 
+  # Lower case row names
   rownames(embeddings) <- tolower(rownames(embeddings))
 
+  # Check for duplicate row names
+  if(anyDuplicated(rownames(embeddings)) > 0){
+
+    # Send error
+    stop(
+      "In `forward_flow()`: `embeddings` has row names that are the same once lower-cased (e.g., \"Apple\" and \"apple\").",
+      call. = FALSE
+    )
+
+  }
+
+  # 'min_response' errors
   length_error(min_response, 1, "forward_flow")
   typeof_error(min_response, "numeric", "forward_flow")
-  range_error(min_response, c(1, Inf), "forward_flow")
+  range_error(min_response, c(2, Inf), "forward_flow")
 
+  # 'max_response' errors
   if(!is.null(max_response)){
     length_error(max_response, 1, "forward_flow")
     typeof_error(max_response, "numeric", "forward_flow")
     range_error(max_response, c(1, Inf), "forward_flow")
   }
 
+  # 'cores' errors
   length_error(cores, 1, "forward_flow")
   typeof_error(cores, "numeric", "forward_flow")
   range_error(cores, c(1, Inf), "forward_flow")
 
+  # Return validated input (in case of data frames or matched 'type')
   return(list(response_matrix = response_matrix, embeddings = embeddings, type = type))
 
 }

@@ -35,66 +35,71 @@
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# Multi-format file reader for the Shiny app's upload widgets -- dispatches on
-# the *original* file name's extension (not the temp `datapath` Shiny stores
-# the upload under, which isn't guaranteed to carry a matching extension),
-# but reads the actual uploaded content from `datapath`. Real bug fixed
-# relative to the pre-2.0.0 Shiny app's `read.data()`, which inferred the
-# extension from `datapath` itself.
-# Exported for the same reason as `responses_to_binary()` (see helpers.R):
-# an unexported (`@noRd`) helper called directly from `inst/Shiny/` is
-# invisible under a real `library(SemNeT)` install, and only appeared to
-# work because Phase 7's own testing used `devtools::load_all()` throughout
+# Read uploaded file ----
 # Updated 10.09.2026
 read_uploaded_file <- function(datapath, filename, header = TRUE, sep = ",")
 {
 
-  # Extension is read off the name the user's browser sent, lower-cased so
-  # ".CSV"/".csv" are treated the same way
+  # Argument errors
+  read_uploaded_file_errors(datapath, filename, header, sep)
+
+  # Get file extension
   extension <- tolower(tools::file_ext(filename))
 
-  # These readers are `Suggests`, not `Imports` -- checked here, per format,
-  # rather than requiring every possible format's package just to launch the
-  # app (most users only ever upload one format)
+  # Get package needed to read extension
   format_package <- switch(
     extension, xlsx = "readxl", xls = "readxl", sav = "foreign", mat = "R.matlab", NULL
   )
 
+  # Check for missing package
   if(!is.null(format_package) && !requireNamespace(format_package, quietly = TRUE)){
+
+    # Send error
     stop(
       "In `read_uploaded_file()`: reading a \".", extension, "\" file requires the '", format_package, "' package. ",
       "Install it with `install.packages(\"", format_package, "\")`.",
       call. = FALSE
     )
+
   }
 
+  # Check for RData
   if(extension == "rdata"){
 
-    # Loaded into a private environment, not `.GlobalEnv` -- the Shiny app
-    # never touches the user's real global environment (see `SHINY_PLAN.md`'s
-    # "Deferred / Dropped" section)
+    # Set up private environment
     holder <- new.env()
+
+    # Load file into environment
     load(datapath, envir = holder)
+
+    # Get objects
     objects <- as.list(holder)
 
+    # Check for one object
     if(length(objects) != 1){
+
+      # Send error
       stop(
         "In `read_uploaded_file()`: an \".RData\" file must contain exactly one object.",
         call. = FALSE
       )
+
     }
 
+    # Return object
     return(objects[[1]])
 
   }
 
-  # A bare/missing extension falls through to the same plain-text reader as
-  # ".txt" -- `switch()` can't take an empty string as a case label directly,
-  # so that's normalized here instead
+  # Check for no extension
   if(extension == ""){
+
+    # Return table
     return(utils::read.table(datapath, header = header, sep = sep))
+
   }
 
+  # Return data
   return(switch(
     extension,
     rds = readRDS(datapath),
@@ -112,6 +117,30 @@ read_uploaded_file <- function(datapath, filename, header = TRUE, sep = ",")
 
 }
 
+#' @noRd
+# Errors ----
+# Updated 13.10.2026
+read_uploaded_file_errors <- function(datapath, filename, header, sep)
+{
+
+  # 'datapath' errors
+  length_error(datapath, 1, "read_uploaded_file")
+  typeof_error(datapath, "character", "read_uploaded_file")
+
+  # 'filename' errors
+  length_error(filename, 1, "read_uploaded_file")
+  typeof_error(filename, "character", "read_uploaded_file")
+
+  # 'header' errors
+  length_error(header, 1, "read_uploaded_file")
+  typeof_error(header, "logical", "read_uploaded_file")
+
+  # 'sep' errors
+  length_error(sep, 1, "read_uploaded_file")
+  typeof_error(sep, "character", "read_uploaded_file")
+
+}
+
 #' @title Find Usable \code{textcleaner} Objects in the Global Environment
 #'
 #' @description Scans \code{.GlobalEnv} for objects inheriting class
@@ -123,7 +152,7 @@ read_uploaded_file <- function(datapath, filename, header = TRUE, sep = ",")
 #' Restricted to \code{type = "fluency"} results: a \code{type = "free"}
 #' result's \code{$data$clean} is a long-format response/cue/ID table, a
 #' different shape than the participant x response-slot word matrix this
-#' package's own \code{responses_to_binary()} (and every bundled example
+#' package's own \code{responses2binary()} (and every bundled example
 #' dataset) expects -- not something to silently reshape without a real
 #' design decision, so it's excluded here rather than offered and failing
 #' downstream.
@@ -137,25 +166,26 @@ read_uploaded_file <- function(datapath, filename, header = TRUE, sep = ",")
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @export
-# New: the shared hand-off mechanism between SemNetCleaner's
-# textcleaner_shiny() app and this package's own SemNeTShiny() app -- both
-# are ordinarily launched sequentially from the same interactive R session,
-# so `.GlobalEnv` itself (not a file, temp path, or `options()` signal) is
-# the whole channel. Exported (not just internal) for the same reason
-# read_uploaded_file() is: inst/Shiny/'s own module files are sourced into
-# the global environment by Shiny's own app-loading mechanism, not into the
-# package namespace -- an unexported function is not reachable from there
-# by its bare name.
+# Find {SemNetCleaner} objects ----
+# Updated 10.09.2026
 find_textcleaner_objects <- function()
 {
 
+  # Get objects in global environment
   candidates <- ls(envir = .GlobalEnv)
 
+  # Identify fluency {SemNetCleaner} objects
   is_usable_textcleaner <- vapply(candidates, function(name){
+
+    # Get object
     obj <- tryCatch(get(name, envir = .GlobalEnv), error = function(e) NULL)
+
+    # Check for classes
     inherits(obj, "textcleaner") && inherits(obj, "fluency")
+
   }, logical(1))
 
+  # Return usable objects
   candidates[is_usable_textcleaner]
 
 }

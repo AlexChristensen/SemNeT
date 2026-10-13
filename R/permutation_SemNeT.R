@@ -1,72 +1,197 @@
 #' @title Permutation Test for Network Measures
 #'
-#' @description Computes a permutation test to determine whether there's a
-#' difference in a global network measure between two samples
+#' @description Tests whether global network measures differ between two samples
+#' by comparing the observed difference with a null distribution from randomly
+#' re-dealing the pooled participants into two samples
 #'
 #' @param sample_1 Matrix or data frame.
-#' Response matrix to be compared with \code{sample_2}
+#' Response matrix to be compared with \code{sample_2}. The two samples are
+#' pooled by rows, so their columns are lined up first: raw responses of
+#' different widths are padded with missing responses, and numeric matrices are
+#' matched by column (response) name
 #'
 #' @param sample_2 Matrix or data frame.
 #' Response matrix to be compared with \code{sample_1}
 #'
-#' @param method Character.
-#' Network estimation method to use: \code{"tmfg"}, \code{"cn"}, \code{"nrw"},
-#' or \code{"pf"} -- see \code{\link{tmfg}}, \code{\link{cn}}, \code{\link{nrw}},
-#' and \code{\link{pf}}
+#' @param method Character (length = 1).
+#' Network estimation method.
+#' Defaults to \code{"tmfg"}.
+#' Available options:
+#'
+#' \itemize{
+#'
+#' \item \code{"tmfg"} --- See \code{\link{tmfg}}
+#'
+#' \item \code{"cn"} --- See \code{\link{cn}}
+#'
+#' \item \code{"nrw"} --- See \code{\link{nrw}}
+#'
+#' \item \code{"pf"} --- See \code{\link{pf}}
+#'
+#' }
 #'
 #' @param method_args List.
-#' Additional arguments passed on to the chosen \code{method}'s own function.
-#' Defaults to \code{list()} (every method's own defaults apply)
+#' Additional arguments passed to \code{method}'s function.
+#' Defaults to \code{list()} (the method's defaults)
 #'
-#' @param sim Character.
-#' Similarity measure to use, \code{method = "tmfg"} only.
-#' Defaults to \code{"cosine"}. See \code{\link{similarity}} for other options
+#' @param sim Character (length = 1).
+#' Similarity measure for \code{method = "tmfg"}.
+#' Defaults to \code{"cosine"}.
+#' See \code{\link{similarity}} for other options
 #'
-#' @param minimum_cases Numeric.
+#' @param minimum_cases Numeric (length = 1).
 #' \strong{Only} for \code{method = "tmfg"}.
-#' Minimum number of participants required to have given a response for that
-#' response to be kept, via \code{\link{finalize}}, before equating the two
-#' samples' vocabularies via \code{\link{equate}}.
+#' Minimum number of participants who gave a response for it to be kept
+#' (\code{\link{finalize}}) before the samples' vocabularies are equated
+#' (\code{\link{equate}}).
 #' Defaults to \code{2}
 #'
 #' @param measure Character.
-#' Global network measure to compare: one of \code{"aspl"}, \code{"cc"}, or \code{"q"}
+#' One or more of \code{"aspl"}, \code{"cc"}, and \code{"q"}
+#' (e.g., \code{c("aspl", "cc", "q")} for all three).
+#' Every measure is computed from the same permuted networks, so testing
+#' several costs little more than one.
+#' Defaults to \code{"aspl"}
 #'
-#' @param alternative Character.
-#' Alternative hypothesis: \code{"two_tailed"}, \code{"less"}, or \code{"greater"}.
-#' Defaults to \code{"two_tailed"}
+#' @param alternative Character (length = 1).
+#' Alternative hypothesis.
+#' Defaults to \code{"two_tailed"}.
+#' Available options:
 #'
-#' @param iter Numeric.
-#' Number of permuted samples to generate.
+#' \itemize{
+#'
+#' \item \code{"two_tailed"} --- \code{sample_1} differs from \code{sample_2};
+#' the \emph{p}-value is the proportion of permuted differences \eqn{T^*} with
+#' \eqn{|T^*| \ge |T_{obs}|} (distance from 0)
+#'
+#' \item \code{"two_tailed_centered"} --- same hypothesis, but the distance is
+#' measured from the permutation null's mean \eqn{\bar{T}^*}:
+#' \eqn{|T^* - \bar{T}^*| \ge |T_{obs} - \bar{T}^*|}
+#'
+#' \item \code{"two_tailed_doubled"} --- same hypothesis, with the \emph{p}-value
+#' twice the smaller one-sided \emph{p}-value (at most 1)
+#'
+#' \item \code{"less"} --- \code{sample_1} is less than \code{sample_2}
+#'
+#' \item \code{"greater"} --- \code{sample_1} is greater than \code{sample_2}
+#'
+#' }
+#'
+#' @param iter Numeric (length = 1).
+#' Number of permutations (the first is the observed data).
 #' Defaults to \code{1000}
 #'
-#' @param cores Numeric.
-#' Number of processing cores to use.
+#' @param cores Numeric (length = 1).
+#' Number of processing cores.
 #' Defaults to \code{1} (sequential)
 #'
-#' @param previous A \code{permutation_SemNeT} object from a previous call.
-#' Reuses its already-permuted networks to test a different \code{measure}
-#' without regenerating and re-estimating every permuted sample from scratch.
-#' Requires that original call to have used \code{keep_networks = TRUE}.
+#' @param previous \code{\link{permutation_SemNeT}} object.
+#' Reuses the previous call's permuted networks to test other \code{measure}s
+#' without re-estimating them (requires \code{keep_networks = TRUE} in that call).
 #' Defaults to \code{NULL}
 #'
-#' @param keep_networks Boolean.
-#' Whether every permuted sample's estimated networks should be kept in the
-#' result, in addition to the measure values already computed from them. Only
-#' needed to test a second \code{measure} later via \code{previous} -- a full
-#' set of \code{iter} dense networks per sample can be large, and no other use
-#' needs them. Defaults to \code{FALSE}
+#' @param keep_networks Boolean (length = 1).
+#' Should every permuted network be kept?
+#' Only needed to test other measures later with \code{previous}
+#' and can be large.
+#' Defaults to \code{TRUE}
 #'
-#' @return Returns a list of class \code{"permutation_SemNeT"}:
-#' \item{result}{A data frame with \code{sample_1}'s and \code{sample_2}'s
-#' observed \code{measure}, the permutation \emph{p}-value, and the direction
-#' of the (in)equality tested}
-#' \item{networks}{A list of \code{network_1}/\code{network_2}, the networks
-#' estimated for every permuted sample (its first entry is each original,
-#' unpermuted sample), or \code{NULL} unless \code{keep_networks = TRUE} --
-#' reusable via \code{previous} only when kept}
-#' \item{method}{The \code{method} that was used}
-#' \item{differences}{The observed measure difference for every permutation}
+#' @param seed Numeric (length = 1).
+#' Defaults to \code{NULL} or random results (\code{previous}'s \code{seed}
+#' when it is used); \code{0} is random too.
+#' Set a nonzero value for reproducible results.
+#' Each permutation (and its \code{\link{q}} community detection) gets its own
+#' seed, so results do not depend on \code{set.seed()} or \code{cores}
+#'
+#' @param alpha Numeric (length = 1).
+#' Significance level for the critical value of the minimal detectable effect
+#' (\code{mde}) between 0 and 1 (exclusive). Does not change the \emph{p}-value.
+#' Defaults to \code{.05}
+#'
+#' @param power Numeric (length = 1).
+#' Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
+#' Defaults to \code{.80}
+#'
+#' @details Always run \code{\link{bootstrap_test_SemNeT}} (on
+#' \code{\link{bootstrap_SemNeT}} results) alongside this function and report
+#' both: the permutation test asks whether group membership matters, whereas the
+#' bootstrap shows how precisely each group's networks and their difference are
+#' estimated.
+#'
+#' The null hypothesis is that the participants' group labels are
+#' exchangeable: both groups' participants come from the same population of
+#' responses. A rejection therefore says the groups differ in their responses
+#' (their vocabularies, how many responses they give, and the size of the
+#' resulting networks as well as their structure); it does not by itself show a
+#' difference in semantic structure. \code{diagnostics} shows how the networks'
+#' sizes vary across permutations.
+#'
+#' The permutation null answers a different question than a bootstrap
+#' interval, so their spreads need not agree: a permutation pools both groups'
+#' participants and re-deals them, so the permuted networks' node and edge counts
+#' (which ASPL and CC depend on) vary, whereas a case bootstrap
+#' (\code{\link{bootstrap_SemNeT}}) resamples within each group. Use
+#' \code{diagnostics} to see how the network sizes vary.
+#'
+#' The three two-sided definitions agree when the null is centred on 0 and
+#' symmetric, which is the case when the two groups have (about) the same size.
+#' With unequal group sizes the permutation null is generally not centred on 0,
+#' because the measures (e.g., ASPL, CC) depend on a network's size. All three
+#' are valid tests of the same null (the participants' group labels are
+#' exchangeable) because the observed difference is one of the permutations.
+#' \code{"two_tailed"} also counts the size-induced offset as evidence;
+#' \code{"two_tailed_centered"} measures how far the observed difference is
+#' from what the group sizes alone produce, assuming the null is roughly
+#' symmetric about its mean; \code{"two_tailed_doubled"} makes no symmetry
+#' assumption. The one-sided tests are unaffected by centring.
+#'
+#' When several \code{measure}s are tested, each is tested against its own null:
+#' the \emph{p}-values and \code{mde} are \emph{not} adjusted for the number of
+#' measures.
+#'
+#' The minimal detectable effect (\code{mde}) is the smallest true difference
+#' the test would detect with probability \code{power}, at the study's sample
+#' sizes (it does not transfer to other sample sizes and, apart from the observed
+#' difference being one of the \code{iter} permuted values, does not depend on
+#' the observed difference). The permutation null gives the critical value \eqn{c}
+#' without assuming normality: the \code{1 - alpha} quantile of \eqn{|T^*|}
+#' (\code{"two_tailed"}), of \eqn{|T^* - \bar{T}^*|}
+#' (\code{"two_tailed_centered"}; the \code{mde} is then a difference from the
+#' null's mean), the larger of the \code{1 - alpha/2} quantile of \eqn{T^*} and
+#' the negated \code{alpha/2} quantile (\code{"two_tailed_doubled"}),
+#' \eqn{T^*} (\code{"greater"}), or \eqn{-T^*} (\code{"less"}) over the
+#' permuted differences. The distribution under an
+#' alternative is not identified by permuting labels, so it is approximated as
+#' normal with the null's standard deviation \eqn{\mathrm{SD}_0}:
+#' \eqn{\mathrm{MDE} \approx c + z_{\mathrm{power}}\,\mathrm{SD}_0}. Use at least
+#' 1000 permutations for a stable critical value.
+#'
+#' @return Returns a list containing:
+#'
+#' \item{result}{A data frame with one row per \code{measure} containing each
+#' sample's observed value, the permutation \emph{p}-value (\code{p_value}), and
+#' the alternative tested (\code{alternative})}
+#'
+#' \item{networks}{A list of \code{network_1} and \code{network_2}, the networks
+#' of every permuted sample (the first entry is the observed data); \code{NULL}
+#' unless \code{keep_networks = TRUE}}
+#'
+#' \item{method}{The \code{method} used}
+#'
+#' \item{seed}{The \code{seed} used (\code{NULL} if none)}
+#'
+#' \item{differences}{The measure difference for every permutation: a vector for
+#' one \code{measure}, or a permutations x measures matrix for several}
+#'
+#' \item{diagnostics}{A data frame with a row per permutation containing each
+#' sample's measure value (\code{value_1} and \code{value_2}, or
+#' \code{<measure>_1} and \code{<measure>_2} for several measures) and each
+#' network's \code{nodes_1}, \code{nodes_2}, \code{edges_1}, and \code{edges_2}}
+#'
+#' \item{mde}{A data frame with one row per \code{measure} containing \code{alpha},
+#' \code{power}, \code{critical_value}, \code{null_sd}, and \code{mde}}
+#'
+#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
 #' @examples
 #' # Get openness data -- equating (see `equate()`) requires named responses
@@ -77,282 +202,746 @@
 #' # aspl
 #' perm_aspl <- permutation_SemNeT(
 #'   low, high, method = "tmfg", measure = "aspl", iter = 100, cores = 2,
-#'   keep_networks = TRUE
+#'   keep_networks = TRUE, seed = 1234
 #' )
 #'
 #' # cc, reusing the same permuted networks
 #' perm_cc <- permutation_SemNeT(previous = perm_aspl, measure = "cc", cores = 2)
+#'
+#' # all three measures at once
+#' perm_all <- permutation_SemNeT(
+#'   low, high, method = "tmfg", measure = c("aspl", "cc", "q"), iter = 100,
+#'   cores = 2, seed = 1234
+#' )
 #' }
 #'
-#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
+#' @seealso \code{\link{bootstrap_test_SemNeT}} for bootstrap tests of group differences
 #'
 #' @export
-# Permutation test for a global network measure
-# Updated 06.09.2026
+# Permutation test ----
+# Updated 12.10.2026
 permutation_SemNeT <- function(
   sample_1 = NULL, sample_2 = NULL,
   method = c("tmfg", "cn", "nrw", "pf"), method_args = list(),
   sim = "cosine", minimum_cases = 2,
-  measure = c("aspl", "cc", "q"),
-  alternative = c("two_tailed", "less", "greater"),
-  iter = 1000, cores = 1, previous = NULL, keep_networks = FALSE
+  measure = "aspl",
+  alternative = c("two_tailed", "two_tailed_centered", "two_tailed_doubled", "less", "greater"),
+  iter = 1000, cores = 1, previous = NULL, keep_networks = TRUE,
+  seed = NULL, alpha = .05, power = .80
 )
 {
 
-  # Captured before any reassignment below -- once 'sample_1'/'sample_2' are
-  # reassigned to their validated/coerced values, they're no longer unforced
-  # promises, so `substitute()` would return their (potentially huge) value
-  # instead of the caller's original argument expression
+  # Get name of first sample
   sample_1_name <- deparse(substitute(sample_1))
+
+  # Get name of second sample
   sample_2_name <- deparse(substitute(sample_2))
 
-  # Validate and coerce input before any computation begins
+  # Argument errors
   validated <- permutation_SemNeT_errors(
-    sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, previous, keep_networks
+    sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, previous, keep_networks, seed,
+    alpha, power
   )
+
+  # Get first sample
   sample_1 <- validated$sample_1
+
+  # Get second sample
   sample_2 <- validated$sample_2
+
+  # Get method
   method <- validated$method
+
+  # Get method arguments
   method_args <- validated$method_args
 
-  measure <- match.arg(measure)
-  alternative <- match.arg(alternative)
-  measure_function <- switch(measure, aspl = aspl, cc = cc, q = q)
+  # Get unique measures
+  measure <- unique(measure)
 
-  # Reuse a previous call's already-permuted networks to test a different
-  # measure, instead of regenerating and re-estimating every sample again --
-  # `permutation_SemNeT_errors()` already confirmed `previous$networks` isn't
-  # NULL (i.e. that call used `keep_networks = TRUE`)
+  # Set alternative
+  alternative <- match.arg(alternative)
+
+  # Set up measure function
+  measure_function <- function(A, seed = NULL){
+    semantic_network_measures(A, measures = measure, weighted = FALSE, seed = seed)
+  }
+
+  # Check for previous seed
+  if(!is.null(previous) && is.null(seed)){
+
+    # Use seed of previous result
+    seed <- previous$seed
+
+  }
+
+  # Check for random seed
+  if(random_seed(seed) && (is.null(previous) || "q" %in% measure)){
+
+    # Send message
+    message("Argument 'seed' is `NULL` or 0. Results will not be reproducible. Set 'seed' for reproducible results")
+
+  }
+
+  # Check for previous result
   if(!is.null(previous)){
 
-    values_1 <- vapply(previous$networks$network_1, measure_function, numeric(1))
-    values_2 <- vapply(previous$networks$network_2, measure_function, numeric(1))
+    # Get permuted networks of first sample
     networks_1 <- previous$networks$network_1
+
+    # Get permuted networks of second sample
     networks_2 <- previous$networks$network_2
+
+    # Get seeds
+    seeds <- reproducible_seeds(length(networks_1), seed)
+
+    # Compute measures of first sample
+    values_1 <- vapply(seq_along(networks_1), function(i) measure_function(networks_1[[i]], seeds[i]), numeric(length(measure)))
+
+    # Compute measures of second sample
+    values_2 <- vapply(seq_along(networks_2), function(i) measure_function(networks_2[[i]], seeds[i]), numeric(length(measure)))
+
+    # Get counts of first sample
+    counts_1 <- vapply(networks_1, network_counts, numeric(2))
+
+    # Get counts of second sample
+    counts_2 <- vapply(networks_2, network_counts, numeric(2))
 
   }else{
 
-    message("Generating permuted samples...")
-    permuted <- generate_permuted_samples(sample_1, sample_2, iter)
+    # Get seeds
+    seeds <- reproducible_seeds(iter, seed)
 
-    if(method == "tmfg"){
-
-      message("Finalizing and equating samples...")
-
-      # Raw word responses are converted to binary *after* permuting, not
-      # before -- each permuted draw can contain a different mix of
-      # participants, so its binary vocabulary has to be (re)built from
-      # that specific draw, not inherited from the original two samples
-      permuted <- lapply(permuted, function(pair){
-
-        one <- pair$sample_1
-        two <- pair$sample_2
-
-        if(is.character(one) || is.factor(one)){
-          one <- responses_to_binary(one)$binary
-        }
-        if(is.character(two) || is.factor(two)){
-          two <- responses_to_binary(two)$binary
-        }
-
-        equated <- equate(sample_1 = finalize(one, minimum_cases), sample_2 = finalize(two, minimum_cases))
-
-        list(sample_1 = equated$sample_1, sample_2 = equated$sample_2)
-
-      })
-
-    }
-
-    # Each permuted pair's measure values are computed immediately after its
-    # networks are estimated, inside `permutation_iteration()` -- the networks
-    # themselves are only kept (per sample, per iteration) when 'keep_networks'
-    # is TRUE, so a full `iter`-sized network list never has to accumulate in
-    # memory just to compute a single measure's values
+    # Send message
     message("Estimating networks and measures...")
+
+    # Estimate permutations
     estimated <- parallel_process(
       iter,
-      function(i) permutation_iteration(permuted[[i]], method, method_args, sim, measure_function, keep_networks),
+      function(i) permutation_iteration(
+        i, sample_1, sample_2, seeds[i], method, method_args, sim, minimum_cases, measure_function, keep_networks
+      ),
       cores = cores
     )
 
-    values_1 <- vapply(estimated, function(x) x$value_1, numeric(1))
-    values_2 <- vapply(estimated, function(x) x$value_2, numeric(1))
+    # Get measures of first sample
+    values_1 <- vapply(estimated, function(x) x$value_1, numeric(length(measure)))
+
+    # Get measures of second sample
+    values_2 <- vapply(estimated, function(x) x$value_2, numeric(length(measure)))
+
+    # Get counts of first sample
+    counts_1 <- vapply(estimated, function(x) x$counts_1, numeric(2))
+
+    # Get counts of second sample
+    counts_2 <- vapply(estimated, function(x) x$counts_2, numeric(2))
+
+    # Get networks of first sample
     networks_1 <- if(keep_networks) lapply(estimated, function(x) x$network_1) else NULL
+
+    # Get networks of second sample
     networks_2 <- if(keep_networks) lapply(estimated, function(x) x$network_2) else NULL
 
   }
 
-  # The first entry is always each original, unpermuted sample -- the
-  # observed statistic being tested against the permuted null distribution
-  observed_1 <- values_1[1]
-  observed_2 <- values_2[1]
-  observed_difference <- observed_1 - observed_2
+  # Set measures of first sample (one row per measure)
+  values_1 <- matrix(values_1, nrow = length(measure), dimnames = list(measure, NULL))
 
-  differences <- values_1 - values_2
+  # Set measures of second sample (one row per measure)
+  values_2 <- matrix(values_2, nrow = length(measure), dimnames = list(measure, NULL))
 
-  p_value <- switch(
-    alternative,
-    greater = mean(differences >= observed_difference, na.rm = TRUE),
-    less = mean(differences <= observed_difference, na.rm = TRUE),
-    two_tailed = mean(abs(differences) >= abs(observed_difference), na.rm = TRUE)
-  )
+  # Get differences between samples
+  differences <- t(values_1 - values_2)
 
-  # A reused `previous` result already has its own names recorded
+  # Get observed differences
+  observed_difference <- differences[1, ]
+
+  # Compute p-values
+  p_value <- vapply(measure, function(name){
+    permutation_p_value(differences[, name], observed_difference[name], alternative)
+  }, numeric(1))
+
+  # Check for previous result
   if(!is.null(previous)){
+
+    # Use name of first sample of previous result
     sample_1_name <- names(previous$result)[1]
+
+    # Use name of second sample of previous result
     sample_2_name <- names(previous$result)[2]
+
   }
 
+  # Set direction of alternative
   direction <- switch(
     alternative,
     less = paste(sample_1_name, "<", sample_2_name),
     greater = paste(sample_1_name, ">", sample_2_name),
-    two_tailed = paste(sample_1_name, "!=", sample_2_name)
+    paste(sample_1_name, "!=", sample_2_name)
   )
 
+  # Set up result
   result <- data.frame(
-    round(observed_1, 3), round(observed_2, 3), round(p_value, 3), direction, stringsAsFactors = FALSE
+    round(unname(values_1[, 1]), 3), round(unname(values_2[, 1]), 3), signif(unname(p_value), 3), direction,
+    stringsAsFactors = FALSE
   )
+
+  # Name columns
   names(result) <- c(sample_1_name, sample_2_name, "p_value", "alternative")
+
+  # Name rows
   row.names(result) <- measure
 
+  # Initialize measure columns
+  value_columns <- list()
+
+  # Loop over measures
+  for(name in measure){
+
+    # Set suffix of columns
+    suffix <- if(length(measure) == 1) "value_" else paste0(name, "_")
+
+    # Add measures of first sample
+    value_columns[[paste0(suffix, "1")]] <- unname(values_1[name, ])
+
+    # Add measures of second sample
+    value_columns[[paste0(suffix, "2")]] <- unname(values_2[name, ])
+
+  }
+
+  # Set up diagnostics
+  diagnostics <- data.frame(
+    value_columns,
+    nodes_1 = counts_1["nodes", ], nodes_2 = counts_2["nodes", ],
+    edges_1 = counts_1["edges", ], edges_2 = counts_2["edges", ],
+    row.names = NULL
+  )
+
+  # Set up output
   output <- list(
     result = result,
     networks = if(keep_networks || !is.null(previous)) list(network_1 = networks_1, network_2 = networks_2) else NULL,
     method = method,
-    differences = differences
+    seed = seed,
+    differences = if(length(measure) == 1) unname(differences[, 1]) else differences,
+    diagnostics = diagnostics,
+    mde = do.call(rbind, lapply(measure, function(name){
+      permutation_mde(differences[, name], alternative, alpha, power, name)
+    }))
   )
 
+  # Set class
   class(output) <- "permutation_SemNeT"
 
+  # Return output
   return(output)
 
 }
 
+#' @method print permutation_SemNeT
+#' @export
 #' @noRd
-# 'iter' permuted (sample_1, sample_2) pairs, drawn by reshuffling which
-# rows of the pooled data belong to each sample -- the first pair is always
-# the two original, unpermuted samples
-# Updated 06.09.2026
-generate_permuted_samples <- function(sample_1, sample_2, iter)
+# S3 Print Method ----
+# Updated 12.10.2026
+print.permutation_SemNeT <- function(x, ...)
 {
 
-  pooled <- rbind(sample_1, sample_2)
-  n_1 <- nrow(sample_1)
-  n_pooled <- nrow(pooled)
+  # Get measures
+  measures <- row.names(x$result)
 
-  permuted <- vector("list", iter)
-  permuted[[1]] <- list(sample_1 = sample_1, sample_2 = sample_2)
+  # Get group names
+  group_names <- names(x$result)[1:2]
 
-  for(i in seq_len(iter)[-1]){
-    # `sample.int()` instead of `sample(seq_len(n_pooled), ...)` -- verified
-    # bit-for-bit identical draws, ~15-20% faster (`microbenchmark`)
-    drawn <- sample.int(n_pooled, n_1)
-    permuted[[i]] <- list(sample_1 = pooled[drawn, , drop = FALSE], sample_2 = pooled[-drawn, , drop = FALSE])
+  # Get differences of measures
+  differences <- as.matrix(x$differences)
+
+  # Name measures
+  colnames(differences) <- measures
+
+  # Print header
+  writeLines(strwrap("Permutation test of group differences (shuffled group membership)", width = 80, exdent = 2))
+
+  # Add break space
+  cat("\n")
+
+  # Print run settings
+  print_run_settings(paste0(nrow(differences), " permutations (incl. observed)"), x$method, x$seed)
+
+  # Check for diagnostics
+  if(!is.null(x$diagnostics)){
+
+    # Get diagnostics
+    diagnostics <- x$diagnostics
+
+    # Print network sizes
+    print_group_sizes(
+      group_names,
+      c(mean(diagnostics$nodes_1), mean(diagnostics$nodes_2)),
+      c(mean(diagnostics$edges_1), mean(diagnostics$edges_2)),
+      c(diagnostics$nodes_1[1], diagnostics$nodes_2[1]),
+      c(diagnostics$edges_1[1], diagnostics$edges_2[1])
+    )
+
   }
 
-  return(permuted)
+  # Print comparison
+  cat("  Comparison: ", group_names[1], " - ", group_names[2], " (H1: ", x$result$alternative[1], ")\n\n", sep = "")
+
+  # Get quantiles of null distribution
+  null_quantiles <- apply(differences, 2, quantile, probs = c(.025, .975), na.rm = TRUE, names = FALSE)
+
+  # Set up table
+  table <- data.frame(
+    measure = toupper(measures),
+    group_1 = format_number(x$result[[1]]), group_2 = format_number(x$result[[2]]),
+    diff = format_number(differences[1, ]), p = format_p_value(x$result$p_value),
+    null_sd = format_number(apply(differences, 2, sd, na.rm = TRUE)),
+    q2.5 = format_number(null_quantiles[1, ]), q97.5 = format_number(null_quantiles[2, ]),
+    stringsAsFactors = FALSE
+  )
+
+  # Name group columns
+  names(table)[2:3] <- group_names
+
+  # Check for minimal detectable effect
+  if(!is.null(x$mde)){
+
+    # Add minimal detectable effect
+    table$MDE <- format_number(x$mde$mde)
+
+  }
+
+  # Print table
+  print(table, row.names = FALSE, right = TRUE)
+
+  # Set note on p-value
+  notes <- "p: share of permutations (observed included) with a difference at least as extreme as the observed one."
+
+  # Check for minimal detectable effect
+  if(!is.null(x$mde)){
+
+    # Add note on minimal detectable effect
+    notes <- paste(
+      notes, paste0(
+        "MDE: smallest true difference detected with ", format(100 * x$mde$power[1]), "% power at alpha = ",
+        sub("^0", "", format(x$mde$alpha[1])), "."
+      )
+    )
+
+  }
+
+  # Check for multiple measures
+  if(length(measures) > 1){
+
+    # Add note on adjustment
+    notes <- paste(notes, "p-values are per measure, not adjusted for the number of measures tested.")
+
+  }
+
+  # Add break space
+  cat("\n")
+
+  # Print notes
+  writeLines(strwrap(notes, width = 80))
+
+  # Add break space
+  cat("\n")
+
+  # Loop over comparison notices
+  for(note in comparison_notice("permutation_SemNeT")){
+
+    # Print notice
+    writeLines(strwrap(note, width = 80))
+
+  }
+
+  # Return object invisibly
+  return(invisible(x))
 
 }
 
 #' @noRd
-# One permuted pair's two estimated networks and measure values -- one code
-# path for both samples (instead of the original's separately-written,
-# copy-pasted per-sample blocks, which is exactly where its `enrich <-`/
-# `thresold`/wrong-parameter-name bugs lived). Each network's measure value is
-# computed immediately, here, rather than in a second pass over a fully
-# materialized `iter`-sized network list -- the network itself is only kept
-# (per sample) when 'keep_networks' is TRUE
-# Updated 07.09.2026
-permutation_iteration <- function(pair, method, method_args, sim, measure_function, keep_networks)
+# Permutation p-value ----
+# Updated 13.10.2026
+permutation_p_value <- function(differences, observed, alternative)
 {
 
-  estimate <- function(data){
+  # Check for missing observed difference
+  if(is.na(observed)){
 
-    if(method == "tmfg"){
-      similarity_matrix <- similarity(data, method = sim)
-      return(do.call(tmfg, c(list(data = similarity_matrix), method_args)))
-    }
-
-    network_function <- switch(method, cn = cn, nrw = nrw, pf = pf)
-    return(do.call(network_function, c(list(data = data), method_args)))
+    # Return missing p-value
+    return(NA_real_)
 
   }
 
-  network_1 <- estimate(pair$sample_1)
-  network_2 <- estimate(pair$sample_2)
+  # Check for undefined permuted differences
+  if(anyNA(differences)){
 
-  return(list(
-    network_1 = if(keep_networks) network_1 else NULL,
-    network_2 = if(keep_networks) network_2 else NULL,
-    value_1 = measure_function(network_1),
-    value_2 = measure_function(network_2)
+    # Send warning
+    warning(
+      "In `permutation_SemNeT()`: ", sum(is.na(differences)), " of ", length(differences),
+      " permutations had an undefined difference and are left out of the p-value.",
+      call. = FALSE
+    )
+
+  }
+
+  # Remove undefined differences
+  differences <- differences[!is.na(differences)]
+
+  # Set tolerance for ties
+  tolerance <- 1e-8 * max(1, abs(observed))
+
+  # Get center of null distribution
+  center <- mean(differences)
+
+  # Get proportion at least as great as observed
+  greater <- mean(differences >= observed - tolerance)
+
+  # Get proportion at most as great as observed
+  less <- mean(differences <= observed + tolerance)
+
+  # Return p-value
+  return(switch(
+    alternative,
+    greater = greater,
+    less = less,
+    two_tailed = mean(abs(differences) >= abs(observed) - tolerance),
+    two_tailed_centered = mean(abs(differences - center) >= abs(observed - center) - tolerance),
+    two_tailed_doubled = min(1, 2 * min(greater, less))
   ))
 
 }
 
 #' @noRd
-# Argument errors for `permutation_SemNeT()`
-# Updated 06.09.2026
-permutation_SemNeT_errors <- function(sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, previous, keep_networks)
+# Permutation minimal detectable effect ----
+# Updated 12.10.2026
+permutation_mde <- function(differences, alternative, alpha, power, measure)
 {
 
+  # Remove undefined differences
+  differences <- differences[!is.na(differences)]
+
+  # Get critical value of null distribution
+  critical_value <- switch(
+    alternative,
+    two_tailed = quantile(abs(differences), probs = 1 - alpha),
+    two_tailed_centered = quantile(abs(differences - mean(differences)), probs = 1 - alpha),
+    two_tailed_doubled = max(
+      quantile(differences, probs = 1 - alpha / 2), -quantile(differences, probs = alpha / 2)
+    ),
+    greater = quantile(differences, probs = 1 - alpha),
+    less = -quantile(differences, probs = alpha)
+  )
+
+  # Get standard deviation of null distribution
+  null_sd <- sd(differences)
+
+  # Set up minimal detectable effect
+  mde <- data.frame(
+    alpha = alpha, power = power, critical_value = unname(critical_value), null_sd = null_sd,
+    mde = unname(critical_value) + qnorm(power) * null_sd, row.names = measure
+  )
+
+  # Return minimal detectable effect
+  return(mde)
+
+}
+
+#' @noRd
+# Permutation iteration ----
+# Updated 12.10.2026
+permutation_iteration <- function(
+    i, sample_1, sample_2, seed, method, method_args, sim, minimum_cases, measure_function, keep_networks
+)
+{
+
+  # Check for first iteration
+  if(i == 1){
+
+    # Use original samples
+    pair <- list(sample_1 = sample_1, sample_2 = sample_2)
+
+  }else{
+
+    # Pool samples
+    pooled <- rbind(sample_1, sample_2)
+
+    # Draw rows for first sample
+    drawn <- shuffle(seq_len(nrow(pooled)), size = nrow(sample_1), seed = seed)
+
+    # Split pooled rows into samples
+    pair <- list(sample_1 = pooled[drawn, , drop = FALSE], sample_2 = pooled[-drawn, , drop = FALSE])
+
+    # Remove pooled samples
+    rm(pooled)
+
+  }
+
+  # Check for TMFG
+  if(method == "tmfg"){
+
+    # Get first sample
+    one <- pair$sample_1
+
+    # Get second sample
+    two <- pair$sample_2
+
+    # Check for raw responses in first sample
+    if(is.character(one) || is.factor(one)){
+
+      # Convert to binary
+      one <- responses2binary(one)$binary
+
+    }
+
+    # Check for raw responses in second sample
+    if(is.character(two) || is.factor(two)){
+
+      # Convert to binary
+      two <- responses2binary(two)$binary
+
+    }
+
+    # Equate samples
+    equated <- equate(sample_1 = finalize(one, minimum_cases), sample_2 = finalize(two, minimum_cases))
+
+    # Use equated samples
+    pair <- list(sample_1 = equated$sample_1, sample_2 = equated$sample_2)
+
+  }
+
+  # Estimate network
+  estimate <- function(data){
+
+    # Check for TMFG
+    if(method == "tmfg"){
+
+      # Compute similarity
+      similarity_matrix <- similarity(data, method = sim)
+
+      # Return TMFG network
+      return(do.call(tmfg, c(list(data = similarity_matrix), method_args)))
+
+    }
+
+    # Get network function
+    network_function <- switch(method, cn = cn, nrw = nrw, pf = pf)
+
+    # Return network
+    return(do.call(network_function, c(list(data = data), method_args)))
+
+  }
+
+  # Estimate network of first sample
+  network_1 <- estimate(pair$sample_1)
+
+  # Estimate network of second sample
+  network_2 <- estimate(pair$sample_2)
+
+  # Return networks, measures, and counts
+  return(list(
+    network_1 = if(keep_networks) network_1 else NULL,
+    network_2 = if(keep_networks) network_2 else NULL,
+    value_1 = measure_function(network_1, seed),
+    value_2 = measure_function(network_2, seed),
+    counts_1 = network_counts(network_1),
+    counts_2 = network_counts(network_2)
+  ))
+
+}
+
+#' @noRd
+# Align samples ----
+# Updated 13.10.2026
+align_samples <- function(sample_1, sample_2)
+{
+
+  # Check for mixed types
+  if(is.character(sample_1) != is.character(sample_2)){
+
+    # Send error
+    stop(
+      "In `permutation_SemNeT()`: 'sample_1' and 'sample_2' must both be raw word responses or both be numeric response matrices.",
+      call. = FALSE
+    )
+
+  }
+
+  # Check for raw responses
+  if(is.character(sample_1)){
+
+    # Get widest sample
+    width <- max(ncol(sample_1), ncol(sample_2))
+
+    # Pad sample with missing responses
+    pad <- function(sample){
+
+      # Add missing columns
+      sample <- cbind(sample, matrix(NA_character_, nrow = nrow(sample), ncol = width - ncol(sample)))
+
+      # Remove column names
+      colnames(sample) <- NULL
+
+      # Return sample
+      sample
+
+    }
+
+    # Return padded samples
+    return(list(sample_1 = pad(sample_1), sample_2 = pad(sample_2)))
+
+  }
+
+  # Get responses of first sample
+  names_1 <- colnames(sample_1)
+
+  # Get responses of second sample
+  names_2 <- colnames(sample_2)
+
+  # Check for missing names
+  if(is.null(names_1) || is.null(names_2)){
+
+    # Check for mismatched unnamed columns
+    if(ncol(sample_1) != ncol(sample_2) || !is.null(names_1) || !is.null(names_2)){
+
+      # Send error
+      stop(
+        "In `permutation_SemNeT()`: numeric response matrices need column names (the responses) to be lined up, unless both have the same, unnamed columns.",
+        call. = FALSE
+      )
+
+    }
+
+    # Return samples
+    return(list(sample_1 = sample_1, sample_2 = sample_2))
+
+  }
+
+  # Check for duplicate responses
+  if(anyDuplicated(names_1) > 0 || anyDuplicated(names_2) > 0){
+
+    # Send error
+    stop("In `permutation_SemNeT()`: every response (column) name within a sample must be unique.", call. = FALSE)
+
+  }
+
+  # Get responses of both samples
+  responses <- union(names_1, names_2)
+
+  # Align sample to responses
+  align <- function(sample){
+
+    # Check for aligned sample
+    if(identical(colnames(sample), responses)){
+
+      # Return sample
+      return(sample)
+
+    }
+
+    # Initialize aligned sample
+    aligned <- matrix(0, nrow = nrow(sample), ncol = length(responses), dimnames = list(rownames(sample), responses))
+
+    # Fill responses of sample
+    aligned[, colnames(sample)] <- sample
+
+    # Return aligned sample
+    aligned
+
+  }
+
+  # Return aligned samples
+  return(list(sample_1 = align(sample_1), sample_2 = align(sample_2)))
+
+}
+
+#' @noRd
+# Errors ----
+# Updated 13.10.2026
+permutation_SemNeT_errors <- function(
+    sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative,
+    iter, cores, previous, keep_networks, seed, alpha, power
+)
+{
+
+  # 'previous' errors
   if(!is.null(previous)){
 
+    # Check for class
     if(!inherits(previous, "permutation_SemNeT")){
+
+      # Send error
       stop(
         "In `permutation_SemNeT()`: 'previous' is not a `permutation_SemNeT` object (from `permutation_SemNeT()`).",
         call. = FALSE
       )
+
     }
 
+    # Check for stored networks
     if(is.null(previous$networks)){
+
+      # Send error
       stop(
         "In `permutation_SemNeT()`: 'previous' has no stored networks to reuse -- call the original with `keep_networks = TRUE`.",
         call. = FALSE
       )
+
     }
 
+    # Use method of previous result
     method <- previous$method
 
   }else{
 
+    # 'method' errors
+    length_error(method, c(1, 4), "permutation_SemNeT")
+    typeof_error(method, "character", "permutation_SemNeT")
+
+    # Match method
+    method <- match.arg(method, c("tmfg", "cn", "nrw", "pf"))
+
+    # 'sample_1' and 'sample_2' errors
     if(is.null(sample_1) || is.null(sample_2)){
+
+      # Send error
       stop(
         "In `permutation_SemNeT()`: 'sample_1' and 'sample_2' must both be provided, unless 'previous' is.",
         call. = FALSE
       )
+
     }
 
-    # 'method' must be one (and only one) of the documented options
-    method <- match.arg(method, c("tmfg", "cn", "nrw", "pf"))
-
-    # Every sample must be a response matrix in the shape its method needs --
-    # same rule `bootstrap_SemNeT()` uses. `tmfg`'s conversion to binary
-    # happens later, *after* permuting (see `permutation_SemNeT()` below),
-    # since raw responses are pooled and reshuffled first
+    # Check for TMFG
     if(method == "tmfg"){
 
+      # Check for response matrices
       sample_1 <- response_matrix_error(sample_1, "permutation_SemNeT")
       sample_2 <- response_matrix_error(sample_2, "permutation_SemNeT")
 
-    }else if(method %in% c("cn", "nrw")){
+    }else{
+
+      # Check for ordered response matrices
       sample_1 <- ordered_response_matrix_error(sample_1, "permutation_SemNeT")
       sample_2 <- ordered_response_matrix_error(sample_2, "permutation_SemNeT")
-    }else{
-      sample_1 <- response_matrix_error(sample_1, "permutation_SemNeT")
-      sample_2 <- response_matrix_error(sample_2, "permutation_SemNeT")
+
     }
 
   }
 
-  # 'method_args' must be a list of arguments the chosen method actually has
+  # 'method_args' errors
   object_error(method_args, "list", "permutation_SemNeT")
 
+  # Get network function
   network_function <- switch(method, tmfg = tmfg, cn = cn, nrw = nrw, pf = pf)
+
+  # Get valid arguments
   valid_arguments <- setdiff(names(formals(network_function)), "data")
 
+  # Check for invalid arguments
   if(!all(names(method_args) %in% valid_arguments)){
+
+    # Send error
     stop(
       paste0(
         "In `permutation_SemNeT()`: 'method_args' contains an argument not used by `", method, "()`.\n",
@@ -360,38 +949,96 @@ permutation_SemNeT_errors <- function(sample_1, sample_2, method, method_args, s
       ),
       call. = FALSE
     )
+
   }
 
-  # 'sim' must be a single character string
+  # 'sim' errors
   length_error(sim, 1, "permutation_SemNeT")
   typeof_error(sim, "character", "permutation_SemNeT")
 
-  # 'minimum_cases' must be a single non-negative whole number
+  # 'minimum_cases' errors
   length_error(minimum_cases, 1, "permutation_SemNeT")
   typeof_error(minimum_cases, "numeric", "permutation_SemNeT")
   range_error(minimum_cases, c(0, Inf), "permutation_SemNeT")
 
-  # 'measure' must be one (and only one) of the documented options
-  measure <- match.arg(measure, c("aspl", "cc", "q"))
+  # 'measure' errors
+  typeof_error(measure, "character", "permutation_SemNeT")
 
-  # 'alternative' must be one (and only one) of the documented options
-  alternative <- match.arg(alternative, c("two_tailed", "less", "greater"))
+  # Check for unknown measures
+  if(!all(measure %in% c("aspl", "cc", "q"))){
 
-  # 'iter' must be a single positive whole number
+    # Send error
+    stop("In `permutation_SemNeT()`: 'measure' must only contain 'aspl', 'cc', and/or 'q'.", call. = FALSE)
+
+  }
+
+  # 'alternative' errors
+  length_error(alternative, c(1, 5), "permutation_SemNeT")
+  typeof_error(alternative, "character", "permutation_SemNeT")
+
+  # Match alternative
+  alternative <- match.arg(alternative, c("two_tailed", "two_tailed_centered", "two_tailed_doubled", "less", "greater"))
+
+  # 'iter' errors
   length_error(iter, 1, "permutation_SemNeT")
   typeof_error(iter, "numeric", "permutation_SemNeT")
   range_error(iter, c(1, Inf), "permutation_SemNeT")
 
-  # 'cores' must be a single positive whole number
+  # 'cores' errors
   length_error(cores, 1, "permutation_SemNeT")
   typeof_error(cores, "numeric", "permutation_SemNeT")
   range_error(cores, c(1, Inf), "permutation_SemNeT")
 
-  # 'keep_networks' must be a single logical value
-  object_error(keep_networks, "vector", "permutation_SemNeT")
-  typeof_error(keep_networks, "logical", "permutation_SemNeT")
+  # 'keep_networks' errors
   length_error(keep_networks, 1, "permutation_SemNeT")
+  typeof_error(keep_networks, "logical", "permutation_SemNeT")
 
+  # 'seed' errors
+  if(!is.null(seed)){
+    length_error(seed, 1, "permutation_SemNeT")
+    typeof_error(seed, "numeric", "permutation_SemNeT")
+    range_error(seed, c(0, Inf), "permutation_SemNeT")
+  }
+
+  # 'alpha' errors
+  length_error(alpha, 1, "permutation_SemNeT")
+  typeof_error(alpha, "numeric", "permutation_SemNeT")
+
+  # Check for limits of alpha
+  if(is.na(alpha) || alpha <= 0 || alpha >= 1){
+
+    # Send error
+    stop("In `permutation_SemNeT()`: 'alpha' must be strictly between 0 and 1.", call. = FALSE)
+
+  }
+
+  # 'power' errors
+  length_error(power, 1, "permutation_SemNeT")
+  typeof_error(power, "numeric", "permutation_SemNeT")
+
+  # Check for limits of power
+  if(is.na(power) || power <= 0 || power >= 1){
+
+    # Send error
+    stop("In `permutation_SemNeT()`: 'power' must be strictly between 0 and 1.", call. = FALSE)
+
+  }
+
+  # Check for samples
+  if(is.null(previous)){
+
+    # Align samples
+    aligned <- align_samples(sample_1, sample_2)
+
+    # Get first sample
+    sample_1 <- aligned$sample_1
+
+    # Get second sample
+    sample_2 <- aligned$sample_2
+
+  }
+
+  # Return validated input (in case of data frames or matched 'method')
   return(list(sample_1 = sample_1, sample_2 = sample_2, method = method, method_args = method_args))
 
 }

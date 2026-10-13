@@ -21,8 +21,12 @@
 #'
 #' @author Alexander P. Christensen <alexpaulchristensen@gmail.com> & Yoed N. Kenett <yoedkenett@gmail.com>
 #'
+#' @importFrom graphics layout
 #' @importFrom methods is
-#' @importFrom stats sd
+#' @importFrom stats aov as.dist as.formula binom.test cor cutree dist hclust mcnemar.test na.omit pnorm qnorm quantile rpois runif sd t.test terms TukeyHSD var
+#' @importFrom utils combn packageVersion
+#'
+#' @useDynLib SemNeT, .registration = TRUE
 #'
 "_PACKAGE"
 #> [1] "_PACKAGE"

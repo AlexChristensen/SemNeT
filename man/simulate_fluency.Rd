@@ -30,8 +30,13 @@ desired in the resulting network. Each response's total endorsement count
 is simulated from a Poisson distribution (see \code{\link{rpois}}), using
 frequencies from the \code{\link{animals.freq}} data; participants'
 individual responses are then simulated with a probability of endorsing
-each response equal to that response's simulated total over the number
-of participants
+each response equal to that response's simulated total (plus 1) over 1.05
+times the largest such total. The probability therefore does not depend on
+the number of participants, and every response is simulated independently of
+the others: the data contain no association between responses, so a network
+estimated from them (which still has its full complement of edges, e.g.
+\code{\link{tmfg}}) describes noise. Use them to try out functions, not as a
+model of semantic structure
 }
 \examples{
 # Simulate data for 50 nodes and 200 participants

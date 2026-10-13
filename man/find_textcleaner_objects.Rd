@@ -20,7 +20,7 @@ directly, as a second data source alongside its own file-upload widget.
 Restricted to \code{type = "fluency"} results: a \code{type = "free"}
 result's \code{$data$clean} is a long-format response/cue/ID table, a
 different shape than the participant x response-slot word matrix this
-package's own \code{responses_to_binary()} (and every bundled example
+package's own \code{responses2binary()} (and every bundled example
 dataset) expects -- not something to silently reshape without a real
 design decision, so it's excluded here rather than offered and failing
 downstream.

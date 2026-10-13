@@ -1,56 +1,91 @@
-# Export tab: replaces the original's "assign into your live R session"
-# save pattern (which only worked for a single local user) with real
-# downloads -- required for a hosted, multi-user deployment where there's no
-# shared R session to assign into, and it's what lets a session's `state`
-# be safely dropped rather than accumulating indefinitely.
+# Export module ----
+# Updated 13.10.2026
 
+# Export interface ----
+# Updated 13.10.2026
 mod_export_ui <- function(id)
 {
 
+  # Set namespace
   ns <- NS(id)
 
+  # Return interface
   tagList(
 
+    # Add sidebar
     sidebarPanel(
 
+      # Add note
       tags$p("Download whatever this session has computed so far."),
 
+      # Add all results download
       downloadButton(ns("download_all"), "All Results (.rds)"),
+
+      # Add spacing
       br(), br(),
+
+      # Add networks download
       downloadButton(ns("download_networks"), "Estimated Networks (.rds)"),
+
+      # Add spacing
       br(), br(),
+
+      # Add measures download
       downloadButton(ns("download_measures"), "Network Measures (.csv)"),
+
+      # Add spacing
       br(), br(),
+
+      # Add bootstrap test download
       downloadButton(ns("download_boot_test"), "Bootstrap Test Table (.csv)"),
+
+      # Add spacing
       br(), br(),
+
+      # Add random walk download
       downloadButton(ns("download_random_walk"), "Random Walk Table (.csv)"),
 
+      # Add spacing
       br(), br(),
+
+      # Add reset button
       actionButton(ns("reset"), label = "Clear This Session's Results", class = "btn-danger")
 
     ),
 
+    # Add main panel
     mainPanel(
+
+      # Add note
       tags$p("Available in this session:"),
+
+      # Add summary table
       tableOutput(ns("summary"))
+
     )
 
   )
 
 }
 
+# Export server ----
+# Updated 13.10.2026
 mod_export_server <- function(id, state)
 {
 
+  # Start module
   moduleServer(id, function(input, output, session){
 
+    # Render summary
     output$summary <- renderTable({
 
+      # Set fields of results
       fields <- c(
         "data", "networks", "random_test", "boot_result", "boot_test",
         "perm_result", "random_walk", "spreading_result"
       )
 
+      # Return availability of fields
       data.frame(
         Result = fields,
         Available = vapply(fields, function(field) !is.null(state[[field]]), logical(1))
@@ -58,63 +93,112 @@ mod_export_server <- function(id, state)
 
     })
 
+    # Handle download of all results
     output$download_all <- downloadHandler(
       filename = function() "semnet_results.rds",
       content = function(file){
+
+        # Save all results
         saveRDS(reactiveValuesToList(state), file)
+
       }
     )
 
+    # Handle download of networks
     output$download_networks <- downloadHandler(
       filename = function() "semnet_networks.rds",
       content = function(file){
+
+        # Require networks
         req(state$networks)
+
+        # Save networks
         saveRDS(state$networks, file)
+
       }
     )
 
+    # Handle download of measures
     output$download_measures <- downloadHandler(
       filename = function() "semnet_measures.csv",
       content = function(file){
+
+        # Require measures
         req(state$measures)
+
+        # Save measures
         utils::write.csv(state$measures, file)
+
       }
     )
 
+    # Handle download of bootstrap tests
     output$download_boot_test <- downloadHandler(
       filename = function() "semnet_bootstrap_test.csv",
       content = function(file){
+
+        # Require tests
         req(state$boot_test)
+
+        # Combine tables of conditions
         table <- do.call(rbind, lapply(names(state$boot_test$results), function(condition){
+
+          # Combine tables of measures
           do.call(rbind, lapply(names(state$boot_test$results[[condition]]), function(measure){
+
+            # Get entry
             entry <- state$boot_test$results[[condition]][[measure]]
+
+            # Add condition and measure
             cbind(Condition = condition, Measure = measure, entry$table)
+
           }))
+
         }))
+
+        # Save table
         utils::write.csv(table, file, row.names = FALSE)
+
       }
     )
 
+    # Handle download of random walk
     output$download_random_walk <- downloadHandler(
       filename = function() "semnet_random_walk.csv",
       content = function(file){
+
+        # Require random walk
         req(state$random_walk)
+
+        # Save table
         utils::write.csv(state$random_walk$short, file, row.names = FALSE)
+
       }
     )
 
+    # Watch for reset button
     observeEvent(input$reset, {
 
+      # Send confirmation alert
       shinyalert::shinyalert(
         title = "Clear this session's results?",
         text = "This can't be undone. Your uploaded data stays, but every analysis result is cleared.",
         type = "warning", showCancelButton = TRUE, confirmButtonText = "Clear",
         callbackR = function(confirmed){
+
+          # Check for confirmation
           if(isTRUE(confirmed)){
+
+            # Loop over results
             for(field in c("networks", "measures", "random_test", "boot_result", "boot_test", "perm_result", "random_walk", "spreading_result")){
+
+              # Clear result
               state[[field]] <- NULL
+
             }
+
           }
+
         }
       )
 

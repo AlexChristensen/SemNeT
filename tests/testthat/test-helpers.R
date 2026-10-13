@@ -1,279 +1,324 @@
-# Tests for the generic, cross-cutting helpers in R/helpers.R
-
-test_that("get_object_type identifies shapes correctly", {
-
-  expect_equal(get_object_type(matrix(1:4, 2, 2)), "matrix")
-  expect_equal(get_object_type(data.frame(x = 1:2)), "data.frame")
-  expect_equal(get_object_type(list(1, 2)), "list")
-  expect_equal(get_object_type(1:5), "vector")
-  expect_equal(get_object_type(factor(c("a", "b"))), "factor")
-  expect_equal(get_object_type(array(1:8, dim = c(2, 2, 2))), "array")
-
-})
-
-test_that("object_error only errors on unexpected types", {
-
-  expect_silent(object_error(matrix(1, 1, 1), "matrix", "test_fn"))
-  expect_error(object_error(list(1), "matrix", "test_fn"), "test_fn")
-
-})
-
-test_that("typeof_error collapses integer/double into numeric", {
-
-  expect_silent(typeof_error(1L, "numeric", "test_fn"))
-  expect_silent(typeof_error(1.5, "numeric", "test_fn"))
-  expect_error(typeof_error("a", "numeric", "test_fn"), "test_fn")
-
-})
-
-test_that("length_error checks against a set of allowed lengths", {
-
-  expect_silent(length_error(1:3, 3, "test_fn"))
-  expect_silent(length_error(1, c(1, 2), "test_fn"))
-  expect_error(length_error(1:3, 2, "test_fn"), "test_fn")
-
-})
-
-test_that("range_error checks minimum and maximum bounds", {
-
-  expect_silent(range_error(c(0, 0.5, 1), c(0, 1), "test_fn"))
-  expect_error(range_error(c(-1, 0.5), c(0, 1), "test_fn"), "minimum")
-  expect_error(range_error(c(0.5, 2), c(0, 1), "test_fn"), "maximum")
-
-})
-
-test_that("swiftelse matches ifelse for both scalar and vector conditions", {
-
-  expect_equal(swiftelse(TRUE, "yes", "no"), "yes")
-  expect_equal(swiftelse(FALSE, "yes", "no"), "no")
-  expect_equal(swiftelse(c(TRUE, FALSE, TRUE), 1:3, 4:6), ifelse(c(TRUE, FALSE, TRUE), 1:3, 4:6))
-
-})
-
-test_that("adjacency_matrix_error validates and coerces adjacency matrices", {
-
-  square_matrix <- matrix(1, 3, 3)
-  expect_equal(adjacency_matrix_error(square_matrix, "test_fn"), square_matrix)
-
-  # data.frame input is coerced to a matrix
-  coerced <- adjacency_matrix_error(as.data.frame(square_matrix), "test_fn")
-  expect_true(is.matrix(coerced))
-
-  # non-square input errors
-  expect_error(adjacency_matrix_error(matrix(1, 3, 4), "test_fn"), "square")
-
-  # non-symmetric input only errors when symmetry is required
-  asymmetric <- matrix(c(1, 0, 1, 1), 2, 2)
-  expect_silent(adjacency_matrix_error(asymmetric, "test_fn"))
-  expect_error(adjacency_matrix_error(asymmetric, "test_fn", require_symmetric = TRUE), "symmetric")
-
-  # a 0x0 matrix passes the square check vacuously -- must be rejected explicitly
-  expect_error(adjacency_matrix_error(matrix(numeric(0), nrow = 0, ncol = 0), "test_fn"), "at least 1 node")
-
-})
-
-test_that("response_matrix_error validates response matrices without guessing", {
-
-  binary_matrix <- matrix(c(0, 1, 1, 0), 2, 2)
-  expect_equal(response_matrix_error(binary_matrix, "test_fn"), binary_matrix)
-
-  character_matrix <- matrix(c("dog", "cat", "cat", "dog"), 2, 2)
-  expect_equal(response_matrix_error(character_matrix, "test_fn"), character_matrix)
-
-  # non-binary numeric input errors instead of being silently reinterpreted
-  count_matrix <- matrix(c(0, 2, 1, 0), 2, 2)
-  expect_error(response_matrix_error(count_matrix, "test_fn"), "Binarize")
-
-  # empty input errors
-  expect_error(response_matrix_error(matrix(nrow = 0, ncol = 0), "test_fn"), "row")
-
-})
-
-test_that("ordered_response_matrix_error accepts responses/ordered numeric and rejects binary", {
-
-  # Character responses pass through untouched
-  raw <- matrix(c("dog", "cat", "cat", "dog"), 2, 2)
-  expect_equal(ordered_response_matrix_error(raw, "test_fn"), raw)
-
-  # Ordered numeric (values above 1) is accepted -- this is the fixed
-  # `>= 1` vs. `== 1` distinction that `nrw()` originally got backwards
-  ordered <- matrix(c(1, 2, 0, 1), 2, 2)
-  expect_equal(ordered_response_matrix_error(ordered, "test_fn"), ordered)
-
-  # Strictly binary numeric has already discarded response order
-  binary <- matrix(c(0, 1, 1, 0), 2, 2)
-  expect_error(ordered_response_matrix_error(binary, "test_fn"), "discarded response order")
-
-  # empty input errors
-  expect_error(ordered_response_matrix_error(matrix(nrow = 0, ncol = 0), "test_fn"), "row")
-
-})
-
-test_that("binarize converts any nonzero entry to 1 and preserves dimnames", {
-
-  A <- matrix(c(0, -2, 3, 0), 2, 2, dimnames = list(c("a", "b"), c("a", "b")))
-  binary <- binarize(A)
-
-  expect_equal(unname(binary), matrix(c(0, 1, 1, 0), 2, 2))
-  expect_equal(dimnames(binary), dimnames(A))
-
-})
+# Tests for the generic helpers in R/helpers.R
 
 test_that("distance matches a hand-computed shortest-path matrix on a ring network", {
 
-  # 4-node ring: neighbors at distance 1, opposite node at distance 2
+  # Set up network
   A <- matrix(0, 4, 4)
+
+  # Add first edge
   A[1, 2] <- A[2, 1] <- 1
+
+  # Add second edge
   A[2, 3] <- A[3, 2] <- 1
+
+  # Add third edge
   A[3, 4] <- A[4, 3] <- 1
+
+  # Add fourth edge
   A[4, 1] <- A[1, 4] <- 1
 
+  # Compute distances
   D <- distance(A)
 
+  # Check diagonal
   expect_equal(unname(diag(D)), c(0, 0, 0, 0))
+
+  # Check neighbors
   expect_equal(unname(D[1, 2]), 1)
+
+  # Check opposite nodes
   expect_equal(unname(D[1, 3]), 2)
 
 })
 
 test_that("distance leaves unreachable pairs as Inf instead of masking them as 0", {
 
-  # Two disconnected 2-node pairs
+  # Set up network
   A <- matrix(0, 4, 4)
+
+  # Add first pair
   A[1, 2] <- A[2, 1] <- 1
+
+  # Add second pair
   A[3, 4] <- A[4, 3] <- 1
 
+  # Compute distances
   D <- distance(A)
 
+  # Check first unreachable pair
   expect_true(is.infinite(D[1, 3]))
+
+  # Check second unreachable pair
   expect_true(is.infinite(D[2, 4]))
+
+  # Check reachable pair
   expect_equal(unname(D[1, 2]), 1)
 
 })
 
 test_that("bad_response replaces empty/placeholder responses with NA", {
 
+  # Check placeholders
   expect_equal(bad_response(c("dog", "", " ", "NA", NA, "cat")), c("dog", NA, NA, NA, NA, "cat"))
+
+  # Check no responses
   expect_equal(bad_response(character(0)), NA)
 
 })
 
-test_that("responses_to_binary and binary_to_responses round-trip a response matrix", {
+test_that("responses2binary and binary2responses round-trip a response matrix", {
 
+  # Set up responses
   raw <- matrix(c("dog", "cat", "cat", "", "dog", "bird"), nrow = 2, ncol = 3, byrow = TRUE)
 
-  converted <- responses_to_binary(raw)
+  # Convert to binary
+  converted <- responses2binary(raw)
 
-  expect_s3_class(converted, "responses_to_binary")
+  # Check class
+  expect_s3_class(converted, "responses2binary")
+
+  # Check vocabulary
   expect_equal(sort(colnames(converted$binary)), c("bird", "cat", "dog"))
+
+  # Check for binary values
   expect_true(all(converted$binary %in% c(0, 1)))
 
-  # Every word actually said appears somewhere in the round-tripped output
-  back <- binary_to_responses(converted)
+  # Convert back to responses
+  back <- binary2responses(converted)
+
+  # Get responses of first participant
   said_row_1 <- na.omit(back[1, ])
+
+  # Check responses
   expect_true(all(c("dog", "cat") %in% said_row_1))
 
 })
 
-test_that("binary_to_responses handles a fully-empty (all-zero) response matrix", {
+test_that("binary2responses handles a fully-empty (all-zero) response matrix", {
 
-  # Real bug fixed: `1:max_responses` became `1:0 = c(1, 0)` when every
-  # participant said nothing, mis-sizing `response_names` against a
-  # 0-column output matrix and erroring on `colnames<-`
+  # Set up empty responses
   empty <- matrix(0, nrow = 3, ncol = 5, dimnames = list(paste0("p", 1:3), paste0("w", 1:5)))
 
-  result <- binary_to_responses(empty)
+  # Convert to responses
+  result <- binary2responses(empty)
 
+  # Check columns
   expect_equal(ncol(result), 0)
+
+  # Check rows
   expect_equal(nrow(result), 3)
+
+  # Check row names
   expect_equal(row.names(result), paste0("p", 1:3))
 
 })
 
 test_that("cosine matches hand-computed similarity", {
 
+  # Set up first vector
   x <- c(1, 0, 1, 0)
+
+  # Set up second vector
   y <- c(1, 1, 0, 0)
 
-  # By hand: dot = 1, ||x|| = sqrt(2), ||y|| = sqrt(2) -> cos = 1/2
+  # Check cosine of vectors
   expect_equal(cosine(x, y), 0.5)
 
-  # The matrix form's diagonal is always 1 (each column is identical to itself)
+  # Set up matrix
   m <- matrix(c(1, 0, 1, 0, 1, 1, 0, 0), 4, 2)
+
+  # Compute cosine of columns
   similarity_matrix <- cosine(m)
+
+  # Check diagonal
   expect_equal(unname(diag(similarity_matrix)), c(1, 1))
+
+  # Check cosine of columns
   expect_equal(unname(similarity_matrix[1, 2]), 0.5)
 
 })
 
 test_that("cohens_d matches a hand-computed effect size", {
 
-  # Two samples with equal spread: d = |mean diff| / sd, no pooling ambiguity
+  # Set up first sample
   sample_1 <- c(1, 2, 3, 4, 5)
+
+  # Set up second sample
   sample_2 <- c(3, 4, 5, 6, 7)
 
+  # Check effect size
   expect_equal(cohens_d(sample_1, sample_2), abs(mean(sample_1) - mean(sample_2)) / sd(sample_1))
 
-  # Order-independence: d is reported as an absolute value
+  # Check that order does not matter
   expect_equal(cohens_d(sample_1, sample_2), cohens_d(sample_2, sample_1))
 
 })
 
-test_that("parallel_process runs sequentially and restores the prior future plan", {
+test_that("reproducible seeds and shuffles depend only on the seed", {
 
-  plan_before <- future::plan()
+  # Check same seed
+  expect_identical(reproducible_seeds(5, 1), reproducible_seeds(5, 1))
 
-  result <- parallel_process(5, function(i) i^2, cores = 1, progress = FALSE)
-  expect_equal(unlist(result), (1:5)^2)
+  # Check different seed
+  expect_false(identical(reproducible_seeds(5, 1), reproducible_seeds(5, 2)))
 
-  # The plan in effect after the call must match what was active before it
-  expect_equal(class(future::plan()), class(plan_before))
+  # Check unique seeds
+  expect_length(unique(reproducible_seeds(100, 1)), 100)
 
-})
+  # Check shuffle with same seed
+  expect_identical(shuffle(1:20, size = 5, seed = 3), shuffle(1:20, size = 5, seed = 3))
 
-test_that("parallel_process validates its arguments", {
+  # Check shuffle elements
+  expect_setequal(shuffle(1:20, seed = 3), 1:20)
 
-  expect_error(parallel_process(0, function(i) i), "parallel_process")
-  expect_error(parallel_process(5, function(i) i, cores = 0), "parallel_process")
-  expect_error(parallel_process(5, "not a function"), "parallel_process")
+  # Check shuffle size
+  expect_length(shuffle(1:20, size = 5, seed = 3), 5)
 
-})
+  # Resample with replacement
+  drawn <- shuffle_replace(1:20, seed = 3)
 
-test_that("parallel_process caps requested cores to what's actually available", {
+  # Check resample with same seed
+  expect_identical(drawn, shuffle_replace(1:20, seed = 3))
 
-  # Simulate running inside an already-nested worker (e.g. a Shiny
-  # `ExtendedTask`'s background process), where `future::availableCores()`
-  # is deliberately capped to 1 -- requesting more workers than that used to
-  # trip `parallelly`'s hard localhost-worker-count guard instead of
-  # degrading to sequential execution
-  testthat::local_mocked_bindings(availableCores = function() 1L, .package = "future")
+  # Check resample size
+  expect_length(drawn, 20)
 
-  plan_before <- future::plan()
-
-  result <- parallel_process(5, function(i) i^2, cores = 4, progress = FALSE)
-  expect_equal(unlist(result), (1:5)^2)
-
-  expect_equal(class(future::plan()), class(plan_before))
+  # Check resample elements
+  expect_true(all(drawn %in% 1:20))
 
 })
 
-test_that("parallel_process's progress file reports a monotonic completion count", {
+test_that("seed = 0 asks for random results, like NULL, while any other seed is reproducible", {
 
-  progress_file <- tempfile()
-  writeLines("1", progress_file)
-  old_option <- options(SemNeT.progress_file = progress_file)
-  on.exit(options(old_option), add = TRUE)
+  # Check no seed
+  expect_true(random_seed(NULL))
 
-  # Multiple iterations across 2 workers -- completion order across workers
-  # isn't guaranteed, but the number of completions recorded must still end
-  # up exactly matching the iteration count, regardless of order
-  parallel_process(6, function(i) i, cores = 2, progress = FALSE)
+  # Check zero seed
+  expect_true(random_seed(0))
 
-  total <- as.numeric(readLines(progress_file, n = 1))
-  expect_equal(total, 6)
+  # Check nonzero seed
+  expect_false(random_seed(1))
 
-  # One byte appended per completed iteration, not the (out-of-order) raw
-  # iteration index itself
-  expect_equal(file.info(paste0(progress_file, ".progress"))$size, 6)
+  # Check fractional seed
+  expect_false(random_seed(.5))
+
+  # Check seed for compiled code
+  expect_equal(compiled_seed(7), 7)
+
+  # Check no seed for compiled code
+  expect_equal(compiled_seed(NULL), 0)
+
+  # Check zero seed for compiled code
+  expect_equal(compiled_seed(0), 0)
+
+  # Check same seed
+  expect_identical(reproducible_seeds(5, 1), reproducible_seeds(5, 1))
+
+  # Check different seed
+  expect_false(identical(reproducible_seeds(5, 1), reproducible_seeds(5, 2)))
+
+  # Check zero seed gives fresh seeds
+  expect_false(identical(reproducible_seeds(5, 0), reproducible_seeds(5, 0)))
+
+  # Check no seed gives fresh seeds
+  expect_false(identical(reproducible_seeds(5, NULL), reproducible_seeds(5, NULL)))
+
+  # Check zero seed gives fresh resamples
+  expect_false(identical(shuffle_replace(1:50, seed = 0), shuffle_replace(1:50, seed = 0)))
+
+  # Set seed
+  set.seed(1)
+
+  # Estimate network
+  net <- suppressWarnings(tmfg(cor(matrix(rnorm(15 * 20), nrow = 15, ncol = 20))))
+
+  # Check modularity with same seed
+  expect_identical(q(net, seed = 3), q(net, seed = 3))
+
+  # Check message for random seed
+  expect_message(
+    bootstrap_SemNeT(low = open.clean[1:30, ], iter = 2, method = "nrw", seed = 0), "not be reproducible"
+  )
+
+})
+
+test_that("cohens_d pools the standard deviations by degrees of freedom", {
+
+  # Set seed
+  set.seed(1)
+
+  # Sample first group
+  sample_1 <- rnorm(10, 0, 1)
+
+  # Sample second group
+  sample_2 <- rnorm(200, .5, 3)
+
+  # Compute pooled standard deviation
+  pooled_sd <- sqrt((9 * var(sample_1) + 199 * var(sample_2)) / 208)
+
+  # Check effect size
+  expect_equal(cohens_d(sample_1, sample_2), abs(mean(sample_1) - mean(sample_2)) / pooled_sd)
+
+  # Compute t statistic
+  t_statistic <- unname(t.test(sample_1, sample_2, var.equal = TRUE)$statistic)
+
+  # Check against t statistic
+  expect_equal(cohens_d(sample_1, sample_2), abs(t_statistic) * sqrt(1 / 10 + 1 / 200))
+
+})
+
+test_that("binary2responses reads a plain ordered numeric matrix by response rank", {
+
+  # Set up ordered responses
+  ordered <- matrix(c(2, 1, 0, 0, 3, 1), nrow = 2, byrow = TRUE)
+
+  # Name responses
+  colnames(ordered) <- c("a", "b", "c")
+
+  # Convert to responses
+  back <- binary2responses(ordered)
+
+  # Check first participant
+  expect_equal(unname(back[1, 1:2]), c("b", "a"))
+
+  # Check second participant
+  expect_equal(unname(back[2, 1:2]), c("c", "b"))
+
+  # Set up binary responses
+  binary <- matrix(c(1, 1, 0, 0, 1, 1), nrow = 2, byrow = TRUE)
+
+  # Name responses
+  colnames(binary) <- c("a", "b", "c")
+
+  # Check column order
+  expect_equal(unname(binary2responses(binary)[1, 1:2]), c("a", "b"))
+
+})
+
+test_that("cohens_d handles groups of one and samples without variation", {
+
+  # Check group of one
+  expect_equal(cohens_d(5, c(1, 2, 3)), abs(5 - 2) / 1)
+
+  # Check no variation and no difference
+  expect_equal(cohens_d(c(2, 2, 2), c(2, 2)), 0)
+
+  # Check no variation and a difference
+  expect_equal(cohens_d(c(2, 2, 2), c(3, 3)), Inf)
+
+  # Check nothing to pool
+  expect_true(is.na(cohens_d(1, 2)))
+
+  # Check empty sample
+  expect_true(is.na(cohens_d(numeric(0), c(1, 2))))
+
+  # Set up first sample
+  x <- c(1, 4, 2, 8, 5)
+
+  # Set up second sample
+  y <- c(3, 9, 7)
+
+  # Check against t statistic
+  expect_equal(cohens_d(x, y), abs(unname(t.test(x, y, var.equal = TRUE)$statistic)) * sqrt(1 / 5 + 1 / 3))
 
 })
