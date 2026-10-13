@@ -133,3 +133,4 @@ spreadr: An R package to simulate spreading activation in a network.
 
 Tu, C.-Y., Chodorow, M., Brooks, P. J., Ezrina, E., & Valian, V. (under review).
 Inflated statistics lead to incorrect inference: How (not) to make cognitive network group comparisons.
+*PsyArXiv*. https://doi.org/10.31234/osf.io/mbq59_v1
