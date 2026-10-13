@@ -1,8 +1,8 @@
 # SemNeT
 
-[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)[![Downloads Total](https://cranlogs.r-pkg.org/badges/grand-total/SemNeT?color=brightgreen)](https://cran.r-project.org/package=SemNeT) [![Downloads per month](http://cranlogs.r-pkg.org/badges/SemNeT?color=brightgreen)](https://cran.r-project.org/package=SemNeT)
 
-SemNeT is an R package for estimating and analyzing semantic networks. It is the third part of a pipeline for verbal fluency data: [*SemNetDictionaries*](https://github.com/AlexChristensen/SemNetDictionaries) and [*SemNetCleaner*](https://github.com/AlexChristensen/SemNetCleaner) preprocess the responses, and SemNeT estimates networks from the cleaned responses and compares them across groups. The tutorial for the full pipeline is
+SemNeT is an R package for estimating and analyzing semantic networks. It is the third part of a pipeline for verbal fluency data: [*SemNetDictionaries*](https://github.com/AlexChristensen/SemNetDictionaries) and [*SemNeT*](https://github.com/AlexChristensen/SemNeT) preprocess the responses, and SemNeT estimates networks from the cleaned responses and compares them across groups. The tutorial for the full pipeline is
 
 Christensen, A. P., & Kenett, Y. N. (2023). Semantic network analysis (SemNA): A tutorial on preprocessing, estimating, and analyzing semantic networks. *Psychological Methods*, *28*(4), 860-879. https://doi.org/10.1037/met0000463 (see [PsyArXiv](https://psyarxiv.com/eht87/) for the preprint)
 
@@ -69,15 +69,15 @@ permutation_SemNeT(low, high, method = "tmfg", measure = c("aspl", "cc", "q"), i
 
 ## Shiny application
 
-The Shiny application runs the analyses above from a point-and-click interface and adds spreading activation from the [*spreadr*](https://github.com/csqsiew/spreadr) package (Siew, 2019). It can read a *SemNetCleaner* object from the R environment:
+The Shiny application runs the analyses above from a point-and-click interface and adds spreading activation from the [*spreadr*](https://github.com/csqsiew/spreadr) package (Siew, 2019). It can read a *SemNeT* object from the R environment:
 
 ```r
 # Grouping variable
 group <- SemNeT::open.group
 
 # Preprocessed data
-clean <- SemNetCleaner::textcleaner(
-    data = SemNetCleaner::open.animals[,-c(1,2)], type = "fluency",
+clean <- SemNeT::textcleaner(
+    data = SemNeT::open.animals[,-c(1,2)], type = "fluency",
     miss = 99, partBY = "row", dictionary = "animals"
 )
 
