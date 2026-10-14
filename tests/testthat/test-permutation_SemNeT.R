@@ -122,7 +122,7 @@ test_that("permutation_SemNeT reports the minimal detectable effect from the per
   expect_lt(abs(helper$mde - (qnorm(.975) + qnorm(.8))), .03)
 
   # Check printed output
-  expect_output(print(result), "MDE: smallest true difference detected with 80%\\s+power at alpha = .05")
+  expect_output(print(result), "MDE: smallest true difference detected with 80%\\s+power\\s+at\\s+alpha = .05")
 
   # Check result column
   expect_output(print(result), "result")
