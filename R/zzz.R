@@ -1,7 +1,7 @@
 # Package startup hook
 
 # Package startup ----
-# Updated 06.09.2026
+# Updated 14.10.2026
 .onAttach <- function(libname, pkgname)
 {
 
@@ -13,6 +13,16 @@
 
   # Add issue tracker link
   msg <- paste(msg, "For bugs and errors, submit an issue to <https://github.com/AlexChristensen/SemNeT/issues>\n")
+
+  # Add bootstrap testing change notice
+  msg <- paste(
+    msg,
+    "\nIMPORTANT: Bootstrap group tests changed in version 2.1.0. Earlier versions applied t-tests/ANOVA/ANCOVA ",
+    "to bootstrap samples as independent observations, inflating statistics by about sqrt(iter).",
+    "\nAs of version 2.1.0, bootstrap_test_SemNeT() returns confidence intervals of within-iteration group differences.",
+    "\nRecompute earlier bootstrap results. Run and report both the bootstrap (bootstrap_test_SemNeT()) ",
+    "and permutation (permutation_SemNeT()) procedures.\nDetails: <https://github.com/AlexChristensen/SemNeT/issues/16>\n"
+  )
 
   # Send message to console
   packageStartupMessage(msg)

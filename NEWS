@@ -1,7 +1,5 @@
 Changes in version 2.1.0
 
-Important statistical correction: bootstrap group comparisons
-
 o FIX: group tests in `bootstrap_test_SemNeT` and `test.bootSemNeT` inflated statistics by `sqrt(iter)` (Tu, Chodorow, Brooks, Ezrina, & Valian, under review); recompute any results
 
 o UPDATE: `bootstrap_test_SemNeT` now returns bootstrap intervals of within-iteration group contrasts (`ci_level`, `adjust`, `ci_type`, `power`, `legacy` arguments)
@@ -17,9 +15,6 @@ o ADD: `bootstrap_test_SemNeT` Wald `z`, `p_value`, and minimal detectable effec
 o ADD: `bootstrap_test_SemNeT` `bias_se` (|bias| / `se`; above about 0.25 the bootstrap is off-centre from the observed difference), printed as `bias/se`
 
 o ADD: `bootstrap_test_SemNeT` and `permutation_SemNeT` print a note under their summary tables that they should always be run together
-
-
-Other changes
 
 o FIX: `cn` `alpha` had no effect
 
