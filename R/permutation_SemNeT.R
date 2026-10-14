@@ -501,11 +501,31 @@ print.permutation_SemNeT <- function(x, ...)
 
   }
 
+  # Set significance level (matches minimal detectable effect when available)
+  alpha <- if(!is.null(x$mde)) x$mde$alpha[1] else .05
+
+  # Get observed differences and p-values
+  observed <- differences[1, ]
+  p_values <- x$result$p_value
+
+  # Label result
+  table$result <- ifelse(
+    is.na(p_values) | is.na(observed), "NA",
+    ifelse(
+      p_values >= alpha, "n.s.",
+      ifelse(observed > 0, paste(group_names[1], ">", group_names[2]), paste(group_names[1], "<", group_names[2]))
+    )
+  )
+
   # Print table
   print(table, row.names = FALSE, right = TRUE)
 
   # Set note on p-value
-  notes <- "p: share of permutations (observed included) with a difference at least as extreme as the observed one."
+  notes <- paste(
+    "p: share of permutations (observed included) with a difference at least as extreme as the observed one.",
+    "result: n.s. when p >=", paste0(sub("^0", "", format(alpha)), ","),
+    "otherwise the group with the larger value."
+  )
 
   # Check for minimal detectable effect
   if(!is.null(x$mde)){

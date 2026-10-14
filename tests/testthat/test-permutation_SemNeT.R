@@ -124,6 +124,9 @@ test_that("permutation_SemNeT reports the minimal detectable effect from the per
   # Check printed output
   expect_output(print(result), "MDE: smallest true difference detected with 80%\\s+power at alpha = .05")
 
+  # Check result column
+  expect_output(print(result), "result")
+
   # Reuse permuted networks
   reused <- permutation_SemNeT(previous = result, measure = "aspl", cores = 1)
 

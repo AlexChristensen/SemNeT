@@ -17,10 +17,10 @@
   # Add bootstrap testing change notice
   msg <- paste(
     msg,
-    "\nIMPORTANT: Bootstrap group tests changed in version 2.1.0. Earlier versions applied t-tests/ANOVA/ANCOVA ",
+    "\nIMPORTANT: Bootstrap group tests changed in version 2.1.0. Earlier versions applied t-tests/ANOVA/ANCOVA",
     "to bootstrap samples as independent observations, inflating statistics by about sqrt(iter).",
     "\nAs of version 2.1.0, bootstrap_test_SemNeT() returns confidence intervals of within-iteration group differences.",
-    "\nRecompute earlier bootstrap results. Run and report both the bootstrap (bootstrap_test_SemNeT()) ",
+    "\nRecompute earlier bootstrap results. Run and report both the bootstrap (bootstrap_test_SemNeT())",
     "and permutation (permutation_SemNeT()) procedures.\nDetails: <https://github.com/AlexChristensen/SemNeT/issues/16>\n"
   )
 
