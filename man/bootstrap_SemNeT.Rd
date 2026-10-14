@@ -135,8 +135,9 @@ two <- simulate_fluency(20)
 \donttest{
 # Bootstrap node-drop (partial) networks
 boot_result <- bootstrap_SemNeT(
-  one = one, two = two, prop = .50, iter = 100, cores = 2,
-  method = "tmfg", type = "node", seed = 1234
+  one = one, two = two, prop = .50,
+  iter = 100, # increase for more precise results
+  cores = 2, method = "tmfg", type = "node", seed = 1234
 )
 
 # Bootstrap case-resampled networks -- equating (see `equate()`) requires
@@ -144,8 +145,9 @@ boot_result <- bootstrap_SemNeT(
 low <- open.clean[which(open.group == "Low"), ]
 high <- open.clean[which(open.group == "High"), ]
 boot_result <- bootstrap_SemNeT(
-  low = low, high = high, iter = 100, cores = 2,
-  method = "tmfg", type = "case", minimum_cases = 2
+  low = low, high = high,
+  iter = 100, # increase for more precise results
+  cores = 2, method = "tmfg", type = "case", minimum_cases = 2
 )
 }
 

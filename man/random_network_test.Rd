@@ -72,8 +72,10 @@ net_one <- cn(one)
 net_two <- cn(two)
 
 # Perform random networks test
-random_network_test(low = net_one, high = net_two, iter = 100, cores = 2)
-}
+random_network_test(
+  low = net_one, high = net_two, cores = 2,
+  iter = 100 # increase for more precise results
+)}
 
 }
 \references{

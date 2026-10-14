@@ -11,7 +11,7 @@ permutation_SemNeT(
   method_args = list(),
   sim = "cosine",
   minimum_cases = 2,
-  measure = "aspl",
+  measure = c("aspl", "cc", "q"),
   alternative = c("two_tailed", "two_tailed_centered", "two_tailed_doubled", "less",
     "greater"),
   iter = 1000,
@@ -224,21 +224,12 @@ low <- open.clean[which(open.group == "Low"), ]
 high <- open.clean[which(open.group == "High"), ]
 
 \donttest{
-# aspl
-perm_aspl <- permutation_SemNeT(
-  low, high, method = "tmfg", measure = "aspl", iter = 100, cores = 2,
-  keep_networks = TRUE, seed = 1234
-)
-
-# cc, reusing the same permuted networks
-perm_cc <- permutation_SemNeT(previous = perm_aspl, measure = "cc", cores = 2)
-
-# all three measures at once
-perm_all <- permutation_SemNeT(
-  low, high, method = "tmfg", measure = c("aspl", "cc", "q"), iter = 100,
-  cores = 2, seed = 1234
-)
-}
+# Perform permutation test
+perm_test <- permutation_SemNeT(
+  low, high, method = "tmfg",
+  iter = 100, # increase for more precise results
+  cores = 2, keep_networks = TRUE, seed = 1234
+)}
 
 }
 \seealso{

@@ -1,4 +1,5 @@
 ^\.github$
 ^LICENSE$
 ^Readme\.md$
-^\.claude$
+^\.git$
+^tests$

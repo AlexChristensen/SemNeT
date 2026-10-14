@@ -62,8 +62,10 @@
 #' net_two <- cn(two)
 #'
 #' # Perform random networks test
-#' random_network_test(low = net_one, high = net_two, iter = 100, cores = 2)
-#' }
+#' random_network_test(
+#'   low = net_one, high = net_two, cores = 2,
+#'   iter = 100 # increase for more precise results
+#' )}
 #'
 #' @references
 #' Erdos, P., & Renyi, A. (1960).
@@ -78,7 +80,7 @@
 #'
 #' @export
 # Random network test ----
-# Updated 13.10.2026
+# Updated 14.10.2026
 random_network_test <- function(..., iter = 1000, cores = 1, seed = NULL)
 {
 

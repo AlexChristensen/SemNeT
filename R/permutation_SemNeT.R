@@ -199,32 +199,23 @@
 #' high <- open.clean[which(open.group == "High"), ]
 #'
 #' \donttest{
-#' # aspl
-#' perm_aspl <- permutation_SemNeT(
-#'   low, high, method = "tmfg", measure = "aspl", iter = 100, cores = 2,
-#'   keep_networks = TRUE, seed = 1234
-#' )
-#'
-#' # cc, reusing the same permuted networks
-#' perm_cc <- permutation_SemNeT(previous = perm_aspl, measure = "cc", cores = 2)
-#'
-#' # all three measures at once
-#' perm_all <- permutation_SemNeT(
-#'   low, high, method = "tmfg", measure = c("aspl", "cc", "q"), iter = 100,
-#'   cores = 2, seed = 1234
-#' )
-#' }
+#' # Perform permutation test
+#' perm_test <- permutation_SemNeT(
+#'   low, high, method = "tmfg",
+#'   iter = 100, # increase for more precise results
+#'   cores = 2, keep_networks = TRUE, seed = 1234
+#' )}
 #'
 #' @seealso \code{\link{bootstrap_test_SemNeT}} for bootstrap tests of group differences
 #'
 #' @export
 # Permutation test ----
-# Updated 12.10.2026
+# Updated 14.10.2026
 permutation_SemNeT <- function(
   sample_1 = NULL, sample_2 = NULL,
   method = c("tmfg", "cn", "nrw", "pf"), method_args = list(),
   sim = "cosine", minimum_cases = 2,
-  measure = "aspl",
+  measure = c("aspl", "cc", "q"),
   alternative = c("two_tailed", "two_tailed_centered", "two_tailed_doubled", "less", "greater"),
   iter = 1000, cores = 1, previous = NULL, keep_networks = TRUE,
   seed = NULL, alpha = .05, power = .80

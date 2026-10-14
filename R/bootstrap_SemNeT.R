@@ -116,8 +116,9 @@
 #' \donttest{
 #' # Bootstrap node-drop (partial) networks
 #' boot_result <- bootstrap_SemNeT(
-#'   one = one, two = two, prop = .50, iter = 100, cores = 2,
-#'   method = "tmfg", type = "node", seed = 1234
+#'   one = one, two = two, prop = .50,
+#'   iter = 100, # increase for more precise results
+#'   cores = 2, method = "tmfg", type = "node", seed = 1234
 #' )
 #'
 #' # Bootstrap case-resampled networks -- equating (see `equate()`) requires
@@ -125,8 +126,9 @@
 #' low <- open.clean[which(open.group == "Low"), ]
 #' high <- open.clean[which(open.group == "High"), ]
 #' boot_result <- bootstrap_SemNeT(
-#'   low = low, high = high, iter = 100, cores = 2,
-#'   method = "tmfg", type = "case", minimum_cases = 2
+#'   low = low, high = high,
+#'   iter = 100, # increase for more precise results
+#'   cores = 2, method = "tmfg", type = "case", minimum_cases = 2
 #' )
 #' }
 #'
@@ -135,7 +137,7 @@
 #'
 #' @export
 # Bootstrap semantic networks ----
-# Updated 12.10.2026
+# Updated 14.10.2026
 bootstrap_SemNeT <- function(
   ..., method = c("tmfg", "cn", "nrw", "pf"), method_args = list(),
   type = c("case", "node"), prop = .50, sim = "cosine",
