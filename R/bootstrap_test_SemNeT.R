@@ -638,8 +638,8 @@ bootstrap_print_table <- function(condition_results)
     result <- data.frame(
       measure = toupper(measure), contrast = contrast,
       obs_1 = format_number(table$observed_1), obs_2 = format_number(table$observed_2),
-      diff = format_number(table$observed_diff), CI = format_interval(table$ci_lower, table$ci_upper),
-      se = format_number(table$se), `bias/se` = format_number(table$bias_se, 2), z = format_number(table$z), p = format_p_value(table$p_value),
+      diff = format_number(table$observed_diff), se = format_number(table$se),
+      CI = format_interval(table$ci_lower, table$ci_upper), `bias/se` = format_number(table$bias_se, 2), z = format_number(table$z), p = format_p_value(table$p_value),
       result = ifelse(is.na(table$direction), "NA", table$direction),
       stringsAsFactors = FALSE, check.names = FALSE
     )

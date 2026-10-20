@@ -463,8 +463,8 @@ print.permutation_SemNeT <- function(x, ...)
     measure = toupper(measures),
     group_1 = format_number(x$result[[1]]), group_2 = format_number(x$result[[2]]),
     diff = format_number(differences[1, ]),
-    null_range = format_interval(null_quantiles[1, ], null_quantiles[2, ]),
     null_sd = format_number(apply(differences, 2, sd, na.rm = TRUE)),
+    null_range = format_interval(null_quantiles[1, ], null_quantiles[2, ]),
     p = format_p_value(x$result$p_value),
     stringsAsFactors = FALSE
   )
@@ -500,8 +500,8 @@ print.permutation_SemNeT <- function(x, ...)
 
   # Add note on null distribution
   notes <- paste(
-    notes, "null_range: 2.5% and 97.5% quantiles of the permuted differences;",
-    "null_sd: their standard deviation."
+    notes, "null_sd: standard deviation of the permuted differences;",
+    "null_range: their 2.5% and 97.5% quantiles."
   )
 
   # Check for multiple measures
