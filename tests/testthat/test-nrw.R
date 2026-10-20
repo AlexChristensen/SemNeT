@@ -78,8 +78,11 @@ test_that("nrw reproduces Lerner et al.'s (2009) Figure 1 example", {
   # Check average degree
   expect_equal(unname(sum(net) / nrow(net)), 2.4)
 
-  # Check clustering coefficient
+  # Check clustering coefficient (Lerner et al. report the average of the nodes' coefficients)
   expect_equal(as.numeric(cc(net)), 0.6)
+
+  # Check global clustering coefficient (3 x triangles / connected triples)
+  expect_equal(as.numeric(cc(net, type = "global")), 6 / 11)
 
   # Check average shortest path length
   expect_equal(as.numeric(aspl(net)), 1.4)

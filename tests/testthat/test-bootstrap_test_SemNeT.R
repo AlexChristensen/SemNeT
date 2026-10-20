@@ -79,7 +79,7 @@ test_that("bootstrap_test_SemNeT returns a percentile CI table of within-iterati
   expect_s3_class(result, "bootstrap_test_SemNeT")
 
   # Check names
-  expect_named(result, c("test", "measures", "groups", "results", "meta", "ci_level", "power", "adjust", "ci_type", "legacy"))
+  expect_named(result, c("test", "measures", "groups", "results", "meta", "ci_level", "adjust", "ci_type", "legacy"))
 
   # Check for no legacy tests
   expect_false(result$legacy)
@@ -101,7 +101,7 @@ test_that("bootstrap_test_SemNeT returns a percentile CI table of within-iterati
 
   # Check columns
   expect_named(table, c(
-    "term", "contrast", "mean_1", "se_1", "mean_2", "se_2", "mean_diff", "observed_diff", "bias", "se", "bias_se", "z", "mde",
+    "term", "contrast", "mean_1", "se_1", "mean_2", "se_2", "observed_1", "observed_2", "mean_diff", "observed_diff", "bias", "se", "bias_se", "z",
     "ci_lower", "ci_upper", "p_value", "n_boot", "direction"
   ))
 
@@ -469,7 +469,7 @@ test_that("bootstrap_test_SemNeT's custom formula only replaces the standalone '
 
 })
 
-test_that("bootstrap_test_SemNeT reports the minimal detectable effect", {
+test_that("bootstrap_test_SemNeT reports no minimal detectable effect and adjusts intervals", {
 
   # Set seed
   set.seed(22)
@@ -489,14 +489,8 @@ test_that("bootstrap_test_SemNeT reports the minimal detectable effect", {
   # Get table
   table <- bootstrap_test_SemNeT(boot, measures = "aspl")$results$Case$aspl$table
 
-  # Check minimal detectable effect
-  expect_equal(table$mde, (qnorm(.975) + qnorm(.8)) * sd(d))
-
-  # Check higher power
-  expect_gt(bootstrap_test_SemNeT(boot, measures = "aspl", power = .9)$results$Case$aspl$table$mde, table$mde)
-
-  # Check higher level
-  expect_gt(bootstrap_test_SemNeT(boot, measures = "aspl", ci_level = .99)$results$Case$aspl$table$mde, table$mde)
+  # Check that there is no minimal detectable effect
+  expect_false("mde" %in% names(table))
 
   # Make bootstrap of three groups
   three <- make_fake_boot(list(a = a, b = b, c = rnorm(1000, 2.2, .1)))
@@ -504,23 +498,14 @@ test_that("bootstrap_test_SemNeT reports the minimal detectable effect", {
   # Get adjusted table
   bonferroni <- bootstrap_test_SemNeT(three, measures = "aspl", adjust = "bonferroni")$results$Case$aspl$table
 
-  # Check adjusted minimal detectable effect
-  expect_equal(bonferroni$mde[1], (qnorm(1 - .05 / 6) + qnorm(.8)) * sd(three$groups$a$measures["aspl", ] - three$groups$b$measures["aspl", ]))
+  # Get unadjusted table
+  unadjusted <- bootstrap_test_SemNeT(three, measures = "aspl")$results$Case$aspl$table
 
-  # Check percentile intervals
-  expect_equal(bootstrap_test_SemNeT(boot, measures = "aspl", ci_type = "percentile")$results$Case$aspl$table$mde, table$mde)
+  # Check that adjusted intervals are wider
+  expect_true(all(bonferroni$ci_upper - bonferroni$ci_lower > unadjusted$ci_upper - unadjusted$ci_lower))
 
-  # Make bootstrap without observed statistics
-  no_obs <- make_fake_boot(list(a = a, b = b), observed = NA)
-
-  # Check without observed statistics
-  expect_equal(suppressMessages(bootstrap_test_SemNeT(no_obs, measures = "aspl"))$results$Case$aspl$table$mde, table$mde)
-
-  # Check for error with invalid power
-  expect_error(bootstrap_test_SemNeT(boot, power = 1), "'power'")
-
-  # Check for error with multiple powers
-  expect_error(bootstrap_test_SemNeT(boot, power = c(.5, .8)), "length")
+  # Check that percentile intervals have no minimal detectable effect
+  expect_false("mde" %in% names(bootstrap_test_SemNeT(boot, measures = "aspl", ci_type = "percentile")$results$Case$aspl$table))
 
 })
 
@@ -599,9 +584,6 @@ test_that("stored statistics are not rounded, so they agree exactly with each ot
   # Check upper bound
   expect_equal(table$ci_upper, table$observed_diff + qnorm(.975) * table$se)
 
-  # Check minimal detectable effect
-  expect_equal(table$mde, (qnorm(.975) + qnorm(.8)) * table$se)
-
   # Check that standard error is not rounded
   expect_false(isTRUE(all.equal(table$se, round(table$se, 4), tolerance = 0)))
 
@@ -610,5 +592,14 @@ test_that("stored statistics are not rounded, so they agree exactly with each ot
 
   # Check printed output
   expect_match(printed, "ASPL")
+
+  # Check observed group values
+  expect_equal(table$observed_1, unname(boot$groups$low$observed$measures["aspl"]))
+  expect_equal(table$observed_2, unname(boot$groups$high$observed$measures["aspl"]))
+  expect_equal(table$observed_1 - table$observed_2, table$observed_diff)
+
+  # Check that groups are shown in the printed table
+  expect_match(printed, "low\\s+high")
+  expect_match(printed, format_number(table$observed_1), fixed = TRUE)
 
 })

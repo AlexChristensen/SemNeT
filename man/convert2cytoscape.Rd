@@ -12,7 +12,9 @@ A cleaned, finalized network matrix ready to be visualized}
 }
 \value{
 A sparse matrix formatted for Cytoscape, with columns
-\code{nodeTO}, \code{nodeFROM}, and \code{nodeWEIGHT}
+\code{nodeTO}, \code{nodeFROM}, and \code{nodeWEIGHT}. An undirected edge
+is listed twice, once in each direction (as Cytoscape expects for a directed
+edge list), and the weights are stored as text together with the node names
 }
 \description{
 Converts an adjacency matrix to Cytoscape's sparse edge-list format

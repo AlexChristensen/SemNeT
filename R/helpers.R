@@ -673,6 +673,25 @@ compiled_seed <- function(seed = NULL)
 }
 
 #' @noRd
+# Error for non-whole seed ----
+# Updated 15.10.2026
+seed_whole_error <- function(seed, function_name)
+{
+
+  # Check for whole number (a fraction below 1 would silently mean a random seed)
+  if(is.na(seed) || !is.finite(seed) || seed != floor(seed)){
+
+    # Send error
+    stop(
+      paste0("In `", function_name, "()`: 'seed' must be a whole number (0 for random results)."),
+      call. = FALSE
+    )
+
+  }
+
+}
+
+#' @noRd
 # Check for random seed ----
 # Updated 13.10.2026
 random_seed <- function(seed)
@@ -1068,7 +1087,7 @@ distance <- function(A, weighted = FALSE)
 
 #' @noRd
 # Bad responses ----
-# Updated 06.09.2026
+# Updated 15.10.2026
 bad_response <- function(word, ...)
 {
 
@@ -1076,7 +1095,7 @@ bad_response <- function(word, ...)
   others <- unlist(list(...))
 
   # Set bad responses
-  bad <- c(NA, "NA", "", " ", "  ", others)
+  bad <- c(NA, "NA", "", others)
 
   # Check for no responses
   if(length(word) == 0){
@@ -1086,8 +1105,18 @@ bad_response <- function(word, ...)
 
   }
 
-  # Set bad responses to missing
-  word[word %in% bad] <- NA
+  # Check for text (whitespace-only responses are missing)
+  if(is.character(word)){
+
+    # Set bad responses to missing (ignoring surrounding whitespace)
+    word[trimws(word) %in% bad | word %in% bad] <- NA
+
+  }else{
+
+    # Set bad responses to missing
+    word[word %in% bad] <- NA
+
+  }
 
   # Return responses
   return(word)

@@ -129,6 +129,7 @@ q_errors <- function(A, resolution, seed, signed)
     length_error(seed, 1, "q")
     typeof_error(seed, "numeric", "q")
     range_error(seed, c(0, Inf), "q")
+    seed_whole_error(seed, "q")
   }
 
   # 'signed' errors

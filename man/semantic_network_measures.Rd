@@ -11,7 +11,8 @@ semantic_network_measures(
   seed = NULL,
   na.rm = FALSE,
   signed = FALSE,
-  type = c("arithmetic", "harmonic")
+  type = c("arithmetic", "harmonic"),
+  cc_type = c("average", "global")
 )
 }
 \arguments{
@@ -32,10 +33,10 @@ Defaults to \code{NULL} (not reproducible; \code{0} is random too) -- see
 \code{\link{q}}'s Details}
 
 \item{na.rm}{Boolean.
-Passed on to \code{\link{cc}}: should nodes with fewer than two neighbors
-(whose clustering coefficient is undefined) be left out of the average
-(\code{TRUE}) instead of counted as 0 (\code{FALSE})?
-Only affects \code{"cc"}.
+Passed on to \code{\link{cc}}: should nodes with fewer than two neighbors,
+whose local clustering coefficient is undefined, be left out of the average
+(\code{TRUE}) or counted as 0 (\code{FALSE})? It does not change the global
+clustering coefficient (\code{cc_type = "global"}).
 Defaults to \code{FALSE}}
 
 \item{signed}{Boolean.
@@ -52,6 +53,12 @@ node's mean distance to the nodes it can reach; unreachable pairs are left
 out) or \code{"harmonic"} (the inverse of the mean inverse distance between
 all pairs, which counts unreachable pairs). Only affects \code{"aspl"}.
 Defaults to \code{"arithmetic"}}
+
+\item{cc_type}{Character.
+Passed on to \code{\link{cc}}: \code{"average"} (the average of the nodes'
+local clustering coefficients) or \code{"global"} (the global clustering
+coefficient, or transitivity). Only affects \code{"cc"}.
+Defaults to \code{"average"}}
 }
 \value{
 Returns a named numeric vector with one value per requested measure

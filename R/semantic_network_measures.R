@@ -21,10 +21,10 @@
 #' \code{\link{q}}'s Details
 #'
 #' @param na.rm Boolean.
-#' Passed on to \code{\link{cc}}: should nodes with fewer than two neighbors
-#' (whose clustering coefficient is undefined) be left out of the average
-#' (\code{TRUE}) instead of counted as 0 (\code{FALSE})?
-#' Only affects \code{"cc"}.
+#' Passed on to \code{\link{cc}}: should nodes with fewer than two neighbors,
+#' whose local clustering coefficient is undefined, be left out of the average
+#' (\code{TRUE}) or counted as 0 (\code{FALSE})? It does not change the global
+#' clustering coefficient (\code{cc_type = "global"}).
 #' Defaults to \code{FALSE}
 #'
 #' @param signed Boolean.
@@ -41,6 +41,12 @@
 #' out) or \code{"harmonic"} (the inverse of the mean inverse distance between
 #' all pairs, which counts unreachable pairs). Only affects \code{"aspl"}.
 #' Defaults to \code{"arithmetic"}
+#'
+#' @param cc_type Character.
+#' Passed on to \code{\link{cc}}: \code{"average"} (the average of the nodes'
+#' local clustering coefficients) or \code{"global"} (the global clustering
+#' coefficient, or transitivity). Only affects \code{"cc"}.
+#' Defaults to \code{"average"}
 #'
 #' @return Returns a named numeric vector with one value per requested measure
 #'
@@ -66,18 +72,21 @@
 #'
 #' @export
 # Semantic network measures ----
-# Updated 13.10.2026
+# Updated 15.10.2026
 semantic_network_measures <- function(
   A, measures = c("aspl", "cc", "q"), weighted = FALSE, seed = NULL, na.rm = FALSE, signed = FALSE,
-  type = c("arithmetic", "harmonic")
+  type = c("arithmetic", "harmonic"), cc_type = c("average", "global")
 )
 {
 
   # Argument errors
-  A <- semantic_network_measures_errors(A, measures, weighted, seed, na.rm, signed, type)
+  A <- semantic_network_measures_errors(A, measures, weighted, seed, na.rm, signed, type, cc_type)
 
-  # Set type
+  # Set type of ASPL
   type <- match.arg(type)
+
+  # Set type of CC
+  cc_type <- match.arg(cc_type)
 
   # Check for signed without weights
   if(signed && !weighted && "q" %in% measures){
@@ -102,7 +111,7 @@ semantic_network_measures <- function(
   # Set up measure functions
   available_measures <- list(
     aspl = function() as.numeric(aspl(A, weighted = weighted, type = type)),
-    cc   = function() as.numeric(cc(A, weighted = weighted, na.rm = na.rm)),
+    cc   = function() as.numeric(cc(A, weighted = weighted, na.rm = na.rm, type = cc_type)),
     q    = function() as.numeric(q(A, seed = seed, signed = signed))
   )
 
@@ -116,8 +125,8 @@ semantic_network_measures <- function(
 
 #' @noRd
 # Errors ----
-# Updated 13.10.2026
-semantic_network_measures_errors <- function(A, measures, weighted, seed, na.rm, signed, type)
+# Updated 15.10.2026
+semantic_network_measures_errors <- function(A, measures, weighted, seed, na.rm, signed, type, cc_type)
 {
 
   # 'A' errors
@@ -147,6 +156,7 @@ semantic_network_measures_errors <- function(A, measures, weighted, seed, na.rm,
     length_error(seed, 1, "semantic_network_measures")
     typeof_error(seed, "numeric", "semantic_network_measures")
     range_error(seed, c(0, Inf), "semantic_network_measures")
+    seed_whole_error(seed, "semantic_network_measures")
   }
 
   # 'na.rm' errors
@@ -160,6 +170,10 @@ semantic_network_measures_errors <- function(A, measures, weighted, seed, na.rm,
   # 'type' errors
   length_error(type, c(1, 2), "semantic_network_measures")
   typeof_error(type, "character", "semantic_network_measures")
+
+  # 'cc_type' errors
+  length_error(cc_type, c(1, 2), "semantic_network_measures")
+  typeof_error(cc_type, "character", "semantic_network_measures")
 
   # Return 'A' (in case of data frame)
   return(A)

@@ -89,7 +89,7 @@ SemNeT::SemNeTShiny()
 
 `bootstrap_test_SemNeT()` now returns bootstrap confidence intervals of the within-iteration group differences, with a Wald test when the normal interval is used (the default). The old tests are only available with `legacy = TRUE`, which always gives a warning. For a formal test of group differences, use `permutation_SemNeT()`.
 
-Version 2.1.0 also changes some estimation methods. `pf()` now uses the response-order distance of Paulsen et al. (1996) and takes raw or ordered responses, and the co-occurrence test in `cn()` uses a two-sided confidence interval. `seed = 0` now means a random seed. See [NEWS.md](NEWS.md) for the full list of changes.
+Version 2.1.0 also changes some estimation methods. `pf()` now uses the response-order distance of Paulsen et al. (1996) and takes raw or ordered responses, and the co-occurrence test in `cn()` uses a two-sided confidence interval. `seed = 0` now means a random seed. See [NEWS](NEWS) for the full list of changes.
 
 ## References
 

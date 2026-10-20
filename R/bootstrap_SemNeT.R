@@ -43,7 +43,9 @@
 #' (see \code{prop}). Requires every group to share the same nodes. Each
 #' iteration drops the \emph{same} nodes from every group, so a group
 #' contrast within an iteration is not affected by which nodes happened to be
-#' kept
+#' kept. Raw word responses are converted to ordered responses
+#' (see \code{\link{responses2binary}}) first, so the nodes dropped are words
+#' (not response positions)
 #'
 #' }
 #'
@@ -85,9 +87,11 @@
 #' @param seed Numeric (length = 1).
 #' Defaults to \code{NULL} or random results (\code{0} is random too).
 #' Set a nonzero value for reproducible results.
-#' Each bootstrap sample (and its \code{\link{q}} community detection) gets its
-#' own seed, so results do not depend on \code{set.seed()}, \code{cores}, or
-#' the order workers finish
+#' Each bootstrap sample gets its own seed, and each iteration's
+#' \code{\link{q}} community detection gets its own seed shared by all groups.
+#' The networks of the full data (\code{observed}) use \code{seed} itself for
+#' community detection. Results do not depend on \code{set.seed()},
+#' \code{cores}, or the order workers finish
 #'
 #' @return Returns a list containing:
 #'
@@ -137,7 +141,7 @@
 #'
 #' @export
 # Bootstrap semantic networks ----
-# Updated 14.10.2026
+# Updated 20.10.2026
 bootstrap_SemNeT <- function(
   ..., method = c("tmfg", "cn", "nrw", "pf"), method_args = list(),
   type = c("case", "node"), prop = .50, sim = "cosine",
@@ -166,11 +170,17 @@ bootstrap_SemNeT <- function(
   # Get group names
   group_names <- names(groups)
 
-  # Get seeds of iterations
-  seeds <- reproducible_seeds(iter * length(groups), seed)
+  # Get seeds of iterations (resampling of each group, then community detection)
+  seeds <- reproducible_seeds(iter * (length(groups) + 1), seed)
 
-  # Split seeds by group
-  seeds <- split(seeds, factor(rep(group_names, each = iter), levels = group_names))
+  # Get seeds of community detection (shared by groups within an iteration)
+  q_seeds <- seeds[iter * length(groups) + seq_len(iter)]
+
+  # Split resampling seeds by group
+  seeds <- split(
+    seeds[seq_len(iter * length(groups))],
+    factor(rep(group_names, each = iter), levels = group_names)
+  )
 
   # Check for random seed
   if(random_seed(seed)){
@@ -187,7 +197,7 @@ bootstrap_SemNeT <- function(
   replicates <- parallel_process(
     iter,
     function(i) bootstrap_replicate(
-      i, groups, seeds, type, prop, method, method_args, sim, minimum_cases, keep_networks, iter
+      i, groups, seeds, q_seeds[i], type, prop, method, method_args, sim, minimum_cases, keep_networks, iter
     ),
     cores = cores
   )
@@ -263,9 +273,9 @@ bootstrap_SemNeT <- function(
 
 #' @noRd
 # Bootstrap replicate ----
-# Updated 12.10.2026
+# Updated 20.10.2026
 bootstrap_replicate <- function(
-    i, groups, seeds, type, prop, method, method_args, sim, minimum_cases, keep_networks, iter
+    i, groups, seeds, q_seed, type, prop, method, method_args, sim, minimum_cases, keep_networks, iter
 )
 {
 
@@ -310,7 +320,7 @@ bootstrap_replicate <- function(
   results <- lapply(group_names, function(group_name){
     bootstrap_iteration(
       samples[[group_name]], method, method_args, sim, keep_networks,
-      seed = seeds[[group_name]][i]
+      seed = q_seed
     )
   })
 
@@ -574,7 +584,7 @@ summarize_bootstrap_measures <- function(measures)
 
 #' @noRd
 # Errors ----
-# Updated 13.10.2026
+# Updated 15.10.2026
 bootstrap_SemNeT_errors <- function(groups, method, method_args, type, prop, sim, minimum_cases, iter, cores, keep_networks, seed)
 {
 
@@ -643,6 +653,14 @@ bootstrap_SemNeT_errors <- function(groups, method, method_args, type, prop, sim
 
       # Check for ordered response matrix
       group <- ordered_response_matrix_error(group, "bootstrap_SemNeT")
+
+      # Check for raw responses with node resampling
+      if(type == "node" && (is.character(group) || is.factor(group))){
+
+        # Convert to ordered responses so that nodes are words, not serial positions
+        group <- responses2binary(group)$order
+
+      }
 
     }
 
@@ -748,7 +766,7 @@ bootstrap_SemNeT_errors <- function(groups, method, method_args, type, prop, sim
   # 'minimum_cases' errors
   length_error(minimum_cases, 1, "bootstrap_SemNeT")
   typeof_error(minimum_cases, "numeric", "bootstrap_SemNeT")
-  range_error(minimum_cases, c(0, Inf), "bootstrap_SemNeT")
+  range_error(minimum_cases, c(1, Inf), "bootstrap_SemNeT")
 
   # 'iter' errors
   length_error(iter, 1, "bootstrap_SemNeT")
@@ -769,6 +787,7 @@ bootstrap_SemNeT_errors <- function(groups, method, method_args, type, prop, sim
     length_error(seed, 1, "bootstrap_SemNeT")
     typeof_error(seed, "numeric", "bootstrap_SemNeT")
     range_error(seed, c(0, Inf), "bootstrap_SemNeT")
+    seed_whole_error(seed, "bootstrap_SemNeT")
   }
 
   # Return validated input (in case of data frames or raw responses)

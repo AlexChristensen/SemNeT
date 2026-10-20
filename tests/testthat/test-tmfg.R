@@ -53,7 +53,7 @@ test_that("tmfg handles the minimum 4-node case without corrupting output", {
 
 })
 
-test_that("tmfg's depend = TRUE path preserves directional edge weights", {
+test_that("tmfg rejects asymmetric input and no longer has a depend argument", {
 
   # Set seed
   set.seed(2)
@@ -64,16 +64,13 @@ test_that("tmfg's depend = TRUE path preserves directional edge weights", {
   # Set diagonal
   diag(asym) <- 1
 
-  # Estimate network
-  net <- suppressWarnings(tmfg(asym, depend = TRUE))
+  # Check for error
+  expect_error(tmfg(asym), "symmetric")
 
-  # Check dimensions
-  expect_equal(dim(net), dim(asym))
+  # Check for removed argument
+  expect_error(tmfg(asym, depend = TRUE), "unused argument")
 
-  # Get connected pairs
-  connected <- which(net != 0 & upper.tri(net), arr.ind = TRUE)
-
-  # Check for connections
-  expect_true(nrow(connected) > 0)
+  # Check legacy wrapper warns and then rejects asymmetric input
+  expect_warning(expect_error(TMFG(asym, depend = TRUE), "symmetric"), "removed")
 
 })

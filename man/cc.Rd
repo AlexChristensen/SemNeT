@@ -5,51 +5,99 @@
 \alias{CC}
 \title{Clustering Coefficient}
 \usage{
-cc(A, weighted = FALSE, na.rm = FALSE)
+cc(A, weighted = FALSE, na.rm = FALSE, type = c("average", "global"))
 
 CC(A, weighted = FALSE)
 }
 \arguments{
 \item{A}{Matrix or data frame.
-An adjacency matrix of network data}
+A symmetric adjacency matrix of network data}
 
 \item{weighted}{Boolean.
-Is the network weighted? The weighted coefficient (Rubinov & Sporns, 2010)
-is defined for weights scaled by the network's largest absolute weight, so
-the weights are divided by it first: CC does not depend on the scale of the
-weights, and for a signed network a node's coefficient can be negative.
+Is the network weighted? The weighted coefficient generalizes the
+triangle count to the geometric-mean triangle intensity (Onnela et al., 2005;
+Rubinov & Sporns, 2010), which is defined for weights scaled by the network's
+largest absolute weight, so the weights are divided by it first: CC does not
+depend on the scale of the weights. With negative weights (a signed
+network) a triangle's intensity can be negative, so CC can be negative; this
+signed extension (the signed cube root of the weights) is not part of the
+cited definitions.
 Defaults to \code{FALSE}. Set to \code{TRUE} for weighted measures of CC}
 
 \item{na.rm}{Boolean.
-A node with fewer than two neighbors has no possible triangle, so its
-clustering coefficient is undefined. Should those nodes be left out of the
-average (\code{TRUE}), or counted as having a clustering coefficient of 0
-(\code{FALSE})?
+A node with fewer than two neighbors has no possible triangle, so its local
+clustering coefficient is undefined. With \code{type = "average"}, should
+those nodes be left out of the average (\code{TRUE}), or counted as having a
+clustering coefficient of 0 (\code{FALSE})?
 Counting them as 0 lowers CC in sparse networks (e.g., \code{\link{cn}},
 \code{\link{nrw}}) in proportion to how many such nodes there are.
+With \code{type = "global"}, such nodes add nothing to the number of
+triangles or of connected triples, so \code{na.rm} does \emph{not} change the
+result; it only decides whether their values in the \code{"node"}
+attribute are \code{NA} (\code{TRUE}) or \code{0} (\code{FALSE}).
 Defaults to \code{FALSE}}
+
+\item{type}{Character (length = 1).
+How CC is computed:
+\itemize{
+\item \code{"average"} --- the average of the nodes' local clustering
+coefficients (Watts & Strogatz, 1998), the density of each node's
+neighborhood
+\item \code{"global"} --- the global clustering coefficient (transitivity),
+the sum of the nodes' (weighted) triangle counts divided by the number of
+connected triples (3 x triangles / connected triples; Newman, 2003)
+}
+Defaults to \code{"average"}}
 }
 \value{
-Returns the network's CC. The per-node clustering coefficient is
-attached as the \code{"node"} attribute (\code{NA} for a node with fewer than
-two neighbors when \code{na.rm = TRUE}), rather than being computed and discarded
+Returns the network's CC. The per-node (local) clustering coefficient
+is attached as the \code{"node"} attribute (\code{NA} for a node with fewer
+than two neighbors when \code{na.rm = TRUE}, and \code{0} otherwise)
 }
 \description{
-Computes the global clustering coefficient (CC) of a network
+Computes the clustering coefficient (CC) of a network, either as
+the average of the nodes' local clustering coefficients (the default) or as
+the global clustering coefficient (transitivity)
+}
+\details{
+The local clustering coefficient of a node is the (weighted)
+triangle count of the node divided by \eqn{k_i (k_i - 1)}, where \eqn{k_i} is
+the node's number of neighbors. The average coefficient weights every node
+equally, so nodes with few neighbors count as much as hubs. The global
+coefficient sums triangles and triples over the nodes before dividing, so it
+is dominated by high-degree nodes; the two can differ substantially in
+networks with hubs. For an unweighted network, \code{type = "global"} equals
+\code{igraph::transitivity(type = "global")}, which is \code{NaN} (as it is
+here) when no node has two neighbors, because no triangle is then possible.
 }
 \examples{
 # Pearson's correlation only for CRAN checks
 fluency_data <- matrix(sample(0:1, 1000, replace = TRUE), nrow = 100, ncol = 10)
 A <- suppressWarnings(tmfg(similarity(fluency_data, method = "cor")))
 
-# Unweighted
+# Average of the local clustering coefficients
 network_cc <- cc(A)
+
+# Global clustering coefficient (transitivity)
+global_cc <- cc(A, type = "global")
 
 }
 \references{
+Newman, M. E. J. (2003).
+The structure and function of complex networks.
+\emph{SIAM Review}, \emph{45}, 167-256.
+
+Onnela, J.-P., Saramaki, J., Kertesz, J., & Kaski, K. (2005).
+Intensity and coherence of motifs in weighted complex networks.
+\emph{Physical Review E}, \emph{71}, 065103.
+
 Rubinov, M., & Sporns, O. (2010).
 Complex network measures of brain connectivity: Uses and interpretations.
 \emph{NeuroImage}, \emph{52}, 1059-1069.
+
+Watts, D. J., & Strogatz, S. H. (1998).
+Collective dynamics of 'small-world' networks.
+\emph{Nature}, \emph{393}, 440-442.
 }
 \author{
 Alexander Christensen <alexpaulchristensen@gmail.com>

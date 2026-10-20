@@ -94,23 +94,21 @@
 #' Should every permuted network be kept?
 #' Only needed to test other measures later with \code{previous}
 #' and can be large.
-#' Defaults to \code{TRUE}
+#' Defaults to \code{FALSE}
 #'
 #' @param seed Numeric (length = 1).
 #' Defaults to \code{NULL} or random results (\code{previous}'s \code{seed}
 #' when it is used); \code{0} is random too.
 #' Set a nonzero value for reproducible results.
 #' Each permutation (and its \code{\link{q}} community detection) gets its own
-#' seed, so results do not depend on \code{set.seed()} or \code{cores}
+#' seed, so results do not depend on \code{set.seed()} or \code{cores}.
+#' The first permutation (the observed data) uses \code{seed} itself, so its
+#' \code{\link{q}} matches \code{\link{bootstrap_SemNeT}}'s observed networks
 #'
 #' @param alpha Numeric (length = 1).
-#' Significance level for the critical value of the minimal detectable effect
-#' (\code{mde}) between 0 and 1 (exclusive). Does not change the \emph{p}-value.
+#' Significance level between 0 and 1 (exclusive) used to label the printed
+#' \code{result}. Does not change the \emph{p}-value.
 #' Defaults to \code{.05}
-#'
-#' @param power Numeric (length = 1).
-#' Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
-#' Defaults to \code{.80}
 #'
 #' @details Always run \code{\link{bootstrap_test_SemNeT}} (on
 #' \code{\link{bootstrap_SemNeT}} results) alongside this function and report
@@ -146,25 +144,8 @@
 #' assumption. The one-sided tests are unaffected by centring.
 #'
 #' When several \code{measure}s are tested, each is tested against its own null:
-#' the \emph{p}-values and \code{mde} are \emph{not} adjusted for the number of
+#' the \emph{p}-values are \emph{not} adjusted for the number of
 #' measures.
-#'
-#' The minimal detectable effect (\code{mde}) is the smallest true difference
-#' the test would detect with probability \code{power}, at the study's sample
-#' sizes (it does not transfer to other sample sizes and, apart from the observed
-#' difference being one of the \code{iter} permuted values, does not depend on
-#' the observed difference). The permutation null gives the critical value \eqn{c}
-#' without assuming normality: the \code{1 - alpha} quantile of \eqn{|T^*|}
-#' (\code{"two_tailed"}), of \eqn{|T^* - \bar{T}^*|}
-#' (\code{"two_tailed_centered"}; the \code{mde} is then a difference from the
-#' null's mean), the larger of the \code{1 - alpha/2} quantile of \eqn{T^*} and
-#' the negated \code{alpha/2} quantile (\code{"two_tailed_doubled"}),
-#' \eqn{T^*} (\code{"greater"}), or \eqn{-T^*} (\code{"less"}) over the
-#' permuted differences. The distribution under an
-#' alternative is not identified by permuting labels, so it is approximated as
-#' normal with the null's standard deviation \eqn{\mathrm{SD}_0}:
-#' \eqn{\mathrm{MDE} \approx c + z_{\mathrm{power}}\,\mathrm{SD}_0}. Use at least
-#' 1000 permutations for a stable critical value.
 #'
 #' @return Returns a list containing:
 #'
@@ -188,8 +169,7 @@
 #' \code{<measure>_1} and \code{<measure>_2} for several measures) and each
 #' network's \code{nodes_1}, \code{nodes_2}, \code{edges_1}, and \code{edges_2}}
 #'
-#' \item{mde}{A data frame with one row per \code{measure} containing \code{alpha},
-#' \code{power}, \code{critical_value}, \code{null_sd}, and \code{mde}}
+#' \item{alpha}{The \code{alpha} used}
 #'
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
 #'
@@ -210,15 +190,15 @@
 #'
 #' @export
 # Permutation test ----
-# Updated 14.10.2026
+# Updated 20.10.2026
 permutation_SemNeT <- function(
   sample_1 = NULL, sample_2 = NULL,
   method = c("tmfg", "cn", "nrw", "pf"), method_args = list(),
   sim = "cosine", minimum_cases = 2,
   measure = c("aspl", "cc", "q"),
   alternative = c("two_tailed", "two_tailed_centered", "two_tailed_doubled", "less", "greater"),
-  iter = 1000, cores = 1, previous = NULL, keep_networks = TRUE,
-  seed = NULL, alpha = .05, power = .80
+  iter = 1000, cores = 1, previous = NULL, keep_networks = FALSE,
+  seed = NULL, alpha = .05
 )
 {
 
@@ -231,7 +211,7 @@ permutation_SemNeT <- function(
   # Argument errors
   validated <- permutation_SemNeT_errors(
     sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, previous, keep_networks, seed,
-    alpha, power
+    alpha
   )
 
   # Get first sample
@@ -283,7 +263,7 @@ permutation_SemNeT <- function(
     networks_2 <- previous$networks$network_2
 
     # Get seeds
-    seeds <- reproducible_seeds(length(networks_1), seed)
+    seeds <- permutation_seeds(length(networks_1), seed)
 
     # Compute measures of first sample
     values_1 <- vapply(seq_along(networks_1), function(i) measure_function(networks_1[[i]], seeds[i]), numeric(length(measure)))
@@ -300,7 +280,7 @@ permutation_SemNeT <- function(
   }else{
 
     # Get seeds
-    seeds <- reproducible_seeds(iter, seed)
+    seeds <- permutation_seeds(iter, seed)
 
     # Send message
     message("Estimating networks and measures...")
@@ -410,14 +390,12 @@ permutation_SemNeT <- function(
   # Set up output
   output <- list(
     result = result,
-    networks = if(keep_networks || !is.null(previous)) list(network_1 = networks_1, network_2 = networks_2) else NULL,
+    networks = if(keep_networks) list(network_1 = networks_1, network_2 = networks_2) else NULL,
     method = method,
     seed = seed,
     differences = if(length(measure) == 1) unname(differences[, 1]) else differences,
     diagnostics = diagnostics,
-    mde = do.call(rbind, lapply(measure, function(name){
-      permutation_mde(differences[, name], alternative, alpha, power, name)
-    }))
+    alpha = alpha
   )
 
   # Set class
@@ -480,29 +458,22 @@ print.permutation_SemNeT <- function(x, ...)
   # Get quantiles of null distribution
   null_quantiles <- apply(differences, 2, quantile, probs = c(.025, .975), na.rm = TRUE, names = FALSE)
 
-  # Set up table
+  # Set up table (columns follow the bootstrap tests' table)
   table <- data.frame(
     measure = toupper(measures),
     group_1 = format_number(x$result[[1]]), group_2 = format_number(x$result[[2]]),
-    diff = format_number(differences[1, ]), p = format_p_value(x$result$p_value),
+    diff = format_number(differences[1, ]),
+    null_range = format_interval(null_quantiles[1, ], null_quantiles[2, ]),
     null_sd = format_number(apply(differences, 2, sd, na.rm = TRUE)),
-    q2.5 = format_number(null_quantiles[1, ]), q97.5 = format_number(null_quantiles[2, ]),
+    p = format_p_value(x$result$p_value),
     stringsAsFactors = FALSE
   )
 
   # Name group columns
   names(table)[2:3] <- group_names
 
-  # Check for minimal detectable effect
-  if(!is.null(x$mde)){
-
-    # Add minimal detectable effect
-    table$MDE <- format_number(x$mde$mde)
-
-  }
-
-  # Set significance level (matches minimal detectable effect when available)
-  alpha <- if(!is.null(x$mde)) x$mde$alpha[1] else .05
+  # Set significance level
+  alpha <- if(is.null(x$alpha)) .05 else x$alpha
 
   # Get observed differences and p-values
   observed <- differences[1, ]
@@ -527,18 +498,11 @@ print.permutation_SemNeT <- function(x, ...)
     "otherwise the group with the larger value."
   )
 
-  # Check for minimal detectable effect
-  if(!is.null(x$mde)){
-
-    # Add note on minimal detectable effect
-    notes <- paste(
-      notes, paste0(
-        "MDE: smallest true difference detected with ", format(100 * x$mde$power[1]), "% power at alpha = ",
-        sub("^0", "", format(x$mde$alpha[1])), "."
-      )
-    )
-
-  }
+  # Add note on null distribution
+  notes <- paste(
+    notes, "null_range: 2.5% and 97.5% quantiles of the permuted differences;",
+    "null_sd: their standard deviation."
+  )
 
   # Check for multiple measures
   if(length(measures) > 1){
@@ -624,43 +588,30 @@ permutation_p_value <- function(differences, observed, alternative)
 }
 
 #' @noRd
-# Permutation minimal detectable effect ----
-# Updated 12.10.2026
-permutation_mde <- function(differences, alternative, alpha, power, measure)
+# Permutation seeds ----
+# Updated 20.10.2026
+permutation_seeds <- function(n, seed = NULL)
 {
 
-  # Remove undefined differences
-  differences <- differences[!is.na(differences)]
+  # Get seeds
+  seeds <- reproducible_seeds(n, seed)
 
-  # Get critical value of null distribution
-  critical_value <- switch(
-    alternative,
-    two_tailed = quantile(abs(differences), probs = 1 - alpha),
-    two_tailed_centered = quantile(abs(differences - mean(differences)), probs = 1 - alpha),
-    two_tailed_doubled = max(
-      quantile(differences, probs = 1 - alpha / 2), -quantile(differences, probs = alpha / 2)
-    ),
-    greater = quantile(differences, probs = 1 - alpha),
-    less = -quantile(differences, probs = alpha)
-  )
+  # Check for reproducible seed
+  if(!random_seed(seed)){
 
-  # Get standard deviation of null distribution
-  null_sd <- sd(differences)
+    # Use seed for observed data
+    seeds[1] <- seed
 
-  # Set up minimal detectable effect
-  mde <- data.frame(
-    alpha = alpha, power = power, critical_value = unname(critical_value), null_sd = null_sd,
-    mde = unname(critical_value) + qnorm(power) * null_sd, row.names = measure
-  )
+  }
 
-  # Return minimal detectable effect
-  return(mde)
+  # Return seeds
+  return(seeds)
 
 }
 
 #' @noRd
 # Permutation iteration ----
-# Updated 12.10.2026
+# Updated 15.10.2026
 permutation_iteration <- function(
     i, sample_1, sample_2, seed, method, method_args, sim, minimum_cases, measure_function, keep_networks
 )
@@ -718,6 +669,22 @@ permutation_iteration <- function(
 
     # Use equated samples
     pair <- list(sample_1 = equated$sample_1, sample_2 = equated$sample_2)
+
+    # Check for similarity undefined for responses everyone gave
+    if(sim %in% c("cor", "phi")){
+
+      # Identify responses given by every participant of either sample
+      constant <- colSums(pair$sample_1) == nrow(pair$sample_1) | colSums(pair$sample_2) == nrow(pair$sample_2)
+
+      # Check for constant responses
+      if(any(constant)){
+
+        # Drop them from both samples (the samples stay equated)
+        pair <- lapply(pair, function(sample) sample[, !constant, drop = FALSE])
+
+      }
+
+    }
 
   }
 
@@ -871,7 +838,7 @@ align_samples <- function(sample_1, sample_2)
 # Updated 13.10.2026
 permutation_SemNeT_errors <- function(
     sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative,
-    iter, cores, previous, keep_networks, seed, alpha, power
+    iter, cores, previous, keep_networks, seed, alpha
 )
 {
 
@@ -970,7 +937,7 @@ permutation_SemNeT_errors <- function(
   # 'minimum_cases' errors
   length_error(minimum_cases, 1, "permutation_SemNeT")
   typeof_error(minimum_cases, "numeric", "permutation_SemNeT")
-  range_error(minimum_cases, c(0, Inf), "permutation_SemNeT")
+  range_error(minimum_cases, c(1, Inf), "permutation_SemNeT")
 
   # 'measure' errors
   typeof_error(measure, "character", "permutation_SemNeT")
@@ -1009,6 +976,7 @@ permutation_SemNeT_errors <- function(
     length_error(seed, 1, "permutation_SemNeT")
     typeof_error(seed, "numeric", "permutation_SemNeT")
     range_error(seed, c(0, Inf), "permutation_SemNeT")
+    seed_whole_error(seed, "permutation_SemNeT")
   }
 
   # 'alpha' errors
@@ -1020,18 +988,6 @@ permutation_SemNeT_errors <- function(
 
     # Send error
     stop("In `permutation_SemNeT()`: 'alpha' must be strictly between 0 and 1.", call. = FALSE)
-
-  }
-
-  # 'power' errors
-  length_error(power, 1, "permutation_SemNeT")
-  typeof_error(power, "numeric", "permutation_SemNeT")
-
-  # Check for limits of power
-  if(is.na(power) || power <= 0 || power >= 1){
-
-    # Send error
-    stop("In `permutation_SemNeT()`: 'power' must be strictly between 0 and 1.", call. = FALSE)
 
   }
 

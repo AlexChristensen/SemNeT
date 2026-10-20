@@ -12,7 +12,7 @@ data(animals.freq)
 }
 \description{
 Frequency of animal responses from Christensen & Kenett (2019). These frequencies
-are used to generate data in the \code{\link[SemNeT]{sim.fluency}} function.
+are used to generate data in the \code{\link[SemNeT]{simulate_fluency}} function.
 }
 \examples{
 data("animals.freq")

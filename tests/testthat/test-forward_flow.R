@@ -352,3 +352,39 @@ test_that("forward_flow treats blank-like placeholders as missing and validates 
   expect_error(forward_flow(clean, ambiguous, min_response = 2), "lower-cased")
 
 })
+
+test_that("forward_flow free association treats placeholders as missing and keeps participant order", {
+
+  # Make embeddings
+  embeddings <- make_embeddings()
+
+  # Set up clean and padded responses
+  clean <- data.frame(
+    ID = c("b", "b", "b", "a", "a", "a"), Cue = "animals",
+    Response = c("dog", "wolf", "cat", "car", "truck", "bus"), stringsAsFactors = FALSE
+  )
+  padded <- data.frame(
+    ID = c("b", "b", "b", "b", "b", "a", "a", "a"), Cue = "animals",
+    Response = c("dog", "", "wolf", "NA", "cat", "car", "truck", "bus"), stringsAsFactors = FALSE
+  )
+
+  # Compute forward flow
+  clean_result <- forward_flow(clean, embeddings, min_response = 3, type = "free")
+  padded_result <- forward_flow(padded, embeddings, min_response = 3, type = "free")
+
+  # Check that placeholders are missing
+  expect_equal(padded_result$mean_flow, clean_result$mean_flow)
+
+  # Check that participants keep their order
+  expect_identical(padded_result$mean_flow$ID, c("b", "a"))
+
+  # Check that placeholders do not count toward the minimum
+  short <- data.frame(ID = "a", Cue = "animals", Response = c("dog", "", "NA"), stringsAsFactors = FALSE)
+  expect_true(is.na(forward_flow(short, embeddings, min_response = 2, type = "free")$mean_flow$FF))
+
+  # Check for error with missing embedding values
+  broken <- embeddings
+  broken[1, 1] <- NA
+  expect_error(forward_flow(clean, broken, min_response = 3, type = "free"), "missing or infinite")
+
+})

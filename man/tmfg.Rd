@@ -7,19 +7,15 @@
 \usage{
 TMFG(data, depend = FALSE)
 
-tmfg(data, depend = FALSE)
+tmfg(data)
 }
 \arguments{
 \item{data}{Matrix or data frame.
-A square association matrix (e.g. a correlation or similarity matrix)}
+A square, symmetric association matrix (e.g. a correlation or similarity matrix)}
 
-\item{depend}{Boolean.
-Is \code{data} an asymmetric dependency matrix? Without it, \code{data} must
-be symmetric.
-Defaults to \code{FALSE}. With \code{TRUE}, each edge is placed using the
-larger of its two asymmetric values, but the returned network's links are
-still symmetric (both cells of a retained edge are filled, each with its own
-value from \code{data}), so it is not a directed network}
+\item{depend}{Ignored (with a warning) and kept only so that earlier calls
+of the legacy \code{TMFG()} still run: the \code{depend} argument was
+removed in SemNeT 2.1.1}
 }
 \value{
 Returns a TMFG-filtered adjacency matrix

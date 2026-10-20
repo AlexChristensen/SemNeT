@@ -35,14 +35,31 @@ legacy_dot_names <- function(dots_call)
 }
 
 #' @rdname tmfg
+#'
+#' @param depend Ignored (with a warning) and kept only so that earlier calls
+#' of the legacy \code{TMFG()} still run: the \code{depend} argument was
+#' removed in SemNeT 2.1.1
+#'
 #' @export
 # Legacy `tmfg` ----
-# Updated 07.09.2026
+# Updated 15.10.2026
 TMFG <- function(data, depend = FALSE)
 {
 
+  # Check for dependency matrix
+  if(!missing(depend)){
+
+    # Send warning
+    warning(
+      "In `TMFG()`: 'depend' was removed (it never produced a directed network, and its edge rule differed from the documented one). ",
+      "`data` must be a symmetric association matrix; ignoring 'depend'.",
+      call. = FALSE
+    )
+
+  }
+
   # Return network
-  return(tmfg(data, depend = depend))
+  return(tmfg(data))
 
 }
 
@@ -73,12 +90,12 @@ CC <- function(A, weighted = FALSE)
 #' @rdname cn
 #' @export
 # Legacy `cn` ----
-# Updated 07.09.2026
-CN <- function(data, window = 2, alpha = .05, enrich = FALSE)
+# Updated 15.10.2026
+CN <- function(data, window = 2, alpha = .05, enrich = FALSE, cutoff = 0.50)
 {
 
   # Return network
-  return(cn(data, window = window, alpha = alpha, enrich = enrich))
+  return(cn(data, window = window, alpha = alpha, enrich = enrich, cutoff = cutoff))
 
 }
 

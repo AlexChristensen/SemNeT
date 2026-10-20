@@ -35,10 +35,6 @@
 #' Defaults to \code{.95}.
 #' At least 1000 bootstrap iterations are recommended
 #'
-#' @param power Numeric (length = 1).
-#' Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
-#' Defaults to \code{.80}
-#'
 #' @param adjust Character (length = 1).
 #' Multiplicity adjustment across the comparisons within each measure. Nothing
 #' is ever adjusted across the measures or across the objects passed in
@@ -124,19 +120,6 @@
 #' each resampled network's size, so the bootstrap distribution is not centred on
 #' the full-data statistic (reported as \code{bias}).
 #'
-#' The minimal detectable effect (\code{mde}) is
-#' \eqn{(z_{1-\alpha/2} + z_{\mathrm{power}})\,\mathrm{SD}^*}: the smallest true
-#' contrast a two-sided Wald test would detect with probability \code{power}
-#' (\eqn{\alpha} is divided by the number of comparisons for
-#' \code{adjust = "bonferroni"}). It depends only on the bootstrap standard
-#' error, so a non-significant difference smaller than \code{mde} is inconclusive.
-#' The bootstrap standard error can exceed the true sampling standard deviation,
-#' so \code{mde} errs large. It also assumes the contrast is roughly normally
-#' distributed, for every \code{ci_type}. When that is doubtful (check the
-#' \code{differences} of each measure), \code{\link{permutation_SemNeT}} reports
-#' an \code{mde} whose critical value comes from the permutation null instead of a
-#' normal quantile.
-#'
 #' Node results (\code{type = "node"}) subsample words, not participants, and
 #' the subsample sizes change the measures themselves, so they are summarized
 #' descriptively instead of tested.
@@ -161,16 +144,17 @@
 #' \code{table} has one row per comparison: \code{term}, \code{contrast},
 #' \code{mean_1}, \code{se_1}, \code{mean_2}, and \code{se_2} (the bootstrap mean
 #' and standard error of each side; \code{NA} for interactions),
-#' \code{mean_diff}, \code{observed_diff}, \code{bias}
+#' \code{observed_1} and \code{observed_2} (the full-sample value of each side;
+#' \code{NA} for interactions), \code{mean_diff}, \code{observed_diff}, \code{bias}
 #' (\code{mean_diff - observed_diff}), \code{se} (of the difference),
 #' \code{bias_se} (\code{|bias| / se}), \code{z}
-#' (Wald statistic; \code{ci_type = "normal"} only), \code{mde},
+#' (Wald statistic; \code{ci_type = "normal"} only),
 #' \code{ci_lower}, \code{ci_upper}, \code{p_value} (Wald test;
 #' \code{ci_type = "normal"} only, otherwise \code{NA}), \code{n_boot}, and
 #' \code{direction} (\code{"n.s."} when the interval includes 0).
 #'
 #' For node results, \code{table} has \code{term}, \code{contrast},
-#' \code{observed_diff}, \code{mean_diff}, \code{sd_diff}, \code{q_lower} and
+#' \code{observed_1}, \code{observed_2}, \code{observed_diff}, \code{mean_diff}, \code{sd_diff}, \code{q_lower} and
 #' \code{q_upper} (central \code{ci_level} range of the subsample differences),
 #' \code{prop_same_sign} (share with the observed difference's sign), and
 #' \code{n_boot}: a robustness summary with no \emph{p}-value or interval}
@@ -182,8 +166,6 @@
 #' \code{observed_edges})}
 #'
 #' \item{ci_level}{The confidence level used}
-#'
-#' \item{power}{The power used for \code{mde}}
 #'
 #' \item{adjust}{The multiplicity adjustment used}
 #'
@@ -231,14 +213,14 @@
 # Updated 12.10.2026
 bootstrap_test_SemNeT <- function(
   ..., measures = c("aspl", "cc", "q"), groups = NULL, formula = NULL,
-  ci_level = .95, power = .80, adjust = c("none", "bonferroni"), ci_type = c("normal", "bc", "percentile"),
+  ci_level = .95, adjust = c("none", "bonferroni"), ci_type = c("normal", "bc", "percentile"),
   test = NULL, legacy = FALSE
 )
 {
 
   # Argument errors
   validated <- bootstrap_test_SemNeT_errors(
-    list(...), measures, groups, formula, ci_level, power, adjust, ci_type,
+    list(...), measures, groups, formula, ci_level, adjust, ci_type,
     test, legacy
   )
 
@@ -343,7 +325,7 @@ bootstrap_test_SemNeT <- function(
 
         # Perform contrast tests
         contrast_test_one_measure(
-          boot_object, measure, contrasts, ci_level, power, adjust, ci_type
+          boot_object, measure, contrasts, ci_level, adjust, ci_type
         )
 
       }
@@ -371,7 +353,7 @@ bootstrap_test_SemNeT <- function(
   output <- list(
     test = if(legacy) test else "bootstrap CI",
     measures = measures, groups = groups_matrix, results = results, meta = meta,
-    ci_level = ci_level, power = power, adjust = adjust, ci_type = ci_type, legacy = legacy
+    ci_level = ci_level, adjust = adjust, ci_type = ci_type, legacy = legacy
   )
 
   # Set class
@@ -473,6 +455,23 @@ print.bootstrap_test_SemNeT <- function(x, ...)
       # Print comparison
       cat("  Comparison: ", table$contrast[1], "\n", sep = "")
 
+      # Get term of comparison
+      term <- x$results[[condition]][[1]]$table$term[1]
+
+      # Get groups of comparison
+      compared <- strsplit(
+        if(term == "Group") table$contrast[1] else substring(table$contrast[1], nchar(term) + 3),
+        " - ", fixed = TRUE
+      )[[1]]
+
+      # Check for two named groups
+      if(all(c("obs_1", "obs_2") %in% names(table)) && length(compared) == 2 && !anyDuplicated(compared)){
+
+        # Name group columns
+        names(table)[names(table) %in% c("obs_1", "obs_2")] <- compared
+
+      }
+
       # Remove contrast column
       table$contrast <- NULL
 
@@ -484,23 +483,18 @@ print.bootstrap_test_SemNeT <- function(x, ...)
     # Print table
     print(table, row.names = FALSE, right = TRUE)
 
+    # Check for unnamed group columns
+    if("obs_1" %in% names(table)){
+
+      # Print note on group columns
+      cat("  obs_1, obs_2: full-sample values of the first and second group of each contrast\n")
+
+    }
+
   }
 
   # Check for inference
   if(any_inference){
-
-    # Set note on minimal detectable effect
-    mde_text <- if(is.null(x$power)){
-
-      # Set note without power
-      "MDE: smallest true difference the test could detect."
-
-    }else{
-
-      # Set note with power
-      paste0("MDE: smallest true difference detected with ", format(100 * x$power), "% power (assumes a roughly normal contrast; see `permutation_SemNeT()` otherwise).")
-
-    }
 
     # Set note on p-value
     p_text <- if(x$ci_type == "normal"){
@@ -540,7 +534,7 @@ print.bootstrap_test_SemNeT <- function(x, ...)
 
     # Print notes
     writeLines(c(
-      strwrap(paste(p_text, mde_text, adjust_text, bias_text), width = 80),
+      strwrap(paste(p_text, adjust_text, bias_text), width = 80),
       strwrap("For a formal hypothesis test, use `permutation_SemNeT()`. Full tables: `$results`.", width = 80)
     ))
 
@@ -620,12 +614,18 @@ bootstrap_print_table <- function(condition_results)
     # Get label of contrast
     contrast <- ifelse(table$term == "Group", table$contrast, paste0(table$term, ": ", table$contrast))
 
+    # Add missing group values (results from earlier versions)
+    for(column in c("observed_1", "observed_2")){
+      if(is.null(table[[column]])) table[[column]] <- rep(NA_real_, nrow(table))
+    }
+
     # Check for node results
     if("same_sign" %in% names(table) || "prop_same_sign" %in% names(table)){
 
       # Return node summary
       return(data.frame(
         measure = toupper(measure), contrast = contrast,
+        obs_1 = format_number(table$observed_1), obs_2 = format_number(table$observed_2),
         diff = format_number(table$observed_diff), mean = format_number(table$mean_diff),
         sd = format_number(table$sd_diff), range = format_interval(table$q_lower, table$q_upper),
         same_sign = ifelse(is.na(table$prop_same_sign), "NA", sprintf("%.2f", table$prop_same_sign)),
@@ -637,9 +637,10 @@ bootstrap_print_table <- function(condition_results)
     # Set up case summary
     result <- data.frame(
       measure = toupper(measure), contrast = contrast,
+      obs_1 = format_number(table$observed_1), obs_2 = format_number(table$observed_2),
       diff = format_number(table$observed_diff), CI = format_interval(table$ci_lower, table$ci_upper),
       se = format_number(table$se), `bias/se` = format_number(table$bias_se, 2), z = format_number(table$z), p = format_p_value(table$p_value),
-      MDE = format_number(table$mde), result = ifelse(is.na(table$direction), "NA", table$direction),
+      result = ifelse(is.na(table$direction), "NA", table$direction),
       stringsAsFactors = FALSE, check.names = FALSE
     )
 
@@ -650,6 +651,15 @@ bootstrap_print_table <- function(condition_results)
 
   # Combine measures
   table <- do.call(rbind, rows)
+
+  # Check for no group values (interactions only)
+  if(all(table$obs_1 == "NA") && all(table$obs_2 == "NA")){
+
+    # Remove group values
+    table$obs_1 <- NULL
+    table$obs_2 <- NULL
+
+  }
 
   # Check for no Wald statistics
   if("z" %in% names(table) && all(table$z == "NA")){
@@ -1033,8 +1043,18 @@ contrast_differences <- function(boot_object, measure, contrasts)
   # Get observed differences
   observed_differences <- vapply(contrasts, function(contrast) sum(contrast$weights * observed), numeric(1))
 
+  # Get observed values of sides (missing for interactions)
+  observed_sides <- t(vapply(contrasts, function(contrast){
+    vapply(list(contrast$weights_1, contrast$weights_2), function(weights){
+      if(is.null(weights)) NA_real_ else sum(weights * observed)
+    }, numeric(1))
+  }, numeric(2)))
+
   # Return values and differences
-  return(list(values = values, observed = observed, differences = differences, observed_differences = observed_differences))
+  return(list(
+    values = values, observed = observed, differences = differences,
+    observed_differences = observed_differences, observed_sides = matrix(observed_sides, ncol = 2)
+  ))
 
 }
 
@@ -1089,7 +1109,7 @@ normal_interval <- function(difference, level, center)
 #' @noRd
 # Contrast test of one measure ----
 # Updated 10.10.2026
-contrast_test_one_measure <- function(boot_object, measure, contrasts, ci_level, power, adjust, ci_type)
+contrast_test_one_measure <- function(boot_object, measure, contrasts, ci_level, adjust, ci_type)
 {
 
   # Get contrast differences
@@ -1155,8 +1175,9 @@ contrast_test_one_measure <- function(boot_object, measure, contrasts, ci_level,
       term = contrast$term, contrast = contrast$contrast,
       mean_1 = side_1[1], se_1 = side_1[2],
       mean_2 = side_2[1], se_2 = side_2[2],
+      observed_1 = prepared$observed_sides[i, 1], observed_2 = prepared$observed_sides[i, 2],
       mean_diff = NA_real_, observed_diff = observed_difference, bias = NA_real_,
-      se = NA_real_, bias_se = NA_real_, z = NA_real_, mde = NA_real_, ci_lower = NA_real_, ci_upper = NA_real_,
+      se = NA_real_, bias_se = NA_real_, z = NA_real_, ci_lower = NA_real_, ci_upper = NA_real_,
       p_value = NA_real_, n_boot = n_boot, direction = NA_character_, stringsAsFactors = FALSE
     )
 
@@ -1167,9 +1188,6 @@ contrast_test_one_measure <- function(boot_object, measure, contrasts, ci_level,
       return(row)
 
     }
-
-    # Compute minimal detectable effect
-    row$mde <- (qnorm(1 - alpha / 2) + qnorm(power)) * sd(difference)
 
     # Check for differences that do not vary
     if(!isTRUE(sd(difference) > 0)){
@@ -1362,6 +1380,7 @@ robustness_test_one_measure <- function(boot_object, measure, contrasts, ci_leve
     # Return row
     data.frame(
       term = contrast$term, contrast = contrast$contrast,
+      observed_1 = prepared$observed_sides[i, 1], observed_2 = prepared$observed_sides[i, 2],
       observed_diff = observed_difference,
       mean_diff = mean(difference),
       sd_diff = if(length(difference) > 1) sd(difference) else NA_real_,
@@ -1672,7 +1691,7 @@ anova_table <- function(frame, test, formula, groups_matrix)
 #' @noRd
 # Errors ----
 # Updated 13.10.2026
-bootstrap_test_SemNeT_errors <- function(boot_objects, measures, groups, formula, ci_level, power, adjust, ci_type, test, legacy)
+bootstrap_test_SemNeT_errors <- function(boot_objects, measures, groups, formula, ci_level, adjust, ci_type, test, legacy)
 {
 
   # '...' errors
@@ -1801,18 +1820,6 @@ bootstrap_test_SemNeT_errors <- function(boot_objects, measures, groups, formula
 
     # Send error
     stop("In `bootstrap_test_SemNeT()`: 'ci_level' must be strictly between 0 and 1.", call. = FALSE)
-
-  }
-
-  # 'power' errors
-  length_error(power, 1, "bootstrap_test_SemNeT")
-  typeof_error(power, "numeric", "bootstrap_test_SemNeT")
-
-  # Check for limits of power
-  if(is.na(power) || power <= 0 || power >= 1){
-
-    # Send error
-    stop("In `bootstrap_test_SemNeT()`: 'power' must be strictly between 0 and 1.", call. = FALSE)
 
   }
 

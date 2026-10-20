@@ -17,10 +17,16 @@ test_that("semantic_network_measures passes na.rm on to cc", {
   # Check removal of missing
   expect_equal(unname(semantic_network_measures(A, measures = "cc", na.rm = TRUE)), as.numeric(cc(A, na.rm = TRUE)))
 
-  # Check that removal raises clustering
+  # Check that removal raises the average of the local coefficients
   expect_gt(
     semantic_network_measures(A, measures = "cc", na.rm = TRUE),
     semantic_network_measures(A, measures = "cc")
+  )
+
+  # Check that removal does not change the global clustering coefficient
+  expect_equal(
+    semantic_network_measures(A, measures = "cc", na.rm = TRUE, cc_type = "global"),
+    semantic_network_measures(A, measures = "cc", cc_type = "global")
   )
 
   # Check that ASPL is unaffected
@@ -125,5 +131,39 @@ test_that("semantic_network_measures passes 'type' through to aspl", {
 
   # Check for non-character type
   expect_error(semantic_network_measures(net, type = 1), "character|type")
+
+})
+
+test_that("semantic_network_measures passes 'cc_type' through to cc", {
+
+  # Set up network
+  A <- matrix(0, 5, 5)
+
+  # Add triangle
+  A[1, 2] <- A[2, 1] <- A[2, 3] <- A[3, 2] <- A[1, 3] <- A[3, 1] <- 1
+
+  # Add tail
+  A[3, 4] <- A[4, 3] <- A[4, 5] <- A[5, 4] <- 1
+
+  # Check average clustering
+  expect_equal(unname(semantic_network_measures(A, measures = "cc")), as.numeric(cc(A)))
+
+  # Check explicit average clustering
+  expect_equal(semantic_network_measures(A, measures = "cc", cc_type = "average"), semantic_network_measures(A, measures = "cc"))
+
+  # Check global clustering
+  expect_equal(unname(semantic_network_measures(A, measures = "cc", cc_type = "global")), as.numeric(cc(A, type = "global")))
+
+  # Check that other measures are unaffected
+  expect_equal(
+    semantic_network_measures(A, measures = "aspl", cc_type = "global"),
+    semantic_network_measures(A, measures = "aspl")
+  )
+
+  # Check for unknown type
+  expect_error(semantic_network_measures(A, cc_type = "local"), "arg")
+
+  # Check for non-character type
+  expect_error(semantic_network_measures(A, cc_type = 1), "character|cc_type")
 
 })

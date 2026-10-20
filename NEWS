@@ -1,3 +1,42 @@
+Changes in version 2.1.1
+
+o FIX: `cn` returned the wrong nodes whenever the network had isolated words: the largest component was found on a network without its isolates but indexed into the full one, so the returned nodes (and their edges) were not the largest component
+
+o FIX: `convert2igraph` treated a node whose signed edges cancel (e.g., +1 and -1) as unconnected; it now requires a symmetric network, keeps the matrix form with a single edge, and documents that it drops nodes without edges
+
+o FIX: `forward_flow` with `type = "free"` now treats `""`, `" "`, and `"NA"` as missing (as the fluency format and the documentation already did), returns participants in their input order, and stops on missing or infinite `embeddings` (it previously set them to 0)
+
+o FIX: `bootstrap_SemNeT` node bootstrap of raw responses with `cn`, `nrw`, or `pf` dropped response positions instead of words; raw responses are converted to ordered responses (words) first
+
+o FIX: `permutation_SemNeT` stopped when a permuted sample had a response every participant gave and `sim` was `"cor"` or `"phi"`; such responses are now dropped from both samples
+
+o FIX: `random_network_test` left undefined (`NaN`) random-network measures in the mean, which turned its p-value into the minimum possible; they are now left out with a warning. Each input network now has its own random networks (they previously shared one set of seeds), `type` (`"arithmetic"` or `"harmonic"` ASPL) is added, and the random-network mean and standard deviation are no longer rounded to 4 digits
+
+o FIX: `random_walk` no longer lets a draw fall past a node's last neighbor because of rounding, and a single level of steps no longer gives a row named `"Steps"`
+
+o FIX: `response_analysis` no longer rounds p-values to 3 decimals (they are kept to 3 significant digits)
+
+o FIX: `bad_response` ignores whitespace around responses (`" "`, `"   "`, `" NA"`)
+
+o FIX: Louvain aggregation (`q`) counted the self-loops of an aggregated community twice
+
+o UPDATE: `cc` requires a symmetric network, and `type = "global"` returns `NaN` for a network without connected triples (`na.rm` then only affects the per-node attribute)
+
+o UPDATE: `cn` requires a whole-number `window` smaller than the mean number of responses (Goni et al., 2011), and warns and returns an empty network when no pair co-occurs significantly; the documentation states that only the largest component is returned
+
+o UPDATE: `finalize`, `bootstrap_SemNeT`, and `permutation_SemNeT` require `minimum_cases` of at least 1; messages no longer suggest that `finalize` removes responses everyone gave
+
+o UPDATE: `seed` must be a whole number (a fraction below 1 silently meant random results)
+
+o UPDATE: `compare_networks` restores the graphical parameters and, for `placement = "match"`, requires the same node names
+
+o UPDATE: legacy `CN` accepts `cutoff`
+
+o ADD: `cc` `type`: `"average"` (default; the average of the nodes' local clustering coefficients, as before) or `"global"` (3 x triangles / connected triples; `igraph::transitivity(type = "global")`); the weighted (and signed) global coefficient is the ratio of the summed triangle intensities (Onnela et al., 2005) to the number of connected triples; `semantic_network_measures` and `random_network_test` pass it on as `cc_type`
+
+o REMOVE: `tmfg` `depend` argument (an asymmetric matrix is an error; the documented rule was never what the code did); the legacy `TMFG` ignores `depend` with a warning
+
+
 Changes in version 2.1.0
 
 o FIX: group tests in `bootstrap_test_SemNeT` and `test.bootSemNeT` inflated statistics by `sqrt(iter)` (Tu, Chodorow, Brooks, Ezrina, & Valian, under review); recompute any results
@@ -10,7 +49,7 @@ o UPDATE: `bootstrap_test_SemNeT` legacy parametric tests need `legacy = TRUE` a
 
 o UPDATE: `bootstrap_SemNeT` `$summary` standard error is no longer divided by `sqrt(iter)`; observed (full-data) statistics are stored in `$observed`
 
-o ADD: `bootstrap_test_SemNeT` Wald `z`, `p_value`, and minimal detectable effect `mde` for normal intervals (the default)
+o ADD: `bootstrap_test_SemNeT` Wald `z` and `p_value` for normal intervals (the default)
 
 o ADD: `bootstrap_test_SemNeT` `bias_se` (|bias| / `se`; above about 0.25 the bootstrap is off-centre from the observed difference), printed as `bias/se`
 
@@ -68,7 +107,7 @@ o UPDATE: `bootstrap_SemNeT` node bootstrap drops the same nodes from every grou
 
 o UPDATE: `bootstrap_SemNeT` retries draws only for correlation similarities (`"cor"`, `"phi"`); plot shows the full-data value
 
-o UPDATE: `permutation_SemNeT` tests several measures at once and returns `mde` and `diagnostics`
+o UPDATE: `permutation_SemNeT` tests several measures at once and returns `diagnostics`; printed table columns follow `bootstrap_test_SemNeT` (`null_range` and `null_sd` in place of `CI` and `se`)
 
 o UPDATE: `permutation_SemNeT` gains two-sided options `"two_tailed_centered"` and `"two_tailed_doubled"`, tolerates floating-point ties, and aligns samples of different widths or vocabularies
 
@@ -79,6 +118,10 @@ o ADD: `aspl` `type` argument (`"arithmetic"`, the default and previous behavior
 o ADD: `seed` for `bootstrap_SemNeT` and `permutation_SemNeT`; each resample gets its own seed, so results do not depend on `cores` or `set.seed`
 
 o ADD: `random_network_test` `seed` argument
+
+o ADD: `bootstrap_test_SemNeT` prints and stores the groups' full-sample values (`observed_1`, `observed_2` in each `table`), like `permutation_SemNeT`
+
+o UPDATE: `q` seeds now line up between `bootstrap_SemNeT` and `permutation_SemNeT`: `permutation_SemNeT` scores the observed data (first permutation) with `seed` itself, as `bootstrap_SemNeT` does for its full-data networks, so their empirical `q` differences match (they previously used different Louvain seeds, which changes `q` slightly); `bootstrap_SemNeT` gives each iteration one community-detection seed shared by all groups
 
 o ADD: `print` methods for `bootstrap_test_SemNeT` and `permutation_SemNeT`
 

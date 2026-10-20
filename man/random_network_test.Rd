@@ -4,7 +4,14 @@
 \alias{random_network_test}
 \title{Test Against Random Networks}
 \usage{
-random_network_test(..., iter = 1000, cores = 1, seed = NULL)
+random_network_test(
+  ...,
+  iter = 1000,
+  cores = 1,
+  type = c("arithmetic", "harmonic"),
+  cc_type = c("average", "global"),
+  seed = NULL
+)
 }
 \arguments{
 \item{...}{Named matrices or data frames.
@@ -19,10 +26,23 @@ Defaults to \code{1000}}
 Number of computer processing cores to use.
 Defaults to \code{1}}
 
+\item{type}{Character (length = 1).
+Type of \code{\link{aspl}} used for the observed and random networks:
+\code{"arithmetic"} (unreachable pairs are ignored) or \code{"harmonic"}
+(unreachable pairs contribute zero, so it is defined for disconnected
+networks and comparable between a connected and a disconnected network).
+Defaults to \code{"arithmetic"}}
+
+\item{cc_type}{Character (length = 1).
+Type of \code{\link{cc}} used for the observed and random networks:
+\code{"average"} (the average of the nodes' local clustering coefficients) or
+\code{"global"} (the global clustering coefficient, or transitivity).
+Defaults to \code{"average"}}
+
 \item{seed}{Numeric.
 A seed for reproducible results (including the community detection behind
-\code{q}), the same whatever \code{cores} is. Each random network gets its
-own seed derived from it.
+\code{q}), the same whatever \code{cores} is. Each random network of each
+input network gets its own seed derived from it.
 Defaults to \code{NULL} (not reproducible; \code{0} is random too)}
 }
 \value{
@@ -58,8 +78,12 @@ where \eqn{x_i} are the \code{iter} random-network values and \eqn{\bar{x}}
 their mean. They cannot be smaller than \code{1 / (iter + 1)} (and are
 reported to 4 significant digits, so that they are not rounded to 0). Neither null
 model guarantees a connected network, and \code{aspl} ignores unreachable
-pairs, so a sparse random network can differ from a connected observed one
-for that reason alone. The tests are not adjusted for the number of measures.
+pairs (with \code{type = "arithmetic"}), so a sparse random network can differ
+from a connected observed one for that reason alone; use
+\code{type = "harmonic"} to avoid this. Random networks whose measure is
+undefined (\code{NaN}) are left out of that measure's mean, standard
+deviation, and \emph{p}-value, with a warning. The tests are not adjusted for
+the number of measures.
 }
 \examples{
 # Get openness data

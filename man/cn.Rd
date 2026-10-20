@@ -7,7 +7,7 @@
 \usage{
 cn(data, window = 2, alpha = 0.05, enrich = FALSE, cutoff = 0.5)
 
-CN(data, window = 2, alpha = 0.05, enrich = FALSE)
+CN(data, window = 2, alpha = 0.05, enrich = FALSE, cutoff = 0.5)
 }
 \arguments{
 \item{data}{Matrix or data frame.
@@ -17,7 +17,9 @@ the raw word responses or an ordered numeric response matrix (see
 \code{responses2binary()})}
 
 \item{window}{Numeric.
-Size of window to look for co-occurrences in.
+Size of window to look for co-occurrences in (a whole number; Goni et al.
+(2011) require it to be smaller than the average number of responses per
+participant).
 Defaults to \code{2}}
 
 \item{alpha}{Numeric.
@@ -46,7 +48,12 @@ inspected rather than assumed. A warning is given whenever
 Defaults to \code{0.50}}
 }
 \value{
-Returns an undirected semantic network
+Returns an undirected semantic network. As in Goni et al. (2011), only
+the largest connected component is kept: responses without a significant
+co-occurrence with the others (typically many of the less frequent responses)
+are dropped, so the network has fewer nodes than there are distinct
+responses. A 0 x 0 network (with a warning) is returned when no pair of
+responses co-occurs significantly
 }
 \description{
 Estimates a semantic network using the Community Network

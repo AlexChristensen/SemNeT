@@ -57,7 +57,9 @@ Available options:
 (see \code{prop}). Requires every group to share the same nodes. Each
 iteration drops the \emph{same} nodes from every group, so a group
 contrast within an iteration is not affected by which nodes happened to be
-kept
+kept. Raw word responses are converted to ordered responses
+(see \code{\link{responses2binary}}) first, so the nodes dropped are words
+(not response positions)
 
 }}
 
@@ -99,9 +101,11 @@ Defaults to \code{FALSE}}
 \item{seed}{Numeric (length = 1).
 Defaults to \code{NULL} or random results (\code{0} is random too).
 Set a nonzero value for reproducible results.
-Each bootstrap sample (and its \code{\link{q}} community detection) gets its
-own seed, so results do not depend on \code{set.seed()}, \code{cores}, or
-the order workers finish}
+Each bootstrap sample gets its own seed, and each iteration's
+\code{\link{q}} community detection gets its own seed shared by all groups.
+The networks of the full data (\code{observed}) use \code{seed} itself for
+community detection. Results do not depend on \code{set.seed()},
+\code{cores}, or the order workers finish}
 }
 \value{
 Returns a list containing:

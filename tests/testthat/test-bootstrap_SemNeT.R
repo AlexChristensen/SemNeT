@@ -300,3 +300,25 @@ test_that("only correlation-type similarities retry bootstrap draws, and an alwa
   )))
 
 })
+
+test_that("node bootstrap of raw responses drops words, not response positions", {
+
+  # Get raw responses
+  raw <- open.clean[1:30, ]
+
+  # Bootstrap nodes of identical vocabularies
+  result <- suppressMessages(bootstrap_SemNeT(
+    a = raw, b = raw, method = "nrw", type = "node", prop = .5, iter = 3, keep_networks = TRUE, seed = 1
+  ))
+
+  # Get vocabulary
+  vocabulary <- colnames(responses2binary(raw)$order)
+
+  # Check that the nodes of every network are words of the vocabulary
+  nodes <- unlist(lapply(result$groups$a$networks, rownames))
+  expect_true(all(nodes %in% vocabulary))
+
+  # Check that at most half of the vocabulary is kept
+  expect_true(all(result$groups$a$nodes <= floor(length(vocabulary) * .5)))
+
+})

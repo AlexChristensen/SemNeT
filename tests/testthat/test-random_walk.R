@@ -158,3 +158,33 @@ test_that("random_walk copes with isolated nodes and a single walk", {
   expect_error(random_walk(matrix(0, 4, 4), ring_network(5)), "at least one edge")
 
 })
+
+test_that("random_walk's cumulative transitions end at exactly one and results have plain row names", {
+
+  # Set up a weighted-looking network whose row sums round below one
+  A <- matrix(0, 7, 7)
+  A[1, 2:7] <- 1
+  A[2:7, 1] <- 1
+
+  # Get transitions
+  cumulative <- cumulative_transitions(A / rowSums(A), A)
+
+  # Check that every row with neighbors reaches exactly one at its last neighbor
+  expect_true(all(cumulative[, 7] == 1))
+  expect_true(all(cumulative[2:7, 1] == 1))
+
+  # Check that no probability is placed past the last neighbor before it
+  expect_equal(cumulative[2, 1], 1)
+
+  # Set up ring network
+  ring <- function(n){
+    net <- matrix(0, n, n)
+    net[cbind(1:n, c(2:n, 1))] <- 1
+    net + t(net)
+  }
+
+  # Check one level of steps
+  one_level <- suppressMessages(random_walk(ring(8), ring(10), reps = 1, steps = 5, iter = 10))
+  expect_identical(rownames(one_level$short), "1")
+
+})

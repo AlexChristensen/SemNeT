@@ -189,7 +189,7 @@ mod_network_estimation_server <- function(id, state)
       # Render measures
       output$measures <- renderTable(
         measures, rownames = TRUE, caption = paste(
-          "Network Measures (unweighted; clustering coefficient counts nodes with fewer than two neighbors as 0;",
+          "Network Measures (unweighted; clustering coefficient is the average of the nodes' local coefficients, with nodes that have fewer than two neighbors counted as 0;",
           "modularity (q) is a randomized Louvain, so it can differ slightly between runs)"
         ), caption.placement = "top"
       )

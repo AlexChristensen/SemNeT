@@ -8,13 +8,15 @@ convert2igraph(A)
 }
 \arguments{
 \item{A}{Matrix or data frame.
-An adjacency (network) matrix}
+A symmetric adjacency (network) matrix}
 }
 \value{
 Returns a network in \code{igraph}'s format
 }
 \description{
-Converts an adjacency matrix into \code{igraph}'s network format
+Converts an adjacency matrix into \code{igraph}'s network format.
+Nodes without any edge (a nonzero entry in their row or column) are
+removed, so the returned network can have fewer nodes than \code{A}
 }
 \examples{
 # Pearson's correlation only for CRAN checks

@@ -14,15 +14,7 @@
 #' in the returned network.
 #'
 #' @param data Matrix or data frame.
-#' A square association matrix (e.g. a correlation or similarity matrix)
-#'
-#' @param depend Boolean.
-#' Is \code{data} an asymmetric dependency matrix? Without it, \code{data} must
-#' be symmetric.
-#' Defaults to \code{FALSE}. With \code{TRUE}, each edge is placed using the
-#' larger of its two asymmetric values, but the returned network's links are
-#' still symmetric (both cells of a retained edge are filled, each with its own
-#' value from \code{data}), so it is not a directed network
+#' A square, symmetric association matrix (e.g. a correlation or similarity matrix)
 #'
 #' @return Returns a TMFG-filtered adjacency matrix
 #'
@@ -50,12 +42,12 @@
 #'
 #' @export
 # Triangulated Maximally Filtered Graph ----
-# Updated 06.09.2026
-tmfg <- function(data, depend = FALSE)
+# Updated 15.10.2026
+tmfg <- function(data)
 {
 
   # Argument errors
-  data <- tmfg_errors(data, depend)
+  data <- tmfg_errors(data)
 
   # Get number of nodes
   n <- ncol(data)
@@ -116,18 +108,8 @@ tmfg <- function(data, depend = FALSE)
     # Get second node
     to <- inserted[initial_pairs[2, pair]]
 
-    # Check for direction
-    if(!depend || cormat[from, to] > cormat[to, from]){
-
-      # Add edge from first to second
-      edges[pair, ] <- c(from, to, 1)
-
-    }else{
-
-      # Add edge from second to first
-      edges[pair, ] <- c(to, from, 1)
-
-    }
+    # Add edge
+    edges[pair, ] <- c(from, to, 1)
 
   }
 
@@ -201,18 +183,8 @@ tmfg <- function(data, depend = FALSE)
         # Get neighbor
         neighbor <- triangles[best_triangle, k]
 
-        # Check for direction
-        if(!depend || cormat[chosen_node, neighbor] > cormat[neighbor, chosen_node]){
-
-          # Add edge from chosen node
-          edges[edge_row, ] <- c(chosen_node, neighbor, 1)
-
-        }else{
-
-          # Add edge to chosen node
-          edges[edge_row, ] <- c(neighbor, chosen_node, 1)
-
-        }
+        # Add edge
+        edges[edge_row, ] <- c(chosen_node, neighbor, 1)
 
       }
 
@@ -272,12 +244,12 @@ tmfg <- function(data, depend = FALSE)
 
 #' @noRd
 # Errors ----
-# Updated 13.10.2026
-tmfg_errors <- function(data, depend)
+# Updated 15.10.2026
+tmfg_errors <- function(data)
 {
 
   # 'data' errors
-  data <- adjacency_matrix_error(data, "tmfg")
+  data <- adjacency_matrix_error(data, "tmfg", require_symmetric = TRUE)
 
   # Check for missing or infinite values
   if(!all(is.finite(data))){
@@ -285,7 +257,7 @@ tmfg_errors <- function(data, depend)
     # Send error
     stop(
       "In `tmfg()`: the similarity matrix has missing or infinite values (e.g., from a response everyone, or no one, gave).\n",
-      "Remove those responses first (see `finalize()`).",
+      "Remove those responses first (`finalize()` drops rare responses, not responses everyone gave).",
       call. = FALSE
     )
 
@@ -300,21 +272,6 @@ tmfg_errors <- function(data, depend)
         "In `tmfg()`: input `", deparse(substitute(data)), "` has ", ncol(data), " nodes.\n",
         "TMFG requires at least 4 nodes to form its initial tetrahedron."
       ),
-      call. = FALSE
-    )
-
-  }
-
-  # 'depend' errors
-  length_error(depend, 1, "tmfg")
-  typeof_error(depend, "logical", "tmfg")
-
-  # Check for asymmetric network
-  if(!depend && !isSymmetric(unname(data))){
-
-    # Send error
-    stop(
-      "In `tmfg()`: the similarity matrix is not symmetric. Only `depend = TRUE` takes an asymmetric (dependency) matrix.",
       call. = FALSE
     )
 

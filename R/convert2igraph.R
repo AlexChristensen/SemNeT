@@ -1,9 +1,11 @@
 #' @title Convert a Network to igraph's Format
 #'
-#' @description Converts an adjacency matrix into \code{igraph}'s network format
+#' @description Converts an adjacency matrix into \code{igraph}'s network format.
+#' Nodes without any edge (a nonzero entry in their row or column) are
+#' removed, so the returned network can have fewer nodes than \code{A}
 #'
 #' @param A Matrix or data frame.
-#' An adjacency (network) matrix
+#' A symmetric adjacency (network) matrix
 #'
 #' @return Returns a network in \code{igraph}'s format
 #'
@@ -18,7 +20,7 @@
 #'
 #' @export
 # Convert matrix to igraph ----
-# Updated 06.09.2026
+# Updated 15.10.2026
 convert2igraph <- function(A)
 {
 
@@ -28,14 +30,14 @@ convert2igraph <- function(A)
   # Remove self-loops
   diag(A) <- 0
 
-  # Identify nodes without edges
-  unconnected <- colSums(A) == 0
+  # Identify nodes without edges (nonzero entries, not signed sums)
+  unconnected <- colSums(A != 0) == 0
 
   # Check for unconnected nodes
   if(any(unconnected)){
 
     # Remove unconnected nodes
-    A <- A[!unconnected, !unconnected]
+    A <- A[!unconnected, !unconnected, drop = FALSE]
 
   }
 
@@ -57,7 +59,7 @@ convert2igraph_errors <- function(A)
 {
 
   # 'A' errors
-  A <- adjacency_matrix_error(A, "convert2igraph")
+  A <- adjacency_matrix_error(A, "convert2igraph", require_symmetric = TRUE)
 
   # Return 'A' (in case of data frame)
   return(A)

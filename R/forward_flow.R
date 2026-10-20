@@ -237,7 +237,7 @@ forward_flow_fluency <- function(response_matrix, embeddings, min_response, max_
 
 #' @noRd
 # Forward flow of free association data ----
-# Updated 07.09.2026
+# Updated 15.10.2026
 forward_flow_free <- function(response_matrix, embeddings, min_response, max_response, cores)
 {
 
@@ -279,6 +279,12 @@ forward_flow_free <- function(response_matrix, embeddings, min_response, max_res
 
       # Get responses to cue
       responses <- response_matrix$Response[rows_by_cue[[cue]]]
+
+      # Replace bad responses with missing
+      responses <- bad_response(responses)
+
+      # Remove missing responses
+      responses <- responses[!is.na(responses)]
 
       # Check for maximum responses
       if(!is.null(max_response)){
@@ -325,11 +331,21 @@ forward_flow_free <- function(response_matrix, embeddings, min_response, max_res
   shrunk <- embeddings[rownames(embeddings) %in% vocabulary, , drop = FALSE]
 
   # Compute flow of each participant-cue
-  results <- parallel_process(
-    length(cue_responses),
-    function(i) response_flow(cue_responses[[i]], shrunk),
-    cores = cores
-  )
+  results <- if(length(cue_responses) > 0){
+
+    # Estimate flow
+    parallel_process(
+      length(cue_responses),
+      function(i) response_flow(cue_responses[[i]], shrunk),
+      cores = cores
+    )
+
+  }else{
+
+    # No participant-cue has enough responses
+    list()
+
+  }
 
   # Set up mean flow of cues
   mean_response_flow <- data.frame(
@@ -352,8 +368,8 @@ forward_flow_free <- function(response_matrix, embeddings, min_response, max_res
 
   }
 
-  # Keep every participant
-  mean_flow <- merge(data.frame(ID = ids, stringsAsFactors = FALSE), by_id, by = "ID", all.x = TRUE)
+  # Keep every participant (in the order of the participants)
+  mean_flow <- data.frame(ID = ids, FF = by_id$FF[match(ids, by_id$ID)], stringsAsFactors = FALSE)
 
   # Split results by participant
   result_index_by_id <- split(seq_along(cue_ids), factor(cue_ids, levels = ids))
@@ -391,7 +407,7 @@ forward_flow_free <- function(response_matrix, embeddings, min_response, max_res
 
 #' @noRd
 # Errors ----
-# Updated 13.10.2026
+# Updated 15.10.2026
 forward_flow_errors <- function(response_matrix, embeddings, min_response, max_response, type, cores)
 {
 
@@ -454,6 +470,17 @@ forward_flow_errors <- function(response_matrix, embeddings, min_response, max_r
     # Send error
     stop(
       "In `forward_flow()`: `embeddings` must have row names identifying each vocabulary term.",
+      call. = FALSE
+    )
+
+  }
+
+  # Check for missing or infinite values
+  if(any(!is.finite(embeddings))){
+
+    # Send error
+    stop(
+      "In `forward_flow()`: `embeddings` has missing or infinite values, which would silently alter the cosine distances.",
       call. = FALSE
     )
 

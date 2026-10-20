@@ -7,8 +7,11 @@
 #' A binary response matrix (participants x responses)
 #'
 #' @param minimum_cases Numeric.
-#' Minimum number of participants required to have given a response for that
-#' response to be kept.
+#' Minimum number of participants (at least \code{1}) required to have given
+#' a response for that response to be kept. Only rare responses are removed:
+#' a response that \emph{every} participant gave is kept (it makes
+#' \code{"cor"} and \code{"phi"} similarities undefined; drop such columns
+#' yourself)
 #' Defaults to \code{2}
 #'
 #' @return A binary response matrix containing only responses given by at
@@ -57,7 +60,7 @@ finalize <- function(data, minimum_cases = 2)
 
 #' @noRd
 # Errors ----
-# Updated 13.10.2026
+# Updated 15.10.2026
 finalize_errors <- function(data, minimum_cases)
 {
 
@@ -91,7 +94,7 @@ finalize_errors <- function(data, minimum_cases)
   # 'minimum_cases' errors
   length_error(minimum_cases, 1, "finalize")
   typeof_error(minimum_cases, "numeric", "finalize")
-  range_error(minimum_cases, c(0, Inf), "finalize")
+  range_error(minimum_cases, c(1, Inf), "finalize")
 
   # Check for whole number
   if(minimum_cases != round(minimum_cases)){

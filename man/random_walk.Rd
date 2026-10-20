@@ -67,8 +67,9 @@ The comparison is descriptive. Each network's walks are
 \emph{p}-value of a test on those draws would only reflect how many walks
 were simulated: any difference, however small, becomes \dQuote{significant}
 with enough of them. No \emph{p}-values are reported. Each statistic
-(number of unique nodes visited, similarity of the walk's end to its start,
-and the same at 5 unique nodes) is instead summarized by
+(number of unique nodes visited, similarity between the start and the last
+newly visited node of the walk, and the same at the 5th unique node) is
+instead summarized by
 \itemize{
 
 \item the difference in means (\code{A} minus \code{B}) with a Monte Carlo
@@ -80,7 +81,10 @@ networks
 
 }
 Neither accounts for the uncertainty in the estimated networks; use
-\code{\link{bootstrap_SemNeT}} for that.
+\code{\link{bootstrap_SemNeT}} for that. The number of unique nodes visited
+depends mechanically on a network's size and density, so networks of
+different sizes (e.g., unequated networks) differ on it partly for that
+reason alone.
 
 Every walk starts at a node drawn at random from the nodes with at least one
 connection in each network (an isolated node cannot be walked from), and the

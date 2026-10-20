@@ -17,10 +17,9 @@ permutation_SemNeT(
   iter = 1000,
   cores = 1,
   previous = NULL,
-  keep_networks = TRUE,
+  keep_networks = FALSE,
   seed = NULL,
-  alpha = 0.05,
-  power = 0.8
+  alpha = 0.05
 )
 }
 \arguments{
@@ -114,23 +113,21 @@ Defaults to \code{NULL}}
 Should every permuted network be kept?
 Only needed to test other measures later with \code{previous}
 and can be large.
-Defaults to \code{TRUE}}
+Defaults to \code{FALSE}}
 
 \item{seed}{Numeric (length = 1).
 Defaults to \code{NULL} or random results (\code{previous}'s \code{seed}
 when it is used); \code{0} is random too.
 Set a nonzero value for reproducible results.
 Each permutation (and its \code{\link{q}} community detection) gets its own
-seed, so results do not depend on \code{set.seed()} or \code{cores}}
+seed, so results do not depend on \code{set.seed()} or \code{cores}.
+The first permutation (the observed data) uses \code{seed} itself, so its
+\code{\link{q}} matches \code{\link{bootstrap_SemNeT}}'s observed networks}
 
 \item{alpha}{Numeric (length = 1).
-Significance level for the critical value of the minimal detectable effect
-(\code{mde}) between 0 and 1 (exclusive). Does not change the \emph{p}-value.
+Significance level between 0 and 1 (exclusive) used to label the printed
+\code{result}. Does not change the \emph{p}-value.
 Defaults to \code{.05}}
-
-\item{power}{Numeric (length = 1).
-Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
-Defaults to \code{.80}}
 }
 \value{
 Returns a list containing:
@@ -155,8 +152,7 @@ sample's measure value (\code{value_1} and \code{value_2}, or
 \code{<measure>_1} and \code{<measure>_2} for several measures) and each
 network's \code{nodes_1}, \code{nodes_2}, \code{edges_1}, and \code{edges_2}}
 
-\item{mde}{A data frame with one row per \code{measure} containing \code{alpha},
-\code{power}, \code{critical_value}, \code{null_sd}, and \code{mde}}
+\item{alpha}{The \code{alpha} used}
 }
 \description{
 Tests whether global network measures differ between two samples
@@ -198,25 +194,8 @@ symmetric about its mean; \code{"two_tailed_doubled"} makes no symmetry
 assumption. The one-sided tests are unaffected by centring.
 
 When several \code{measure}s are tested, each is tested against its own null:
-the \emph{p}-values and \code{mde} are \emph{not} adjusted for the number of
+the \emph{p}-values are \emph{not} adjusted for the number of
 measures.
-
-The minimal detectable effect (\code{mde}) is the smallest true difference
-the test would detect with probability \code{power}, at the study's sample
-sizes (it does not transfer to other sample sizes and, apart from the observed
-difference being one of the \code{iter} permuted values, does not depend on
-the observed difference). The permutation null gives the critical value \eqn{c}
-without assuming normality: the \code{1 - alpha} quantile of \eqn{|T^*|}
-(\code{"two_tailed"}), of \eqn{|T^* - \bar{T}^*|}
-(\code{"two_tailed_centered"}; the \code{mde} is then a difference from the
-null's mean), the larger of the \code{1 - alpha/2} quantile of \eqn{T^*} and
-the negated \code{alpha/2} quantile (\code{"two_tailed_doubled"}),
-\eqn{T^*} (\code{"greater"}), or \eqn{-T^*} (\code{"less"}) over the
-permuted differences. The distribution under an
-alternative is not identified by permuting labels, so it is approximated as
-normal with the null's standard deviation \eqn{\mathrm{SD}_0}:
-\eqn{\mathrm{MDE} \approx c + z_{\mathrm{power}}\,\mathrm{SD}_0}. Use at least
-1000 permutations for a stable critical value.
 }
 \examples{
 # Get openness data -- equating (see `equate()`) requires named responses

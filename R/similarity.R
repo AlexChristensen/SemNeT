@@ -24,7 +24,8 @@
 #' error); missing or infinite values are an error for every measure. A response nobody gave (an all-zero column) makes
 #' \code{"cosine"}, \code{"angular"} and \code{"jaccard"} undefined (\code{NaN}),
 #' and a response everybody gave (or nobody) makes \code{"cor"}/\code{"phi"}
-#' undefined; remove such responses first (see \code{\link{finalize}}). A
+#' undefined; remove such responses first (\code{\link{finalize}} removes
+#' responses given by too few participants, not responses everybody gave). A
 #' participant who gave no response still counts as a case in which every
 #' response is absent, which matters for the measures that use joint absences
 #' (\code{"cor"}, \code{"phi"}, \code{"faith"}, \code{"rr"}). \code{"euclid"}

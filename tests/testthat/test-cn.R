@@ -155,3 +155,49 @@ test_that("cn handles a single participant and one-response participants", {
   expect_error(stat_cooccur(single_responses), "more than one response")
 
 })
+
+test_that("cn keeps the largest component's own nodes when isolates exist", {
+
+  # Get data
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Estimate full significant network and component network
+  full <- stat_cooccur(low)
+  net <- cn(low)
+
+  # Get components of the full network by name
+  components <- igraph::components(igraph::graph_from_adjacency_matrix(full != 0, mode = "undirected"))
+  giant <- names(components$membership)[components$membership == which.max(components$csize)]
+
+  # Check that isolates exist (otherwise the test is vacuous)
+  expect_gt(sum(rowSums(full) == 0), 0)
+
+  # Check nodes and edges are those of the giant component
+  expect_setequal(rownames(net), giant)
+  expect_equal(net, full[rownames(net), rownames(net)])
+
+  # Check that the network is connected and has no isolates
+  expect_true(all(rowSums(net) > 0))
+  expect_true(igraph::is_connected(igraph::graph_from_adjacency_matrix(net != 0, mode = "undirected")))
+
+})
+
+test_that("cn validates window and warns on an empty network", {
+
+  # Get data
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Check for non-whole window
+  expect_error(cn(low, window = 2.5), "whole number")
+
+  # Check for window of at least the list length
+  short <- matrix(c("a", "b", "c", "d", "e", "f"), nrow = 3, byrow = TRUE)
+  expect_error(cn(short, window = 2), "smaller than the mean")
+
+  # Check for empty network
+  set.seed(1)
+  noise <- matrix(sample(paste0("w", 1:200), 20 * 6), nrow = 20)
+  expect_warning(empty <- cn(noise), "empty")
+  expect_identical(dim(empty), c(0L, 0L))
+
+})

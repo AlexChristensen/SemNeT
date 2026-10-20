@@ -40,8 +40,9 @@
 #' \emph{p}-value of a test on those draws would only reflect how many walks
 #' were simulated: any difference, however small, becomes \dQuote{significant}
 #' with enough of them. No \emph{p}-values are reported. Each statistic
-#' (number of unique nodes visited, similarity of the walk's end to its start,
-#' and the same at 5 unique nodes) is instead summarized by
+#' (number of unique nodes visited, similarity between the start and the last
+#' newly visited node of the walk, and the same at the 5th unique node) is
+#' instead summarized by
 #' \itemize{
 #'
 #' \item the difference in means (\code{A} minus \code{B}) with a Monte Carlo
@@ -53,7 +54,10 @@
 #'
 #' }
 #' Neither accounts for the uncertainty in the estimated networks; use
-#' \code{\link{bootstrap_SemNeT}} for that.
+#' \code{\link{bootstrap_SemNeT}} for that. The number of unique nodes visited
+#' depends mechanically on a network's size and density, so networks of
+#' different sizes (e.g., unequated networks) differ on it partly for that
+#' reason alone.
 #'
 #' Every walk starts at a node drawn at random from the nodes with at least one
 #' connection in each network (an isolated node cannot be walked from), and the
@@ -100,7 +104,7 @@
 #'
 #' @export
 # Random walk simulation ----
-# Updated 13.10.2026
+# Updated 15.10.2026
 random_walk <- function(A, B, name_a = "A", name_b = "B", reps = 20, steps = 10, iter = 10000, cores = 1)
 {
 
@@ -164,10 +168,10 @@ random_walk <- function(A, B, name_a = "A", name_b = "B", reps = 20, steps = 10,
   distance_b <- distance(B)
 
   # Get cumulative transitions of first network
-  cumulative_transition_a <- t(apply(transition_a, 1, cumsum))
+  cumulative_transition_a <- cumulative_transitions(transition_a, A)
 
   # Get cumulative transitions of second network
-  cumulative_transition_b <- t(apply(transition_b, 1, cumsum))
+  cumulative_transition_b <- cumulative_transitions(transition_b, B)
 
   # Simulate one walk on both networks
   simulate_walk <- function(n_steps, n_a, n_b, cumulative_transition_a, cumulative_transition_b, distance_a, distance_b)
@@ -283,6 +287,32 @@ random_walk <- function(A, B, name_a = "A", name_b = "B", reps = 20, steps = 10,
 }
 
 #' @noRd
+# Cumulative transition probabilities ----
+# Updated 15.10.2026
+cumulative_transitions <- function(transition, A)
+{
+
+  # Get cumulative sums of each node's transition probabilities
+  cumulative <- t(apply(transition, 1, cumsum))
+
+  # Loop over nodes with neighbors
+  for(node in which(rowSums(A) > 0)){
+
+    # Get last neighbor
+    last_neighbor <- max(which(A[node, ] > 0))
+
+    # Set the cumulative probability to exactly one from the last neighbor on
+    # (rounding can leave it just below one, which would let a draw fall past it)
+    cumulative[node, last_neighbor:ncol(cumulative)] <- 1
+
+  }
+
+  # Return cumulative transitions
+  return(cumulative)
+
+}
+
+#' @noRd
 # Format long random walk results ----
 # Updated 13.10.2026
 format_random_walk_long <- function(simulations_by_level, step_levels, name_a, name_b)
@@ -393,7 +423,7 @@ format_random_walk_short <- function(long_results, name_a, name_b)
 
   # Return summary
   data.frame(
-    Steps = long_results[, "Steps"],
+    Steps = unname(long_results[, "Steps"]),
     `Unique Nodes (difference)` = round(long_results[, "diff.uniq"], 3),
     `Unique Nodes (d)` = round(long_results[, "d.uniq"], 3),
     `Direction (Unique Nodes)` = direction(long_results[, "d.uniq"]),
@@ -404,7 +434,8 @@ format_random_walk_short <- function(long_results, name_a, name_b)
     `5-step Similarity (d)` = round(long_results[, "d.sim5"], 3),
     `Direction (5-step Similarity)` = direction(long_results[, "d.sim5"]),
     check.names = FALSE,
-    stringsAsFactors = FALSE
+    stringsAsFactors = FALSE,
+    row.names = NULL
   )
 
 }

@@ -50,7 +50,7 @@ test_that("permutation_SemNeT reuses a previous result's networks for a differen
 
 })
 
-test_that("permutation_SemNeT reports the minimal detectable effect from the permutation null", {
+test_that("permutation_SemNeT reports no minimal detectable effect and stores alpha", {
 
   # Get low group
   low <- open.clean[which(open.group == "Low"), ]
@@ -59,70 +59,32 @@ test_that("permutation_SemNeT reports the minimal detectable effect from the per
   high <- open.clean[which(open.group == "High"), ]
 
   # Perform permutation test
-  result <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1)
+  result <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, keep_networks = TRUE)
 
   # Get differences
   d <- result$differences
 
-  # Check class
-  expect_s3_class(result$mde, "data.frame")
+  # Check that there is no minimal detectable effect
+  expect_null(result$mde)
 
-  # Check measure
-  expect_equal(row.names(result$mde), "aspl")
-
-  # Check columns
-  expect_named(result$mde, c("alpha", "power", "critical_value", "null_sd", "mde"))
-
-  # Compute critical value
-  critical_value <- unname(quantile(abs(d), .95))
-
-  # Check critical value
-  expect_equal(result$mde$critical_value, critical_value)
-
-  # Check standard deviation
-  expect_equal(result$mde$null_sd, sd(d))
-
-  # Check minimal detectable effect
-  expect_equal(result$mde$mde, critical_value + qnorm(.8) * sd(d))
+  # Check significance level
+  expect_equal(result$alpha, .05)
 
   # Perform stricter test
-  stricter <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alpha = .01, power = .9)
+  stricter <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alpha = .01)
 
-  # Check larger effect
-  expect_gt(stricter$mde$mde, result$mde$mde)
+  # Check that significance level is stored
+  expect_equal(stricter$alpha, .01)
 
   # Check that p-value is unchanged
   expect_equal(stricter$result$p_value, result$result$p_value)
 
-  # Perform greater test
-  greater <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alternative = "greater")
-
-  # Perform less test
-  less <- permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, alternative = "less")
-
-  # Check greater critical value
-  expect_equal(greater$mde$critical_value, unname(quantile(d, .95)))
-
-  # Check less critical value
-  expect_equal(less$mde$critical_value, -unname(quantile(d, .05)))
-
-  # Set seed
-  set.seed(5)
-
-  # Sample normal null
-  null <- rnorm(1e5)
-
-  # Compute minimal detectable effect
-  helper <- permutation_mde(null, "two_tailed", .05, .8, "aspl")
-
-  # Check normal critical value
-  expect_lt(abs(helper$critical_value - qnorm(.975)), .03)
-
-  # Check normal minimal detectable effect
-  expect_lt(abs(helper$mde - (qnorm(.975) + qnorm(.8))), .03)
+  # Check that removed argument is rejected
+  expect_error(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 30, cores = 1, seed = 1, power = .9), "unused argument")
 
   # Check printed output
-  expect_output(print(result), "MDE: smallest true difference detected with 80%\\s+power\\s+at\\s+alpha = .05")
+  expect_output(print(result), "null_range")
+  expect_false(any(grepl("MDE", capture.output(print(result)))))
 
   # Check result column
   expect_output(print(result), "result")
@@ -130,8 +92,8 @@ test_that("permutation_SemNeT reports the minimal detectable effect from the per
   # Reuse permuted networks
   reused <- permutation_SemNeT(previous = result, measure = "aspl", cores = 1)
 
-  # Check minimal detectable effect
-  expect_equal(reused$mde$mde, result$mde$mde)
+  # Check significance level
+  expect_equal(reused$alpha, result$alpha)
 
 })
 
@@ -161,9 +123,6 @@ test_that("permutation_SemNeT tests several measures at once, matching one-at-a-
   # Check names of differences
   expect_equal(colnames(all_measures$differences), measures)
 
-  # Check minimal detectable effect
-  expect_equal(row.names(all_measures$mde), measures)
-
   # Check diagnostics
   expect_named(all_measures$diagnostics, c(
     "aspl_1", "aspl_2", "cc_1", "cc_2", "q_1", "q_2", "nodes_1", "nodes_2", "edges_1", "edges_2"
@@ -180,9 +139,6 @@ test_that("permutation_SemNeT tests several measures at once, matching one-at-a-
 
     # Check result
     expect_equal(all_measures$result[name, ], single$result)
-
-    # Check minimal detectable effect
-    expect_equal(all_measures$mde[name, ], single$mde)
 
   }
 
@@ -432,12 +388,6 @@ test_that("each two-sided option runs end to end and has its own minimal detecta
   # Check alternative
   expect_match(centered$result$alternative, "!=")
 
-  # Check centered critical value
-  expect_equal(centered$mde$critical_value, unname(quantile(abs(d - mean(d)), .95)))
-
-  # Check doubled critical value
-  expect_equal(doubled$mde$critical_value, max(unname(quantile(d, .975)), -unname(quantile(d, .025))))
-
   # Check that permutations are the same
   expect_identical(default$differences, centered$differences)
 
@@ -555,5 +505,70 @@ test_that("permutation_SemNeT accepts raw samples of different widths", {
   expect_no_error(suppressMessages(
     permutation_SemNeT(low, high, method = "nrw", measure = "cc", iter = 4, cores = 1, seed = 1)
   ))
+
+})
+
+test_that("permutation_SemNeT drops responses everyone gave when similarity is a correlation", {
+
+  # Set seed
+  set.seed(5)
+
+  # Set up binary samples that share a response everyone gave
+  make_sample <- function(n){
+    mat <- matrix(rbinom(n * 20, 1, .4), nrow = n, ncol = 20, dimnames = list(NULL, paste0("w", 1:20)))
+    cbind(mat, everyone = 1)
+  }
+
+  # Perform permutation test
+  result <- suppressMessages(permutation_SemNeT(
+    make_sample(30), make_sample(30), method = "tmfg", sim = "cor", measure = "aspl", iter = 5, seed = 1
+  ))
+
+  # Check that all permutations were estimated
+  expect_true(all(is.finite(result$differences)))
+  expect_true(all(result$diagnostics$nodes_1 == 20))
+
+  # Check that zero is not a valid minimum
+  expect_error(finalize(make_sample(10), minimum_cases = 0), "minimum value")
+
+})
+
+test_that("permutation_SemNeT's observed Q matches bootstrap_SemNeT's, which seeds every iteration's groups alike", {
+
+  # Get low group
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
+  high <- open.clean[which(open.group == "High"), ]
+
+  # Perform bootstrap
+  boot <- suppressMessages(bootstrap_SemNeT(
+    low = low, high = high, method = "tmfg", type = "case", minimum_cases = 2, iter = 4, seed = 42
+  ))
+
+  # Perform permutation test
+  perm <- suppressMessages(permutation_SemNeT(
+    low, high, method = "tmfg", minimum_cases = 2, measure = c("aspl", "cc", "q"), iter = 4, seed = 42
+  ))
+
+  # Get bootstrap observed differences
+  observed <- boot$groups$low$observed$measures - boot$groups$high$observed$measures
+
+  # Check observed differences
+  expect_equal(unname(perm$differences[1, ]), unname(observed[colnames(perm$differences)]))
+
+  # Check permutations do not all share the observed seed
+  expect_false(isTRUE(all.equal(perm$differences[2, "q"], perm$differences[1, "q"])))
+
+  # Check that reuse of networks keeps the observed seed
+  reused <- suppressMessages(permutation_SemNeT(
+    sample_1 = low, sample_2 = high, method = "tmfg", measure = "q", previous = perm
+  ))
+  expect_equal(unname(reused$differences), unname(perm$differences[, "q"]))
+
+  # Check the shared seed of groups in an iteration
+  expect_identical(permutation_seeds(5, 42)[1], 42)
+  expect_identical(permutation_seeds(5, 42)[-1], reproducible_seeds(5, 42)[-1])
+  expect_identical(permutation_seeds(5, NULL)[1] == 42, FALSE)
 
 })

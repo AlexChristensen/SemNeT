@@ -129,6 +129,10 @@ compare_networks <- function(
 
   }
 
+  # Store graphical parameters and restore them on exit
+  old_par <- graphics::par(no.readonly = TRUE)
+  on.exit(suppressWarnings(graphics::par(old_par)), add = TRUE)
+
   # Check for two networks
   if(n_networks == 2){
 
@@ -309,6 +313,20 @@ compare_networks_errors <- function(networks, title, config, placement, weighted
       # Send error
       stop(
         "In `compare_networks()`: `placement = \"match\"` requires every network to have the same number of nodes.",
+        call. = FALSE
+      )
+
+    }
+
+    # Get node names of each network
+    node_names <- lapply(networks, colnames)
+
+    # Check for named networks with different nodes
+    if(!any(vapply(node_names, is.null, logical(1))) && !all(vapply(node_names, setequal, logical(1), y = node_names[[1]]))){
+
+      # Send error
+      stop(
+        "In `compare_networks()`: `placement = \"match\"` requires every network to have the same nodes (column names).",
         call. = FALSE
       )
 

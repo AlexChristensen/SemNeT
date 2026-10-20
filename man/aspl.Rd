@@ -11,7 +11,9 @@ ASPL(A, weighted = FALSE)
 }
 \arguments{
 \item{A}{Matrix or data frame.
-An adjacency matrix of network data}
+An adjacency matrix of network data. A non-symmetric matrix is treated as a
+directed network (a path follows the direction of an edge from row to
+column), whereas the other measures require an undirected (symmetric) network}
 
 \item{weighted}{Boolean.
 Is the network weighted? A weighted edge's length is the inverse of its

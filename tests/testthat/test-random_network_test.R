@@ -108,11 +108,16 @@ test_that("random_network_test is reproducible via 'seed' whatever 'cores' is", 
 
 test_that("random_network_test p-values are not rounded to 0 and asymmetric networks are rejected", {
 
-  # Check that rounding gives zero
-  expect_equal(round(1 / 20001, 4), 0)
+  # Set up a strongly clustered network (two cliques bridged by one edge)
+  clique <- matrix(1, 10, 10)
+  net <- rbind(cbind(clique, matrix(0, 10, 10)), cbind(matrix(0, 10, 10), clique))
+  diag(net) <- 0
+  net[10, 11] <- net[11, 10] <- 1
 
-  # Check that significant digits do not
-  expect_gt(signif(1 / 20001, 4), 0)
+  # Check that the smallest p-value is positive (and not rounded to 0)
+  result <- suppressMessages(random_network_test(net = net, iter = 100, seed = 1))$net
+  expect_true(all(result$p_value > 0))
+  expect_true(all(result$p_value_degree > 0))
 
   # Set up asymmetric network
   asymmetric <- matrix(0, 5, 5)
@@ -125,5 +130,70 @@ test_that("random_network_test p-values are not rounded to 0 and asymmetric netw
 
   # Check for seed error
   expect_error(random_network_test(net = matrix(0, 3, 3), seed = -1), "random_network_test")
+
+})
+
+test_that("random_network_test uses separate random networks for each input and a harmonic ASPL option", {
+
+  # Set up two identical networks
+  net <- matrix(0, 12, 12)
+  net[cbind(1:11, 2:12)] <- 1
+  net <- net + t(net)
+
+  # Test with a seed
+  result <- suppressMessages(random_network_test(one = net, two = net, iter = 20, seed = 3))
+
+  # Check that identical networks do not receive identical random networks
+  expect_false(identical(result$one$random_mean, result$two$random_mean))
+
+  # Check that results are reproducible
+  again <- suppressMessages(random_network_test(one = net, two = net, iter = 20, seed = 3))
+  expect_identical(result, again)
+
+  # Check harmonic type
+  harmonic <- suppressMessages(random_network_test(one = net, iter = 20, seed = 3, type = "harmonic"))
+  expect_false(identical(harmonic$one$random_mean[1], result$one$random_mean[1]))
+  expect_error(random_network_test(one = net, type = "geometric"), "arg")
+
+})
+
+test_that("random_network_significance leaves undefined draws out and warns", {
+
+  # Set up draws with an undefined value
+  draws <- rbind(aspl = c(1, 2, 3, NaN), cc = c(.1, .2, .3, .4), q = c(.5, .6, .7, .8))
+
+  # Check for warning (once for each null model)
+  expect_warning(expect_warning(
+    result <- random_network_significance(c(aspl = 2, cc = .25, q = .6), draws, draws), "undefined"
+  ), "undefined")
+
+  # Check that mean ignores undefined draw and p-value is not at its minimum
+  expect_equal(result$random_mean[1], 2)
+  expect_gt(result$p_value[1], 1 / 5)
+
+})
+
+test_that("random_network_test passes 'cc_type' on to cc", {
+
+  # Set seed
+  set.seed(1)
+
+  # Estimate network
+  net <- suppressWarnings(tmfg(similarity(simulate_fluency(25, 120))))
+
+  # Perform test with average clustering
+  average <- suppressMessages(random_network_test(net = net, iter = 10, seed = 3))
+
+  # Perform test with global clustering
+  global <- suppressMessages(random_network_test(net = net, iter = 10, seed = 3, cc_type = "global"))
+
+  # Check that ASPL is unchanged
+  expect_equal(average$net["aspl", ], global$net["aspl", ])
+
+  # Check that clustering differs
+  expect_false(isTRUE(all.equal(average$net["cc", "random_mean"], global$net["cc", "random_mean"])))
+
+  # Check for error with unknown type
+  expect_error(random_network_test(net = net, iter = 2, cc_type = "local"), "arg")
 
 })

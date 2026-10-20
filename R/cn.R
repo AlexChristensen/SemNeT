@@ -10,7 +10,9 @@
 #' \code{responses2binary()})
 #'
 #' @param window Numeric.
-#' Size of window to look for co-occurrences in.
+#' Size of window to look for co-occurrences in (a whole number; Goni et al.
+#' (2011) require it to be smaller than the average number of responses per
+#' participant).
 #' Defaults to \code{2}
 #'
 #' @param alpha Numeric.
@@ -38,7 +40,12 @@
 #' \code{enrich = TRUE}.
 #' Defaults to \code{0.50}
 #'
-#' @return Returns an undirected semantic network
+#' @return Returns an undirected semantic network. As in Goni et al. (2011), only
+#' the largest connected component is kept: responses without a significant
+#' co-occurrence with the others (typically many of the less frequent responses)
+#' are dropped, so the network has fewer nodes than there are distinct
+#' responses. A 0 x 0 network (with a warning) is returned when no pair of
+#' responses co-occurs significantly
 #'
 #' @examples
 #' # Get data
@@ -64,7 +71,7 @@
 #'
 #' @export
 # Community network ----
-# Updated 13.10.2026
+# Updated 15.10.2026
 cn <- function(data, window = 2, alpha = .05, enrich = FALSE, cutoff = 0.50)
 {
 
@@ -74,14 +81,33 @@ cn <- function(data, window = 2, alpha = .05, enrich = FALSE, cutoff = 0.50)
   # Get significant co-occurrence network
   adjacency <- stat_cooccur(data, window = window, alpha = alpha)
 
-  # Get connected components
-  components <- suppressWarnings(igraph::components(convert2igraph(adjacency)))
+  # Get connected components (of the full network, so memberships index its nodes)
+  components <- igraph::components(
+    igraph::graph_from_adjacency_matrix(
+      adjacency != 0, mode = "undirected", diag = FALSE
+    )
+  )
+
+  # Check for no significant co-occurrences
+  if(!any(adjacency != 0)){
+
+    # Send warning
+    warning(
+      "In `cn()`: no pair of responses co-occurred significantly more than expected by chance, so the network is empty. ",
+      "Consider a larger `alpha` or a larger `window`.",
+      call. = FALSE
+    )
+
+    # Return empty network
+    return(adjacency[0, 0, drop = FALSE])
+
+  }
 
   # Get nodes of largest component
   largest_component <- which(components$membership == which.max(components$csize))
 
   # Keep largest component
-  adjacency <- adjacency[largest_component, largest_component]
+  adjacency <- adjacency[largest_component, largest_component, drop = FALSE]
 
   # Check for enrichment
   if(enrich){
@@ -117,6 +143,14 @@ cn_errors <- function(data, window, alpha, enrich, cutoff)
   length_error(window, 1, "cn")
   typeof_error(window, "numeric", "cn")
   range_error(window, c(1, Inf), "cn")
+
+  # Check for whole number
+  if(window != round(window)){
+
+    # Send error
+    stop("In `cn()`: 'window' must be a whole number.", call. = FALSE)
+
+  }
 
   # 'alpha' errors
   length_error(alpha, 1, "cn")
@@ -318,6 +352,18 @@ stat_cooccur <- function(data, window = 2, alpha = .05)
       # Send error
       stop(
         "In `cn()`: participants must give more than one response on average (mean = ", mean_responses, ").",
+        call. = FALSE
+      )
+
+    }
+
+    # Check for window of at least the list length (chance co-occurrence is undefined)
+    if(window >= mean_responses){
+
+      # Send error
+      stop(
+        "In `cn()`: 'window' (", window, ") must be smaller than the mean number of responses per participant (",
+        mean_responses, ").",
         call. = FALSE
       )
 

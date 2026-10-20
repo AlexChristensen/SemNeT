@@ -11,8 +11,11 @@ finalize(data, minimum_cases = 2)
 A binary response matrix (participants x responses)}
 
 \item{minimum_cases}{Numeric.
-Minimum number of participants required to have given a response for that
-response to be kept.
+Minimum number of participants (at least \code{1}) required to have given
+a response for that response to be kept. Only rare responses are removed:
+a response that \emph{every} participant gave is kept (it makes
+\code{"cor"} and \code{"phi"} similarities undefined; drop such columns
+yourself)
 Defaults to \code{2}}
 }
 \value{

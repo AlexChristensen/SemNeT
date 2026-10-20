@@ -6,7 +6,9 @@
 #' A cleaned, finalized network matrix ready to be visualized
 #'
 #' @return A sparse matrix formatted for Cytoscape, with columns
-#' \code{nodeTO}, \code{nodeFROM}, and \code{nodeWEIGHT}
+#' \code{nodeTO}, \code{nodeFROM}, and \code{nodeWEIGHT}. An undirected edge
+#' is listed twice, once in each direction (as Cytoscape expects for a directed
+#' edge list), and the weights are stored as text together with the node names
 #'
 #' @examples
 #' # Simulate toy binarized datasets

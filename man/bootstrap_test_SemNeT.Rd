@@ -10,7 +10,6 @@ bootstrap_test_SemNeT(
   groups = NULL,
   formula = NULL,
   ci_level = 0.95,
-  power = 0.8,
   adjust = c("none", "bonferroni"),
   ci_type = c("normal", "bc", "percentile"),
   test = NULL,
@@ -48,10 +47,6 @@ Defaults to \code{NULL} (main effects only)}
 Confidence level between 0 and 1 (exclusive).
 Defaults to \code{.95}.
 At least 1000 bootstrap iterations are recommended}
-
-\item{power}{Numeric (length = 1).
-Power for the minimal detectable effect (\code{mde}) between 0 and 1 (exclusive).
-Defaults to \code{.80}}
 
 \item{adjust}{Character (length = 1).
 Multiplicity adjustment across the comparisons within each measure. Nothing
@@ -129,16 +124,17 @@ numbers are not rounded (the printed tables format them), so \code{z},
 \code{table} has one row per comparison: \code{term}, \code{contrast},
 \code{mean_1}, \code{se_1}, \code{mean_2}, and \code{se_2} (the bootstrap mean
 and standard error of each side; \code{NA} for interactions),
-\code{mean_diff}, \code{observed_diff}, \code{bias}
+\code{observed_1} and \code{observed_2} (the full-sample value of each side;
+\code{NA} for interactions), \code{mean_diff}, \code{observed_diff}, \code{bias}
 (\code{mean_diff - observed_diff}), \code{se} (of the difference),
 \code{bias_se} (\code{|bias| / se}), \code{z}
-(Wald statistic; \code{ci_type = "normal"} only), \code{mde},
+(Wald statistic; \code{ci_type = "normal"} only),
 \code{ci_lower}, \code{ci_upper}, \code{p_value} (Wald test;
 \code{ci_type = "normal"} only, otherwise \code{NA}), \code{n_boot}, and
 \code{direction} (\code{"n.s."} when the interval includes 0).
 
 For node results, \code{table} has \code{term}, \code{contrast},
-\code{observed_diff}, \code{mean_diff}, \code{sd_diff}, \code{q_lower} and
+\code{observed_1}, \code{observed_2}, \code{observed_diff}, \code{mean_diff}, \code{sd_diff}, \code{q_lower} and
 \code{q_upper} (central \code{ci_level} range of the subsample differences),
 \code{prop_same_sign} (share with the observed difference's sign), and
 \code{n_boot}: a robustness summary with no \emph{p}-value or interval}
@@ -150,8 +146,6 @@ For node results, \code{table} has \code{term}, \code{contrast},
 \code{observed_edges})}
 
 \item{ci_level}{The confidence level used}
-
-\item{power}{The power used for \code{mde}}
 
 \item{adjust}{The multiplicity adjustment used}
 
@@ -194,19 +188,6 @@ mistaken for one. Use \code{ci_type = "normal"} for a Wald \emph{p}-value, or
 \code{\link{permutation_SemNeT}} for a test. Case resampling changes
 each resampled network's size, so the bootstrap distribution is not centred on
 the full-data statistic (reported as \code{bias}).
-
-The minimal detectable effect (\code{mde}) is
-\eqn{(z_{1-\alpha/2} + z_{\mathrm{power}})\,\mathrm{SD}^*}: the smallest true
-contrast a two-sided Wald test would detect with probability \code{power}
-(\eqn{\alpha} is divided by the number of comparisons for
-\code{adjust = "bonferroni"}). It depends only on the bootstrap standard
-error, so a non-significant difference smaller than \code{mde} is inconclusive.
-The bootstrap standard error can exceed the true sampling standard deviation,
-so \code{mde} errs large. It also assumes the contrast is roughly normally
-distributed, for every \code{ci_type}. When that is doubtful (check the
-\code{differences} of each measure), \code{\link{permutation_SemNeT}} reports
-an \code{mde} whose critical value comes from the permutation null instead of a
-normal quantile.
 
 Node results (\code{type = "node"}) subsample words, not participants, and
 the subsample sizes change the measures themselves, so they are summarized

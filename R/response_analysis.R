@@ -13,7 +13,8 @@
 #' @return With exactly two groups, a list with:
 #' \item{total}{A named vector comparing the number of distinct responses given
 #' by each participant (a response repeated by a participant counts once) via a
-#' two-sample \emph{t}-test and Cohen's \emph{d}}
+#' two-sample \emph{t}-test and Cohen's \emph{d} (absolute; the sign of the
+#' difference is that of \code{t_statistic})}
 #' \item{unique}{A named vector comparing the number of responses unique to
 #' each group via McNemar's test (and \code{phi}, see Details)}
 #' \item{vocabulary}{Descriptive statistics for the groups' vocabularies that
@@ -130,7 +131,7 @@ response_analysis_pair <- function(group_1, group_2, name_1, name_2)
   totals_test <- tryCatch(t.test(total_1, total_2, var.equal = TRUE), error = function(e) NULL)
 
   # Set up totals result
-  total_result <- round(c(
+  total_result <- c(
     mean_1 = mean(total_1, na.rm = TRUE), sd_1 = sd(total_1, na.rm = TRUE),
     mean_2 = mean(total_2, na.rm = TRUE), sd_2 = sd(total_2, na.rm = TRUE),
     t_statistic = if(is.null(totals_test)) NA_real_ else unname(totals_test$statistic),
@@ -139,7 +140,7 @@ response_analysis_pair <- function(group_1, group_2, name_1, name_2)
     ci_lower = if(is.null(totals_test)) NA_real_ else totals_test$conf.int[1],
     ci_upper = if(is.null(totals_test)) NA_real_ else totals_test$conf.int[2],
     cohens_d = cohens_d(total_1, total_2)
-  ), 3)
+  )
 
   # Name totals result
   names(total_result) <- c(
@@ -147,6 +148,9 @@ response_analysis_pair <- function(group_1, group_2, name_1, name_2)
     paste0("mean_", name_2), paste0("sd_", name_2),
     "t_statistic", "df", "p_value", "ci_lower", "ci_upper", "cohens_d"
   )
+
+  # Round totals result (p-values to significant digits, so they do not print as 0)
+  total_result <- round_statistics(total_result)
 
   # Get responses given in first group
   responses_1 <- colnames(group_1)[colSums(group_1) > 0]
@@ -198,14 +202,14 @@ response_analysis_pair <- function(group_1, group_2, name_1, name_2)
   }
 
   # Set up uniqueness result
-  unique_result <- round(c(
+  unique_result <- c(
     total_across_groups = length(vocabulary),
     total_1 = unname(colSums(given_by)[1]), total_2 = unname(colSums(given_by)[2]),
     unique_1 = unique_to_1, unique_2 = unique_to_2,
     mcnemars_x2 = unname(uniqueness_test$statistic), df = unname(uniqueness_test$parameter),
     p_value = uniqueness_test$p.value,
     phi = suppressWarnings(abs(cor(given_by)[1, 2]))
-  ), 3)
+  )
 
   # Name uniqueness result
   names(unique_result) <- c(
@@ -213,6 +217,9 @@ response_analysis_pair <- function(group_1, group_2, name_1, name_2)
     paste0("unique_", name_1), paste0("unique_", name_2),
     "mcnemars_x2", "df", "p_value", "phi"
   )
+
+  # Round uniqueness result (p-values to significant digits, so they do not print as 0)
+  unique_result <- round_statistics(unique_result)
 
   # Count responses shared by groups
   shared <- sum(given_by[, 1] == 1 & given_by[, 2] == 1)
@@ -240,6 +247,26 @@ response_analysis_pair <- function(group_1, group_2, name_1, name_2)
 
   # Return results
   return(list(total = total_result, unique = unique_result, vocabulary = vocabulary_result))
+
+}
+
+#' @noRd
+# Round statistics ----
+# Updated 15.10.2026
+round_statistics <- function(x, digits = 3)
+{
+
+  # Round to digits
+  rounded <- round(x, digits)
+
+  # Find p-values
+  is_p_value <- names(x) == "p_value"
+
+  # Keep p-values to significant digits
+  rounded[is_p_value] <- signif(x[is_p_value], digits)
+
+  # Return rounded statistics
+  return(rounded)
 
 }
 

@@ -15,7 +15,8 @@ per group, e.g. \code{response_analysis(low = low_data, high = high_data)}}
 With exactly two groups, a list with:
 \item{total}{A named vector comparing the number of distinct responses given
 by each participant (a response repeated by a participant counts once) via a
-two-sample \emph{t}-test and Cohen's \emph{d}}
+two-sample \emph{t}-test and Cohen's \emph{d} (absolute; the sign of the
+difference is that of \code{t_statistic})}
 \item{unique}{A named vector comparing the number of responses unique to
 each group via McNemar's test (and \code{phi}, see Details)}
 \item{vocabulary}{Descriptive statistics for the groups' vocabularies that
