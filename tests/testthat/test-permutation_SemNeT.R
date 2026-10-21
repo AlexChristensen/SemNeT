@@ -37,7 +37,7 @@ test_that("permutation_SemNeT reuses a previous result's networks for a differen
   first <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = "aspl", iter = 10, cores = 1, keep_networks = TRUE))
 
   # Perform second permutation test
-  second <- suppressMessages(permutation_SemNeT(previous = first, measure = "cc", cores = 1))
+  second <- suppressMessages(permutation_SemNeT(previous = first, measure = "cc", cores = 1, keep_networks = TRUE))
 
   # Check networks
   expect_identical(first$networks, second$networks)
@@ -109,7 +109,7 @@ test_that("permutation_SemNeT tests several measures at once, matching one-at-a-
   measures <- c("aspl", "cc", "q")
 
   # Perform permutation test
-  all_measures <- permutation_SemNeT(low, high, method = "tmfg", measure = measures, iter = 20, cores = 1, seed = 1)
+  all_measures <- permutation_SemNeT(low, high, method = "tmfg", measure = measures, iter = 20, cores = 1, seed = 1, keep_networks = TRUE)
 
   # Check measures
   expect_equal(row.names(all_measures$result), measures)
@@ -167,7 +167,7 @@ test_that("permutation_SemNeT tests several measures at once, matching one-at-a-
   expect_match(printed, "Permutation test of group differences")
 
   # Check note on adjustment
-  expect_match(printed, "not adjusted for the number of\\s+(\\|\\s+)?measures")
+  expect_match(printed, "not\\s+(\\|\\s+)?adjusted\\s+(\\|\\s+)?for\\s+(\\|\\s+)?the\\s+(\\|\\s+)?number\\s+(\\|\\s+)?of\\s+(\\|\\s+)?measures")
 
   # Check rows
   expect_equal(sum(grepl("^ +(ASPL|CC|Q) ", strsplit(printed, "\n")[[1]])), 3)
@@ -548,7 +548,7 @@ test_that("permutation_SemNeT's observed Q matches bootstrap_SemNeT's, which see
 
   # Perform permutation test
   perm <- suppressMessages(permutation_SemNeT(
-    low, high, method = "tmfg", minimum_cases = 2, measure = c("aspl", "cc", "q"), iter = 4, seed = 42
+    low, high, method = "tmfg", minimum_cases = 2, measure = c("aspl", "cc", "q"), iter = 4, seed = 42, keep_networks = TRUE
   ))
 
   # Get bootstrap observed differences
