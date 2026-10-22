@@ -95,7 +95,15 @@ mod_network_estimation_server <- function(id, state)
           numericInput(ns("minimum_cases"), "Minimum Number of Responses", value = 2, min = 1)
         ),
 
-        pf = NULL
+        pf = tagList(
+          selectInput(
+            ns("pf_method"), "Distance (a modeling choice; no distance is established as correct)",
+            choices = c(
+              "Chebyshev" = "chebyshev", "Euclidean" = "euclidean", "Manhattan" = "manhattan",
+              "Cosine" = "cosine", "Hamming" = "hamming", "Jaccard" = "jaccard", "Paulsen et al. (1996) response order" = "paulsen"
+            )
+          )
+        )
 
       )
 
@@ -122,7 +130,7 @@ mod_network_estimation_server <- function(id, state)
 
           cn = lapply(groups, cn, window = input$window, alpha = as.numeric(input$alpha), enrich = as.logical(input$enrich), cutoff = input$cutoff),
           nrw = lapply(groups, nrw, type = input$nrw_type, threshold = input$threshold),
-          pf = lapply(groups, pf),
+          pf = lapply(groups, pf, method = input$pf_method),
 
           tmfg = {
 
@@ -220,7 +228,7 @@ mod_network_estimation_server <- function(id, state)
         input$method,
         cn = list(window = input$window, alpha = as.numeric(input$alpha), enrich = as.logical(input$enrich), cutoff = input$cutoff),
         nrw = list(type = input$nrw_type, threshold = input$threshold),
-        pf = list(),
+        pf = list(method = input$pf_method),
         tmfg = list()
       )
 
@@ -238,7 +246,13 @@ mod_network_estimation_server <- function(id, state)
           input$method,
           cn = "<b>Please cite:</b><br>Goni, J., Arrondo, G., Sepulcre, J., Martincorena, I., de Mendizabal, N. V., Corominas-Murtra, B., ... & Villoslada, P. (2011). The semantic organization of the animal category: Evidence from semantic verbal fluency and network theory. <em>Cognitive Processing</em>, <em>12</em>, 183–196.",
           nrw = "<b>Please cite:</b><br>Lerner, A. J., Ogrocki, P. K., & Thomas, P. J. (2009). Network graph analysis of category fluency testing. <em>Cognitive and Behavioral Neurology</em>, <em>22</em>, 45–52.",
-          pf = "<b>Please cite:</b><br>Paulsen, J. S., Romero, R., Chan, A., Davis, A. V., Heaton, R. K., & Jeste, D. V. (1996). Impairment of the semantic network in schizophrenia. <em>Psychiatry Research</em>, <em>63</em>, 109–121.",
+          pf = paste0(
+            "<b>Please cite:</b><br>Quirin, A., Cordon, O., Guerrero-Bote, V. P., Vargas-Quesada, B., & Moya-Aneon, F. (2008). A quick MST-based algorithm to obtain Pathfinder networks (\u221e, n-1). <em>Journal of the American Society for Information Science and Technology</em>, <em>59</em>, 1912\u20131924.",
+            if(input$pf_method == "paulsen"){
+              "<br>Paulsen, J. S., Romero, R., Chan, A., Davis, A. V., Heaton, R. K., & Jeste, D. V. (1996). Impairment of the semantic network in schizophrenia. <em>Psychiatry Research</em>, <em>63</em>, 109\u2013121."
+            },
+            "<br><em>The distance between responses is a modeling choice; no distance is established as correct.</em>"
+          ),
           tmfg = "<b>Please cite:</b><br>Massara, G. P., Di Matteo, T., & Aste, T. (2016). Network filtering for big data: Triangulated maximally filtered graph. <em>Journal of Complex Networks</em>, <em>5</em>, 161–178."
         ))
 

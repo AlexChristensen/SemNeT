@@ -1,5 +1,9 @@
 Changes in version 2.1.1
 
+o UPDATE: `pf` gains `method` for the distance between responses (`"chebyshev"`, the default and the distance before 2.1.0, `"euclidean"`, `"manhattan"`, `"cosine"`, `"hamming"`, `"jaccard"`, or `"paulsen"`, the response-order distance of 2.1.0); the distance is a modeling choice, and only `"paulsen"` needs response order (the others also accept a binary matrix)
+
+o ADD: `pf` `q` and `r` arguments (Pathfinder parameters; defaults `NULL`, meaning n - 1, and `Inf` are the previous behavior, computed with MST-Pathfinder); other settings use the general Pathfinder definition, and the documentation suggests an `r` for each distance
+
 o FIX: `cn` returned the wrong nodes whenever the network had isolated words: the largest component was found on a network without its isolates but indexed into the full one, so the returned nodes (and their edges) were not the largest component
 
 o FIX: `convert2igraph` treated a node whose signed edges cancel (e.g., +1 and -1) as unconnected; it now requires a symmetric network, keeps the matrix form with a single edge, and documents that it drops nodes without edges

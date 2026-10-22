@@ -114,12 +114,16 @@ NRW <- function(data, type = c("num", "prop"), threshold = 0)
 #' @rdname pf
 #' @export
 # Legacy `pf` ----
-# Updated 07.09.2026
-PF <- function(data)
+# Updated 22.10.2026
+PF <- function(
+    data,
+    method = c("chebyshev", "euclidean", "manhattan", "cosine", "hamming", "jaccard", "paulsen"),
+    q = NULL, r = Inf
+)
 {
 
   # Return network
-  return(pf(data))
+  return(pf(data, method = method, q = q, r = r))
 
 }
 
