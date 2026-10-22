@@ -1,8 +1,8 @@
 # Load data module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Load data interface ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_load_data_ui <- function(id)
 {
 
@@ -32,6 +32,22 @@ mod_load_data_ui <- function(id)
 
       # Add spacing
       br(), br(),
+
+      # Add seed
+      numericInput(
+        ns("seed"), "Random Seed (0 for no seed)", value = 0, min = 0, max = .Machine$integer.max, step = 1
+      ),
+
+      # Add seed note
+      tags$p(
+        tags$em(
+          "Used by every analysis that involves randomness (modularity, random networks, bootstrap, permutation, random walks).",
+          "A nonzero seed makes results reproducible; 0 gives different results each run."
+        )
+      ),
+
+      # Add seed error
+      uiOutput(ns("seed_error")),
 
       # Add load button
       actionButton(ns("load_data"), label = "Load Data", class = "btn-primary"),
@@ -81,12 +97,33 @@ mod_load_data_ui <- function(id)
 }
 
 # Load data server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_load_data_server <- function(id, state)
 {
 
   # Start module
   moduleServer(id, function(input, output, session){
+
+    # Watch for seed
+    observeEvent(input$seed, {
+
+      # Store seed (NULL if none or invalid)
+      state$seed <- analysis_seed(input$seed)
+
+    }, ignoreNULL = FALSE)
+
+    # Render seed error
+    output$seed_error <- renderUI({
+
+      # Check for invalid seed
+      if(!valid_seed(input$seed)){
+
+        # Show error
+        tags$p(style = "color: #a94442;", "Seed must be a whole number from 0 to 2147483647. No seed is being used.")
+
+      }
+
+    })
 
     # Find {SemNetCleaner} objects
     textcleaner_objects <- reactiveVal(find_textcleaner_objects())

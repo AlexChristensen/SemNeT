@@ -1,5 +1,5 @@
 # Random walk module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Random walk interface ----
 # Updated 13.10.2026
@@ -62,7 +62,7 @@ mod_random_walk_ui <- function(id)
 }
 
 # Random walk server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_random_walk_server <- function(id, state)
 {
 
@@ -96,7 +96,7 @@ mod_random_walk_server <- function(id, state)
     progress <- progress_poller(session, progress_file)
 
     # Set up background task
-    task <- ExtendedTask$new(function(network_a, network_b, name_a, name_b, reps, steps, iter, cores, progress_file){
+    task <- ExtendedTask$new(function(network_a, network_b, name_a, name_b, reps, steps, iter, cores, seed, progress_file){
 
       # Run in background
       promises::future_promise({
@@ -107,7 +107,7 @@ mod_random_walk_server <- function(id, state)
         # Perform random walk
         random_walk(network_a, network_b, name_a = name_a, name_b = name_b, reps = reps, steps = steps, iter = iter, cores = cores)
 
-      }, seed = TRUE)
+      }, seed = task_seed(seed))
 
     })
 
@@ -137,7 +137,7 @@ mod_random_walk_server <- function(id, state)
       # Start task
       task$invoke(
         state$networks[[input$network_a]], state$networks[[input$network_b]],
-        input$network_a, input$network_b, input$reps, input$steps, input$iter, input$cores,
+        input$network_a, input$network_b, input$reps, input$steps, input$iter, input$cores, state$seed,
         progress_file()
       )
 

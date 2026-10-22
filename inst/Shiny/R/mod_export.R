@@ -1,8 +1,8 @@
 # Export module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Export interface ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_export_ui <- function(id)
 {
 
@@ -18,38 +18,8 @@ mod_export_ui <- function(id)
       # Add note
       tags$p("Download whatever this session has computed so far."),
 
-      # Add all results download
-      downloadButton(ns("download_all"), "All Results (.rds)"),
-
-      # Add spacing
-      br(), br(),
-
-      # Add networks download
-      downloadButton(ns("download_networks"), "Estimated Networks (.rds)"),
-
-      # Add spacing
-      br(), br(),
-
-      # Add measures download
-      downloadButton(ns("download_measures"), "Network Measures (.csv)"),
-
-      # Add spacing
-      br(), br(),
-
-      # Add bootstrap test download
-      downloadButton(ns("download_boot_test"), "Bootstrap Test Table (.csv)"),
-
-      # Add spacing
-      br(), br(),
-
-      # Add random walk download
-      downloadButton(ns("download_random_walk"), "Random Walk Table (.csv)"),
-
-      # Add spacing
-      br(), br(),
-
-      # Add reset button
-      actionButton(ns("reset"), label = "Clear This Session's Results", class = "btn-danger")
+      # Add download buttons, shown once results exist
+      uiOutput(ns("downloads"))
 
     ),
 
@@ -69,7 +39,7 @@ mod_export_ui <- function(id)
 }
 
 # Export server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_export_server <- function(id, state)
 {
 
@@ -89,6 +59,48 @@ mod_export_server <- function(id, state)
       data.frame(
         Result = fields,
         Available = vapply(fields, function(field) !is.null(state[[field]]), logical(1))
+      )
+
+    })
+
+    # Render download buttons for completed results
+    output$downloads <- renderUI({
+
+      # Get namespace
+      ns <- session$ns
+
+      # Set buttons for each result
+      buttons <- list(
+        download_networks = list(field = "networks", label = "Estimated Networks (.rds)"),
+        download_measures = list(field = "measures", label = "Network Measures (.csv)"),
+        download_boot_test = list(field = "boot_test", label = "Bootstrap Test Table (.csv)"),
+        download_random_walk = list(field = "random_walk", label = "Random Walk Table (.csv)")
+      )
+
+      # Get available buttons
+      available <- Filter(function(button) !is.null(state[[button$field]]), buttons)
+
+      # Check for no results
+      if(length(available) == 0){
+
+        # Show note
+        return(tags$p(tags$em("Nothing to download yet. Results appear here once they finish.")))
+
+      }
+
+      # Create buttons
+      downloads <- lapply(names(available), function(id){
+
+        # Add button and spacing
+        tagList(downloadButton(ns(id), available[[id]]$label), br(), br())
+
+      })
+
+      # Show buttons
+      tagList(
+        downloadButton(ns("download_all"), "All Results (.rds)"), br(), br(),
+        downloads,
+        actionButton(ns("reset"), label = "Clear This Session's Results", class = "btn-danger")
       )
 
     })

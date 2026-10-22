@@ -572,3 +572,32 @@ test_that("permutation_SemNeT's observed Q matches bootstrap_SemNeT's, which see
   expect_identical(permutation_seeds(5, NULL)[1] == 42, FALSE)
 
 })
+
+test_that("permutation_SemNeT's display is what print shows", {
+
+  # Set seed
+  set.seed(4)
+
+  # Get low group
+  low <- open.clean[which(open.group == "Low"), ]
+
+  # Get high group
+  high <- open.clean[which(open.group == "High"), ]
+
+  # Perform permutation test
+  result <- suppressMessages(permutation_SemNeT(low, high, method = "tmfg", measure = c("aspl", "cc"), iter = 10, cores = 1, keep_networks = TRUE))
+
+  # Get display
+  display <- permutation_display(result)
+
+  # Capture printed output
+  printed <- capture.output(print(result))
+
+  # Check table
+  expect_equal(display$table$measure, c("ASPL", "CC"))
+
+  # Check that the display's lines are printed
+  expect_true(all(display$settings %in% printed))
+  expect_true(display$comparison %in% printed)
+
+})

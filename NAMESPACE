@@ -2,6 +2,7 @@
 
 S3method(plot,bootSemNeT)
 S3method(plot,bootstrap_SemNeT)
+S3method(plot,permutation_SemNeT)
 S3method(print,bootstrap_test_SemNeT)
 S3method(print,permutation_SemNeT)
 export(ASPL)

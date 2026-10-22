@@ -1,5 +1,5 @@
 # Server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 server <- function(input, output, session)
 {
 
@@ -7,6 +7,7 @@ server <- function(input, output, session)
   state <- reactiveValues(
     data = NULL,             # response matrix (raw word responses or binary)
     group = NULL,            # group label per row of 'data'
+    seed = NULL,             # seed from Load Data, NULL for none (random results)
     networks = NULL,         # named list of one estimated network per group
     method = NULL,           # "tmfg"/"cn"/"nrw"/"pf", from Network Estimation
     measures = NULL,         # data frame of aspl/cc/q per group's network

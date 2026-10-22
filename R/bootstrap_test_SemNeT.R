@@ -364,19 +364,17 @@ bootstrap_test_SemNeT <- function(
 
 }
 
-#' @method print bootstrap_test_SemNeT
-#' @export
 #' @noRd
-# S3 Print Method ----
-# Updated 12.10.2026
-print.bootstrap_test_SemNeT <- function(x, ...)
+# Display of bootstrap tests ----
+# Updated 22.10.2026
+bootstrap_test_display <- function(x)
 {
 
   # Check for legacy results
   if(isTRUE(x$legacy)){
 
-    # Print legacy header
-    cat("*** LEGACY (INVALID) INFERENCE: parametric", x$test, "on bootstrap replicates. Do not use for inference. ***\n")
+    # Set legacy sections
+    sections <- list()
 
     # Loop over conditions
     for(condition in names(x$results)){
@@ -384,18 +382,26 @@ print.bootstrap_test_SemNeT <- function(x, ...)
       # Loop over measures
       for(measure in names(x$results[[condition]])){
 
-        # Print measure header
-        cat("\n", condition, " -- ", toupper(measure), "\n", sep = "")
-
-        # Print legacy table
-        print(x$results[[condition]][[measure]]$table, row.names = FALSE)
+        # Add legacy section
+        sections[[length(sections) + 1]] <- list(
+          settings = paste0(condition, " -- ", toupper(measure)),
+          note = NULL, comparison = NULL,
+          table = x$results[[condition]][[measure]]$table, footnote = NULL
+        )
 
       }
 
     }
 
-    # Return object invisibly
-    return(invisible(x))
+    # Return legacy display
+    return(list(
+      legacy = TRUE,
+      header = paste(
+        "*** LEGACY (INVALID) INFERENCE: parametric", x$test,
+        "on bootstrap replicates. Do not use for inference. ***"
+      ),
+      sections = sections, notes = NULL, notices = NULL
+    ))
 
   }
 
@@ -420,17 +426,17 @@ print.bootstrap_test_SemNeT <- function(x, ...)
 
   }
 
-  # Print header
-  writeLines(strwrap(header, width = 80, exdent = 2))
-
   # Initialize inference
   any_inference <- FALSE
+
+  # Initialize sections
+  sections <- list()
 
   # Loop over conditions
   for(condition in names(x$results)){
 
-    # Print settings of condition
-    print_bootstrap_meta(condition, x$meta[[condition]])
+    # Get settings of condition
+    settings <- bootstrap_meta_text(condition, x$meta[[condition]])
 
     # Get table of condition
     table <- bootstrap_print_table(x$results[[condition]])
@@ -441,19 +447,17 @@ print.bootstrap_test_SemNeT <- function(x, ...)
     # Update inference
     any_inference <- any_inference || !is_node
 
-    # Check for node results
-    if(is_node){
+    # Set note on node subsampling
+    note <- if(is_node) "  (node subsampling: robustness across vocabulary, not inference about groups)" else NULL
 
-      # Print note on node subsampling
-      cat("  (node subsampling: robustness across vocabulary, not inference about groups)\n")
-
-    }
+    # Initialize comparison
+    comparison <- NULL
 
     # Check for single comparison
     if(length(unique(table$contrast)) == 1){
 
-      # Print comparison
-      cat("  Comparison: ", table$contrast[1], "\n", sep = "")
+      # Set comparison
+      comparison <- paste0("  Comparison: ", table$contrast[1])
 
       # Get term of comparison
       term <- x$results[[condition]][[1]]$table$term[1]
@@ -477,21 +481,23 @@ print.bootstrap_test_SemNeT <- function(x, ...)
 
     }
 
-    # Add break space
-    cat("\n")
-
-    # Print table
-    print(table, row.names = FALSE, right = TRUE)
-
     # Check for unnamed group columns
-    if("obs_1" %in% names(table)){
+    footnote <- if("obs_1" %in% names(table)){
 
-      # Print note on group columns
-      cat("  obs_1, obs_2: full-sample values of the first and second group of each contrast\n")
+      # Set note on group columns
+      "  obs_1, obs_2: full-sample values of the first and second group of each contrast"
 
     }
 
+    # Add section
+    sections[[length(sections) + 1]] <- list(
+      settings = settings, note = note, comparison = comparison, table = table, footnote = footnote
+    )
+
   }
+
+  # Initialize notes
+  notes <- NULL
 
   # Check for inference
   if(any_inference){
@@ -529,14 +535,64 @@ print.bootstrap_test_SemNeT <- function(x, ...)
       "."
     )
 
+    # Set notes
+    notes <- c(
+      paste(p_text, adjust_text, bias_text),
+      "For a formal hypothesis test, use `permutation_SemNeT()`. Full tables: `$results`."
+    )
+
+  }
+
+  # Return display
+  return(list(
+    legacy = FALSE, header = header, sections = sections, notes = notes,
+    notices = comparison_notice("bootstrap_test_SemNeT")
+  ))
+
+}
+
+#' @method print bootstrap_test_SemNeT
+#' @export
+#' @noRd
+# S3 Print Method ----
+# Updated 22.10.2026
+print.bootstrap_test_SemNeT <- function(x, ...)
+{
+
+  # Get display
+  display <- bootstrap_test_display(x)
+
+  # Print header
+  if(display$legacy) cat(display$header, "\n", sep = "") else writeLines(strwrap(display$header, width = 80, exdent = 2))
+
+  # Loop over sections
+  for(section in display$sections){
+
+    # Add break space
+    cat("\n")
+
+    # Print settings, note, and comparison
+    writeLines(c(section$settings, section$note, section$comparison))
+
+    # Check for non-legacy
+    if(!display$legacy) cat("\n")
+
+    # Print table
+    print(section$table, row.names = FALSE, right = TRUE)
+
+    # Print note on group columns
+    if(!is.null(section$footnote)) writeLines(section$footnote)
+
+  }
+
+  # Check for notes
+  if(!is.null(display$notes)){
+
     # Add break space
     cat("\n")
 
     # Print notes
-    writeLines(c(
-      strwrap(paste(p_text, adjust_text, bias_text), width = 80),
-      strwrap("For a formal hypothesis test, use `permutation_SemNeT()`. Full tables: `$results`.", width = 80)
-    ))
+    writeLines(unlist(lapply(display$notes, strwrap, width = 80)))
 
   }
 
@@ -544,7 +600,7 @@ print.bootstrap_test_SemNeT <- function(x, ...)
   cat("\n")
 
   # Loop over comparison notices
-  for(note in comparison_notice("bootstrap_test_SemNeT")){
+  for(note in display$notices){
 
     # Print notice
     writeLines(strwrap(note, width = 80))
@@ -724,83 +780,66 @@ bootstrap_meta <- function(boot_object)
 }
 
 #' @noRd
-# Print bootstrap settings ----
-# Updated 12.10.2026
-print_bootstrap_meta <- function(condition, meta)
+# Text of bootstrap settings ----
+# Updated 22.10.2026
+bootstrap_meta_text <- function(condition, meta)
 {
 
   # Check for no settings
   if(is.null(meta)){
 
     # Return nothing
-    return(invisible(NULL))
+    return(character(0))
 
   }
-
-  # Add break space
-  cat("\n")
-
-  # Print run settings
-  print_run_settings(
-    paste0(
-      condition, ": ", meta$iter, if(identical(meta$type, "node")) " node-subsampling" else " case-resampling", " iterations"
-    ),
-    meta$method, meta$seed
-  )
 
   # Get network sizes
   networks <- meta$networks
 
-  # Print network sizes
-  print_group_sizes(
-    networks$group, networks$nodes, networks$edges, networks$observed_nodes, networks$observed_edges
-  )
-
-  # Return nothing
-  return(invisible(NULL))
+  # Return run settings and network sizes
+  return(c(
+    run_settings_text(
+      paste0(
+        condition, ": ", meta$iter, if(identical(meta$type, "node")) " node-subsampling" else " case-resampling", " iterations"
+      ),
+      meta$method, meta$seed
+    ),
+    group_sizes_text(networks$group, networks$nodes, networks$edges, networks$observed_nodes, networks$observed_edges)
+  ))
 
 }
 
 #' @noRd
-# Print run settings ----
-# Updated 12.10.2026
-print_run_settings <- function(what, method, seed)
+# Text of run settings ----
+# Updated 22.10.2026
+run_settings_text <- function(what, method, seed)
 {
 
-  # Print what was run, method, and seed
-  cat(
+  # Return what was run, method, and seed
+  return(paste0(
     what, ", ", method, " networks, ",
-    if(is.null(seed) || is.na(seed) || seed == 0) "no seed set" else paste0("seed ", seed), "\n", sep = ""
-  )
-
-  # Return nothing
-  return(invisible(NULL))
+    if(is.null(seed) || is.na(seed) || seed == 0) "no seed set" else paste0("seed ", seed)
+  ))
 
 }
 
 #' @noRd
-# Print group sizes ----
-# Updated 12.10.2026
-print_group_sizes <- function(groups, nodes, edges, full_nodes, full_edges)
+# Text of group sizes ----
+# Updated 22.10.2026
+group_sizes_text <- function(groups, nodes, edges, full_nodes, full_edges)
 {
 
-  # Loop over groups
-  for(i in seq_along(groups)){
-
-    # Print size of group
-    cat(
+  # Return size of each group
+  return(vapply(seq_along(groups), function(i){
+    paste0(
       "  ", groups[i], ": ", format_number(nodes[i], 4), " nodes, ", format_number(edges[i], 4), " edges",
       if(!is.na(full_nodes[i]) && !is.na(full_edges[i])){
         paste0(" (full sample: ", format_number(full_nodes[i], 4), ", ", format_number(full_edges[i], 4), ")")
       }else{
         ""
-      }, "\n", sep = ""
+      }
     )
-
-  }
-
-  # Return nothing
-  return(invisible(NULL))
+  }, character(1)))
 
 }
 

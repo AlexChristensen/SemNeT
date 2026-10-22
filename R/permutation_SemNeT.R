@@ -406,12 +406,10 @@ permutation_SemNeT <- function(
 
 }
 
-#' @method print permutation_SemNeT
-#' @export
 #' @noRd
-# S3 Print Method ----
-# Updated 12.10.2026
-print.permutation_SemNeT <- function(x, ...)
+# Display of permutation test ----
+# Updated 22.10.2026
+permutation_display <- function(x)
 {
 
   # Get measures
@@ -426,14 +424,8 @@ print.permutation_SemNeT <- function(x, ...)
   # Name measures
   colnames(differences) <- measures
 
-  # Print header
-  writeLines(strwrap("Permutation test of group differences (shuffled group membership)", width = 80, exdent = 2))
-
-  # Add break space
-  cat("\n")
-
-  # Print run settings
-  print_run_settings(paste0(nrow(differences), " permutations (incl. observed)"), x$method, x$seed)
+  # Set run settings
+  settings <- run_settings_text(paste0(nrow(differences), " permutations (incl. observed)"), x$method, x$seed)
 
   # Check for diagnostics
   if(!is.null(x$diagnostics)){
@@ -441,19 +433,19 @@ print.permutation_SemNeT <- function(x, ...)
     # Get diagnostics
     diagnostics <- x$diagnostics
 
-    # Print network sizes
-    print_group_sizes(
+    # Add network sizes
+    settings <- c(settings, group_sizes_text(
       group_names,
       c(mean(diagnostics$nodes_1), mean(diagnostics$nodes_2)),
       c(mean(diagnostics$edges_1), mean(diagnostics$edges_2)),
       c(diagnostics$nodes_1[1], diagnostics$nodes_2[1]),
       c(diagnostics$edges_1[1], diagnostics$edges_2[1])
-    )
+    ))
 
   }
 
-  # Print comparison
-  cat("  Comparison: ", group_names[1], " - ", group_names[2], " (H1: ", x$result$alternative[1], ")\n\n", sep = "")
+  # Set comparison
+  comparison <- paste0("  Comparison: ", group_names[1], " - ", group_names[2], " (H1: ", x$result$alternative[1], ")")
 
   # Get quantiles of null distribution
   null_quantiles <- apply(differences, 2, quantile, probs = c(.025, .975), na.rm = TRUE, names = FALSE)
@@ -488,9 +480,6 @@ print.permutation_SemNeT <- function(x, ...)
     )
   )
 
-  # Print table
-  print(table, row.names = FALSE, right = TRUE)
-
   # Set note on p-value
   notes <- paste(
     "p: share of permutations (observed included) with a difference at least as extreme as the observed one.",
@@ -512,17 +501,52 @@ print.permutation_SemNeT <- function(x, ...)
 
   }
 
+  # Return display
+  return(list(
+    header = "Permutation test of group differences (shuffled group membership)",
+    settings = settings, comparison = comparison, table = table, notes = notes,
+    notices = comparison_notice("permutation_SemNeT")
+  ))
+
+}
+
+#' @method print permutation_SemNeT
+#' @export
+#' @noRd
+# S3 Print Method ----
+# Updated 22.10.2026
+print.permutation_SemNeT <- function(x, ...)
+{
+
+  # Get display
+  display <- permutation_display(x)
+
+  # Print header
+  writeLines(strwrap(display$header, width = 80, exdent = 2))
+
+  # Add break space
+  cat("\n")
+
+  # Print settings
+  writeLines(display$settings)
+
+  # Print comparison
+  cat(display$comparison, "\n\n", sep = "")
+
+  # Print table
+  print(display$table, row.names = FALSE, right = TRUE)
+
   # Add break space
   cat("\n")
 
   # Print notes
-  writeLines(strwrap(notes, width = 80))
+  writeLines(strwrap(display$notes, width = 80))
 
   # Add break space
   cat("\n")
 
   # Loop over comparison notices
-  for(note in comparison_notice("permutation_SemNeT")){
+  for(note in display$notices){
 
     # Print notice
     writeLines(strwrap(note, width = 80))

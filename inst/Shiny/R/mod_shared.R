@@ -1,5 +1,119 @@
 # Shared helpers ----
-# Updated 13.10.2026
+# Updated 22.10.2026
+
+# Internal function of {SemNeT} ----
+# Updated 22.10.2026
+semnet_internal <- function(name)
+{
+
+  # Return function from namespace
+  return(utils::getFromNamespace(name, "SemNeT"))
+
+}
+
+# Text lines as they print in the console ----
+# Updated 22.10.2026
+console_lines <- function(lines)
+{
+
+  # Check for no lines
+  if(length(lines) == 0){
+
+    # Return nothing
+    return(NULL)
+
+  }
+
+  # Return lines with spacing kept
+  return(tags$div(style = "white-space: pre-wrap; margin-bottom: 5px;", paste(lines, collapse = "\n")))
+
+}
+
+# Table as it prints in the console ----
+# Updated 22.10.2026
+console_table <- function(table)
+{
+
+  # Return table (values are already formatted for the console)
+  return(tags$table(
+    class = "table table-condensed table-striped", style = "width: auto;",
+    tags$thead(tags$tr(lapply(names(table), function(name) tags$th(style = "text-align: right;", name)))),
+    tags$tbody(lapply(seq_len(nrow(table)), function(i){
+      tags$tr(lapply(table[i, ], function(value) tags$td(style = "text-align: right;", as.character(value))))
+    }))
+  ))
+
+}
+
+# Display of test as it prints in the console ----
+# Updated 22.10.2026
+console_display_ui <- function(display)
+{
+
+  # Get sections (permutation tests have one)
+  sections <- if(is.null(display$sections)){
+
+    # Set single section
+    list(list(
+      settings = display$settings, note = NULL, comparison = display$comparison,
+      table = display$table, footnote = NULL
+    ))
+
+  }else{
+
+    # Use sections
+    display$sections
+
+  }
+
+  # Return display
+  return(tagList(
+    tags$h4(display$header),
+    lapply(sections, function(section){
+      tagList(
+        console_lines(c(section$settings, section$note, section$comparison)),
+        console_table(section$table),
+        console_lines(section$footnote)
+      )
+    }),
+    lapply(display$notes, function(note) tags$p(tags$em(note))),
+    lapply(display$notices, function(note) div(class = "alert alert-warning", note))
+  ))
+
+}
+
+# Validate seed ----
+# Updated 22.10.2026
+valid_seed <- function(seed)
+{
+
+  # Check for whole number within range
+  return(
+    length(seed) == 1 && is.numeric(seed) && is.finite(seed) &&
+      seed == floor(seed) && seed >= 0 && seed <= .Machine$integer.max
+  )
+
+}
+
+# Seed for analyses ----
+# Updated 22.10.2026
+analysis_seed <- function(seed)
+{
+
+  # Return seed for {SemNeT} functions (NULL is not reproducible)
+  return(if(valid_seed(seed) && seed != 0) seed else NULL)
+
+}
+
+# Seed for background tasks ----
+# Updated 22.10.2026
+task_seed <- function(seed)
+{
+
+  # Return seed for {promises} (TRUE draws a random seed)
+  return(if(is.null(seed)) TRUE else as.integer(seed))
+
+}
 
 # Warn about slow analyses ----
 # Updated 13.10.2026

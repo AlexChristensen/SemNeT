@@ -2,13 +2,42 @@
 #'
 #' @description Plots each measure's bootstrap distribution as a raincloud plot
 #' (Allen et al., 2018): a half violin, boxplot, and the jittered bootstrap values,
-#' with one panel per measure and the groups side by side
+#' with one panel per measure and the groups side by side. A bootstrap confidence
+#' interval of each group's value is drawn below its boxplot
 #'
 #' @param x A \code{\link{bootstrap_SemNeT}} object
 #'
 #' @param measures Character.
 #' One or more of \code{"aspl"}, \code{"cc"}, and \code{"q"}.
 #' Defaults to all three
+#'
+#' @param ci Boolean (length = 1).
+#' Whether to draw each group's confidence interval below its boxplot.
+#' Defaults to \code{TRUE}.
+#' Node bootstraps (\code{type = "node"}) subsample words, which changes the
+#' measures themselves, so no interval is drawn for them
+#'
+#' @param ci_level Numeric (length = 1).
+#' Confidence level between 0 and 1 (exclusive).
+#' Defaults to \code{.95}
+#'
+#' @param ci_type Character (length = 1).
+#' Type of interval, as in \code{\link{bootstrap_test_SemNeT}}.
+#' Defaults to \code{"normal"}.
+#' Available options:
+#'
+#' \itemize{
+#'
+#' \item \code{"normal"} --- The group's value for the full data plus and minus
+#' the normal quantile times the bootstrap standard error. Needs the full data's
+#' observed value (falls back to the bootstrap mean without it)
+#'
+#' \item \code{"bc"} --- Bias-corrected percentile interval. Needs the full
+#' data's observed value (falls back to \code{"percentile"} without it)
+#'
+#' \item \code{"percentile"} --- Percentiles of the bootstrap values
+#'
+#' }
 #'
 #' @param ... Not used
 #'
@@ -42,8 +71,11 @@
 #'
 #' @export
 # Plot bootstrap ----
-# Updated 12.09.2026
-plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
+# Updated 22.10.2026
+plot.bootstrap_SemNeT <- function(
+    x, measures = c("aspl", "cc", "q"), ci = TRUE, ci_level = .95,
+    ci_type = c("normal", "bc", "percentile"), ...
+)
 {
 
   # Check for {ggplot2}
@@ -62,7 +94,22 @@ plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
   group <- value <- NULL
 
   # Argument errors
-  measures <- plot_bootstrap_SemNeT_errors(x, measures)
+  ci_type <- match.arg(ci_type)
+  measures <- plot_bootstrap_SemNeT_errors(x, measures, ci, ci_level)
+
+  # Check for node bootstrap
+  if(ci && identical(x$meta$type, "node")){
+
+    # Send message
+    message(
+      "In `plot.bootstrap_SemNeT()`: node bootstraps subsample words, so their spread is not ",
+      "a confidence interval -- no interval is drawn."
+    )
+
+    # Turn off intervals
+    ci <- FALSE
+
+  }
 
   # Get group names
   group_names <- names(x$groups)
@@ -133,6 +180,61 @@ plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
 
   }
 
+  # Set up interval data
+  ci_data <- NULL
+
+  # Check for intervals
+  if(ci){
+
+    # Get interval of each group and measure
+    ci_data <- do.call(rbind, lapply(group_names, function(group_name){
+
+      # Loop over measures
+      do.call(rbind, lapply(seq_along(measures), function(i){
+
+        # Get bootstrap values (the plot drops non-finite values too)
+        values <- x$groups[[group_name]]$measures[measures[i], ]
+        values <- values[is.finite(values)]
+
+        # Get observed value
+        observed <- x$groups[[group_name]]$observed$measures[measures[i]]
+
+        # Check for usable observed value
+        has_observed <- length(observed) == 1 && is.finite(observed)
+
+        # Get interval
+        interval <- if(ci_type == "normal"){
+
+          # Normal interval around observed value
+          normal_interval(values, ci_level, if(has_observed) unname(observed) else mean(values))
+
+        }else{
+
+          # Percentile interval (bias-corrected with observed value)
+          z0 <- if(ci_type == "bc" && has_observed) bc_z0(values, unname(observed)) else 0
+          bc_interval(values, ci_level, z0)
+
+        }
+
+        # Set up data of group and measure
+        data.frame(
+          group = group_name, measure = measure_labels[i],
+          center = if(ci_type == "normal" && has_observed) unname(observed) else mean(values),
+          lower = interval[1], upper = interval[2], stringsAsFactors = FALSE
+        )
+
+      }))
+
+    }))
+
+    # Set order of groups
+    ci_data$group <- factor(ci_data$group, levels = group_names)
+
+    # Set order of measures
+    ci_data$measure <- factor(ci_data$measure, levels = measure_labels)
+
+  }
+
   # Set up plot
   plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = group, y = value, fill = group)) +
 
@@ -168,6 +270,23 @@ plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
       }
     } +
 
+    # Add confidence intervals below boxplots
+    {
+      if(!is.null(ci_data)){
+        list(
+          ggplot2::geom_errorbar(
+            data = ci_data, ggplot2::aes(x = group, ymin = lower, ymax = upper, colour = group),
+            position = ggplot2::position_nudge(x = -0.3), inherit.aes = FALSE,
+            width = 0.08, linewidth = 0.8
+          ),
+          ggplot2::geom_point(
+            data = ci_data, ggplot2::aes(x = group, y = center, colour = group),
+            position = ggplot2::position_nudge(x = -0.3), inherit.aes = FALSE, size = 2
+          )
+        )
+      }
+    } +
+
     # Set fill colors
     ggplot2::scale_fill_brewer(palette = "Dark2") +
 
@@ -180,11 +299,18 @@ plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
     # Set labels
     ggplot2::labs(
       title = "Bootstrap Results", subtitle = paste(x$meta$iter, "Samples"),
-      caption = if(!is.null(observed_data) && nrow(observed_data) > 0){
-        "Open circle: bootstrap mean. Black diamond: value for the full data. The spread is not a confidence interval."
-      }else{
-        "Open circle: bootstrap mean. The spread is not a confidence interval."
-      },
+      caption = wrap_caption(
+        "Open circle: bootstrap mean.",
+        if(!is.null(observed_data) && nrow(observed_data) > 0) "Black diamond: value for the full data.",
+        if(!is.null(ci_data)){
+          paste0(
+            "Bar below each box: ", format(100 * ci_level), "% ",
+            switch(ci_type, normal = "normal", bc = "bias-corrected percentile", percentile = "percentile"),
+            " interval of the group's value."
+          )
+        },
+        "The spread of the violin and box is not a confidence interval."
+      ),
       x = "Group", y = "Value"
     ) +
 
@@ -194,7 +320,8 @@ plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
       panel.grid.minor = ggplot2::element_blank(),
       panel.background = ggplot2::element_blank(),
       axis.line = ggplot2::element_line(colour = "black"),
-      legend.position = "none"
+      legend.position = "none",
+      plot.caption = ggplot2::element_text(size = 10.5)
     ) +
 
     # Flip coordinates
@@ -207,8 +334,8 @@ plot.bootstrap_SemNeT <- function(x, measures = c("aspl", "cc", "q"), ...)
 
 #' @noRd
 # Errors ----
-# Updated 13.10.2026
-plot_bootstrap_SemNeT_errors <- function(x, measures)
+# Updated 22.10.2026
+plot_bootstrap_SemNeT_errors <- function(x, measures, ci, ci_level)
 {
 
   # 'x' errors
@@ -233,8 +360,35 @@ plot_bootstrap_SemNeT_errors <- function(x, measures)
 
   }
 
+  # 'ci' errors
+  length_error(ci, 1, "plot.bootstrap_SemNeT")
+  typeof_error(ci, "logical", "plot.bootstrap_SemNeT")
+
+  # 'ci_level' errors
+  length_error(ci_level, 1, "plot.bootstrap_SemNeT")
+  typeof_error(ci_level, "numeric", "plot.bootstrap_SemNeT")
+
+  # Check for 'ci_level' outside of (0, 1)
+  if(ci_level <= 0 || ci_level >= 1){
+
+    # Send error
+    stop("In `plot.bootstrap_SemNeT()`: 'ci_level' must be between 0 and 1 (exclusive).", call. = FALSE)
+
+  }
+
   # Return 'measures'
   return(measures)
+
+}
+
+#' @noRd
+# Wrap caption ----
+# Updated 22.10.2026
+wrap_caption <- function(...)
+{
+
+  # Return caption wrapped over lines
+  return(paste(strwrap(paste(..., sep = " "), width = 80), collapse = "\n"))
 
 }
 

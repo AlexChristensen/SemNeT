@@ -1,8 +1,8 @@
 # Permutation module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Permutation interface ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_permutation_ui <- function(id)
 {
 
@@ -19,7 +19,11 @@ mod_permutation_ui <- function(id)
       uiOutput(ns("group_selectors")),
 
       # Add measure selection
-      selectInput(ns("measure"), "Network Measure", choices = c("ASPL" = "aspl", "CC" = "cc", "Q" = "q")),
+      checkboxGroupInput(
+        ns("measure"), "Network Measures",
+        choiceNames = c("ASPL", "CC", "Q"), choiceValues = c("aspl", "cc", "q"),
+        selected = c("aspl", "cc", "q"), inline = TRUE
+      ),
 
       # Add alternative selection
       selectInput(
@@ -40,7 +44,13 @@ mod_permutation_ui <- function(id)
       actionButton(ns("run"), label = "Perform Permutation Analysis", class = "btn-primary"),
 
       # Add reuse button
-      actionButton(ns("run_again"), label = "Test Another Measure (reuses permuted networks)")
+      actionButton(ns("run_again"), label = "Test Another Measure (reuses permuted networks)"),
+
+      # Add spacing
+      br(), br(),
+
+      # Add plot button
+      actionButton(ns("run_plot"), label = "Generate Permutation Plot")
 
     ),
 
@@ -50,14 +60,11 @@ mod_permutation_ui <- function(id)
       # Add status
       uiOutput(ns("status")),
 
-      # Add results table
-      tableOutput(ns("result")),
+      # Add results table (as printed in the console)
+      uiOutput(ns("result")),
 
-      # Add note
-      div(
-        class = "alert alert-warning",
-        "The Bootstrap and Permutation Analyses should always be run together. Run the Bootstrap Analyses as well and report both."
-      )
+      # Add plot
+      plotOutput(ns("perm_plot"))
 
     )
 
@@ -66,7 +73,7 @@ mod_permutation_ui <- function(id)
 }
 
 # Permutation server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_permutation_server <- function(id, state)
 {
 
@@ -100,7 +107,7 @@ mod_permutation_server <- function(id, state)
     progress <- progress_poller(session, progress_file)
 
     # Set up background task
-    task <- ExtendedTask$new(function(sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, progress_file){
+    task <- ExtendedTask$new(function(sample_1, sample_2, method, method_args, sim, minimum_cases, measure, alternative, iter, cores, seed, progress_file){
 
       # Run in background
       promises::future_promise({
@@ -112,10 +119,10 @@ mod_permutation_server <- function(id, state)
         permutation_SemNeT(
           sample_1 = sample_1, sample_2 = sample_2, method = method, method_args = method_args,
           sim = sim, minimum_cases = minimum_cases, measure = measure, alternative = alternative,
-          iter = iter, cores = cores, keep_networks = TRUE
+          iter = iter, cores = cores, keep_networks = TRUE, seed = seed
         )
 
-      }, seed = TRUE)
+      }, seed = task_seed(seed))
 
     })
 
@@ -142,7 +149,7 @@ mod_permutation_server <- function(id, state)
     observeEvent(input$run, {
 
       # Require groups, method, and samples
-      req(state$groups_data, state$method, input$sample_1, input$sample_2)
+      req(state$groups_data, state$method, input$sample_1, input$sample_2, input$measure)
 
       # Check for same samples
       if(input$sample_1 == input$sample_2){
@@ -168,7 +175,7 @@ mod_permutation_server <- function(id, state)
       task$invoke(
         state$groups_data[[input$sample_1]], state$groups_data[[input$sample_2]],
         state$method, state$method_args, state$sim, state$minimum_cases,
-        input$measure, input$alternative, input$iter, input$cores,
+        input$measure, input$alternative, input$iter, input$cores, state$seed,
         progress_file()
       )
 
@@ -178,7 +185,7 @@ mod_permutation_server <- function(id, state)
     observeEvent(input$run_again, {
 
       # Require previous result
-      req(state$perm_result)
+      req(state$perm_result, input$measure)
 
       # Create progress file
       progress_file(new_progress_file())
@@ -214,6 +221,37 @@ mod_permutation_server <- function(id, state)
 
     })
 
+    # Watch for plot button
+    observeEvent(input$run_plot, {
+
+      # Require result
+      req(state$perm_result)
+
+      # Render plot
+      output$perm_plot <- renderPlot({
+
+        # Require result and names (cleared on reset)
+        req(state$perm_result, sample_names())
+
+        # Get result
+        result <- state$perm_result
+
+        # Name samples
+        names(result$result)[1:2] <- sample_names()
+
+        # Name first sample in alternative
+        result$result$alternative <- gsub("sample_1", sample_names()[1], result$result$alternative, fixed = TRUE)
+
+        # Name second sample in alternative
+        result$result$alternative <- gsub("sample_2", sample_names()[2], result$result$alternative, fixed = TRUE)
+
+        # Plot permutation
+        plot(result)
+
+      })
+
+    })
+
     # Render status
     output$status <- renderUI({
 
@@ -239,27 +277,27 @@ mod_permutation_server <- function(id, state)
     })
 
     # Render results
-    output$result <- renderTable({
+    output$result <- renderUI({
 
       # Require result and names
       req(state$perm_result, sample_names())
 
       # Get result
-      result <- state$perm_result$result
+      result <- state$perm_result
 
       # Name samples
-      names(result)[1:2] <- sample_names()
+      names(result$result)[1:2] <- sample_names()
 
       # Name first sample in alternative
-      result$alternative <- gsub("sample_1", sample_names()[1], result$alternative, fixed = TRUE)
+      result$result$alternative <- gsub("sample_1", sample_names()[1], result$result$alternative, fixed = TRUE)
 
       # Name second sample in alternative
-      result$alternative <- gsub("sample_2", sample_names()[2], result$alternative, fixed = TRUE)
+      result$result$alternative <- gsub("sample_2", sample_names()[2], result$result$alternative, fixed = TRUE)
 
-      # Return result
-      result
+      # Show test as it prints in the console
+      console_display_ui(semnet_internal("permutation_display")(result))
 
-    }, rownames = TRUE, digits = 3)
+    })
 
   })
 

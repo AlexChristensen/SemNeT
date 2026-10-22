@@ -53,7 +53,7 @@ mod_network_estimation_ui <- function(id)
 }
 
 # Network estimation server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_network_estimation_server <- function(id, state)
 {
 
@@ -184,13 +184,23 @@ mod_network_estimation_server <- function(id, state)
       }
 
       # Compute measures
-      measures <- vapply(networks, semantic_network_measures, numeric(3))
+      measures <- vapply(networks, semantic_network_measures, numeric(3), seed = state$seed)
 
       # Render measures
       output$measures <- renderTable(
         measures, rownames = TRUE, caption = paste(
           "Network Measures (unweighted; clustering coefficient is the average of the nodes' local coefficients, with nodes that have fewer than two neighbors counted as 0;",
-          "modularity (q) is a randomized Louvain, so it can differ slightly between runs)"
+          if(is.null(state$seed)){
+
+            # Note on random modularity
+            "modularity (q) is a randomized Louvain, so it can differ slightly between runs)"
+
+          }else{
+
+            # Note on seeded modularity
+            paste0("modularity (q) is a randomized Louvain, made reproducible by seed ", state$seed, ")")
+
+          }
         ), caption.placement = "top"
       )
 

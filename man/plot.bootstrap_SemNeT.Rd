@@ -4,7 +4,14 @@
 \alias{plot.bootstrap_SemNeT}
 \title{Plot for \code{\link{bootstrap_SemNeT}}}
 \usage{
-\method{plot}{bootstrap_SemNeT}(x, measures = c("aspl", "cc", "q"), ...)
+\method{plot}{bootstrap_SemNeT}(
+  x,
+  measures = c("aspl", "cc", "q"),
+  ci = TRUE,
+  ci_level = 0.95,
+  ci_type = c("normal", "bc", "percentile"),
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{\link{bootstrap_SemNeT}} object}
@@ -12,6 +19,34 @@
 \item{measures}{Character.
 One or more of \code{"aspl"}, \code{"cc"}, and \code{"q"}.
 Defaults to all three}
+
+\item{ci}{Boolean (length = 1).
+Whether to draw each group's confidence interval below its boxplot.
+Defaults to \code{TRUE}.
+Node bootstraps (\code{type = "node"}) subsample words, which changes the
+measures themselves, so no interval is drawn for them}
+
+\item{ci_level}{Numeric (length = 1).
+Confidence level between 0 and 1 (exclusive).
+Defaults to \code{.95}}
+
+\item{ci_type}{Character (length = 1).
+Type of interval, as in \code{\link{bootstrap_test_SemNeT}}.
+Defaults to \code{"normal"}.
+Available options:
+
+\itemize{
+
+\item \code{"normal"} --- The group's value for the full data plus and minus
+the normal quantile times the bootstrap standard error. Needs the full data's
+observed value (falls back to the bootstrap mean without it)
+
+\item \code{"bc"} --- Bias-corrected percentile interval. Needs the full
+data's observed value (falls back to \code{"percentile"} without it)
+
+\item \code{"percentile"} --- Percentiles of the bootstrap values
+
+}}
 
 \item{...}{Not used}
 }
@@ -22,7 +57,8 @@ compatible with \code{shiny::renderPlot()})
 \description{
 Plots each measure's bootstrap distribution as a raincloud plot
 (Allen et al., 2018): a half violin, boxplot, and the jittered bootstrap values,
-with one panel per measure and the groups side by side
+with one panel per measure and the groups side by side. A bootstrap confidence
+interval of each group's value is drawn below its boxplot
 }
 \examples{
 # Get openness data

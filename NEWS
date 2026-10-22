@@ -32,6 +32,22 @@ o UPDATE: `compare_networks` restores the graphical parameters and, for `placeme
 
 o UPDATE: legacy `CN` accepts `cutoff`
 
+o UPDATE: `plot.bootstrap_SemNeT` draws a bootstrap confidence interval of each group's value below its boxplot (`ci`, `ci_level`, `ci_type`; not drawn for node bootstraps)
+
+o ADD: `plot.permutation_SemNeT` plots each measure's permutation null distribution as a raincloud plot with the observed difference, the central range of the null distribution below the boxplot (`null_range`, `level`), and the p-value in each panel title
+
+o FIX: the Shiny app's `cores` input had no effect because the background task's worker reported one available core; `cores` is now capped at the machine's cores instead
+
+o ADD: the Shiny app's Permutation tab has a "Generate Permutation Plot" button (`plot.permutation_SemNeT`)
+
+o UPDATE: the Shiny app's Export tab only shows the download buttons of results that have finished
+
+o UPDATE: the Shiny app's Permutation tab tests all measures (ASPL, CC, and Q) by default; the measures are checkboxes
+
+o ADD: the Shiny app's Load Data tab has a "Random Seed" input (0 for none), passed to every analysis that uses randomness (network measures' modularity, random networks, bootstrap, permutation, and random walks) for reproducible results
+
+o UPDATE: the Shiny app's Bootstrap and Permutation tabs show the same tables as `print.bootstrap_test_SemNeT` and `print.permutation_SemNeT` (header, run settings, network sizes, comparison, table, and notes); the Spreading Activation tab shows each node's activation at the selected time step
+
 o ADD: `cc` `type`: `"average"` (default; the average of the nodes' local clustering coefficients, as before) or `"global"` (3 x triangles / connected triples; `igraph::transitivity(type = "global")`); the weighted (and signed) global coefficient is the ratio of the summed triangle intensities (Onnela et al., 2005) to the number of connected triples; `semantic_network_measures` and `random_network_test` pass it on as `cc_type`
 
 o REMOVE: `tmfg` `depend` argument (an asymmetric matrix is an error; the documented rule was never what the code did); the legacy `TMFG` ignores `depend` with a warning

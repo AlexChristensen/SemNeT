@@ -778,7 +778,7 @@ shuffle_replace <- function(x, size = length(x), seed = NULL)
 
 #' @noRd
 # Parallel process ----
-# Updated 06.09.2026
+# Updated 22.10.2026
 parallel_process <- function(iterations, FUN, ..., cores = 1, progress = TRUE)
 {
 
@@ -798,13 +798,25 @@ parallel_process <- function(iterations, FUN, ..., cores = 1, progress = TRUE)
   # Check for multiple cores
   if(cores > 1){
 
+    # Get available cores from every method
+    available <- future::availableCores(which = "all")
+
+    # Ignore 'mc.cores' because {future} sets it to 1 inside
+    # background workers (e.g., the Shiny app's tasks)
+    available <- available[names(available) != "mc.cores"]
+
     # Cap cores at those available
-    cores <- min(cores, future::availableCores())
+    cores <- min(cores, available)
 
   }
 
   # Check for multiple cores
   if(cores > 1){
+
+    # Lift the soft limit on workers, which is based on 'mc.cores'
+    # and reports a single core inside background workers
+    old_options <- options(parallelly.maxWorkers.localhost = Inf)
+    on.exit(options(old_options), add = TRUE)
 
     # Set parallel plan and store old plan
     old_plan <- future::plan(future::multisession, workers = cores)

@@ -1,5 +1,5 @@
 # Random network module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Random network interface ----
 # Updated 13.10.2026
@@ -57,7 +57,7 @@ mod_random_network_ui <- function(id)
 }
 
 # Random network server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_random_network_server <- function(id, state)
 {
 
@@ -71,7 +71,7 @@ mod_random_network_server <- function(id, state)
     progress <- progress_poller(session, progress_file)
 
     # Set up background task
-    task <- ExtendedTask$new(function(networks, iter, cores, progress_file){
+    task <- ExtendedTask$new(function(networks, iter, cores, seed, progress_file){
 
       # Run in background
       promises::future_promise({
@@ -80,9 +80,9 @@ mod_random_network_server <- function(id, state)
         options(SemNeT.progress_file = progress_file)
 
         # Perform random network tests
-        do.call(random_network_test, c(networks, list(iter = iter, cores = cores)))
+        do.call(random_network_test, c(networks, list(iter = iter, cores = cores, seed = seed)))
 
-      }, seed = TRUE)
+      }, seed = task_seed(seed))
 
     })
 
@@ -99,7 +99,7 @@ mod_random_network_server <- function(id, state)
       progress_file(new_progress_file())
 
       # Start task
-      task$invoke(state$networks, input$iter, input$cores, progress_file())
+      task$invoke(state$networks, input$iter, input$cores, state$seed, progress_file())
 
     })
 

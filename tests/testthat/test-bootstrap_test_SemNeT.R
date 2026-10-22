@@ -603,3 +603,35 @@ test_that("stored statistics are not rounded, so they agree exactly with each ot
   expect_match(printed, format_number(table$observed_1), fixed = TRUE)
 
 })
+
+test_that("bootstrap_test_SemNeT's display is what print shows", {
+
+  # Set seed
+  set.seed(5)
+
+  # Make bootstrap results
+  boot <- make_fake_boot(list(low = rnorm(500, 2.0123, .0337), high = rnorm(500, 2.0771, .0341)))
+
+  # Perform tests
+  result <- bootstrap_test_SemNeT(boot, measures = "aspl")
+
+  # Get display
+  display <- bootstrap_test_display(result)
+
+  # Capture printed output
+  printed <- capture.output(print(result))
+
+  # Check header
+  expect_true(any(grepl("Bootstrap", printed)))
+
+  # Check section
+  expect_length(display$sections, 1)
+  expect_equal(display$sections[[1]]$table$measure, "ASPL")
+
+  # Check that the comparison is printed
+  expect_true(display$sections[[1]]$comparison %in% printed)
+
+  # Check notices
+  expect_true(all(vapply(display$notices, function(note) any(grepl("report both", printed)), logical(1))))
+
+})

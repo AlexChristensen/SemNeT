@@ -1,5 +1,5 @@
 # Spreading activation module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Spreading activation interface ----
 # Updated 13.10.2026
@@ -57,7 +57,10 @@ mod_spreading_activation_ui <- function(id)
       uiOutput(ns("time_slider")),
 
       # Add plot
-      plotOutput(ns("frame"))
+      plotOutput(ns("frame")),
+
+      # Add activation table (the time step's rows of the console output)
+      tableOutput(ns("frame_table"))
 
     ),
 
@@ -76,7 +79,7 @@ mod_spreading_activation_ui <- function(id)
 }
 
 # Spreading activation server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_spreading_activation_server <- function(id, state)
 {
 
@@ -216,6 +219,29 @@ mod_spreading_activation_server <- function(id, state)
       plot_spreading_frame(state$spreading_result$network, state$spreading_result$activation, input$time_step)
 
     })
+
+    # Render activation table
+    output$frame_table <- renderTable({
+
+      # Require result and time step
+      req(state$spreading_result, input$time_step)
+
+      # Get activation of time step
+      frame <- state$spreading_result$activation
+      frame <- frame[frame$time == input$time_step, c("node", "activation", "time")]
+
+      # Order nodes by activation
+      frame <- frame[order(-frame$activation), ]
+
+      # Name columns
+      names(frame) <- c("Node", "Activation", "Time Step")
+
+      # Return activation
+      frame
+
+    }, rownames = FALSE, digits = 4, caption = paste(
+      "Activation of each node at the selected time step (the rows of the spreadr output for that time step)."
+    ), caption.placement = "top")
 
   })
 

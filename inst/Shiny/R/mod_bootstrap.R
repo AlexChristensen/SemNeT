@@ -1,5 +1,5 @@
 # Bootstrap module ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 
 # Bootstrap interface ----
 # Updated 13.10.2026
@@ -53,8 +53,8 @@ mod_bootstrap_ui <- function(id)
       # Add notes
       uiOutput(ns("test_notes")),
 
-      # Add test table
-      tableOutput(ns("test_table")),
+      # Add test table (as printed in the console)
+      uiOutput(ns("test_table")),
 
       # Add plot selector
       uiOutput(ns("plot_selector")),
@@ -81,7 +81,7 @@ mod_bootstrap_ui <- function(id)
 }
 
 # Bootstrap server ----
-# Updated 13.10.2026
+# Updated 22.10.2026
 mod_bootstrap_server <- function(id, state)
 {
 
@@ -115,7 +115,7 @@ mod_bootstrap_server <- function(id, state)
     progress <- progress_poller(session, progress_file)
 
     # Set up background task
-    task <- ExtendedTask$new(function(groups_data, type, method, method_args, sim, minimum_cases, percents, iter, cores, progress_file){
+    task <- ExtendedTask$new(function(groups_data, type, method, method_args, sim, minimum_cases, percents, iter, cores, seed, progress_file){
 
       # Run in background
       promises::future_promise({
@@ -131,7 +131,7 @@ mod_bootstrap_server <- function(id, state)
             groups_data,
             list(
               method = method, method_args = method_args, type = type,
-              sim = sim, minimum_cases = minimum_cases, iter = iter, cores = cores
+              sim = sim, minimum_cases = minimum_cases, iter = iter, cores = cores, seed = seed
             )
           )
 
@@ -154,7 +154,7 @@ mod_bootstrap_server <- function(id, state)
         # Return results
         results
 
-      }, seed = TRUE)
+      }, seed = task_seed(seed))
 
     })
 
@@ -189,7 +189,7 @@ mod_bootstrap_server <- function(id, state)
       # Start task
       task$invoke(
         state$groups_data, input$type, state$method, state$method_args,
-        state$sim, state$minimum_cases, percents, input$iter, input$cores,
+        state$sim, state$minimum_cases, percents, input$iter, input$cores, state$seed,
         progress_file()
       )
 
@@ -270,82 +270,21 @@ mod_bootstrap_server <- function(id, state)
       # Require test
       req(state$boot_test)
 
-      # Check for node type
-      is_node <- names(state$boot_result)[1] != "Case"
-
-      # Show notes
-      tagList(
-        p(
-          em(
-            if(is_node){
-
-              # Show note on node subsampling
-              paste(
-                "Node (vocabulary) subsampling: these summaries describe how robust each group difference is to",
-                "which words are included, at a reduced network size. They are not confidence intervals and do not",
-                "support inference about groups of participants -- use a Case bootstrap for that."
-              )
-
-            }else{
-
-              # Show note on case resampling
-              paste(
-                "Bootstrap intervals of within-iteration group differences. A difference is reliable when",
-                "its interval excludes 0; a wide interval that includes 0 means the data are inconclusive, not that",
-                "the groups are equivalent.",
-                if(identical(input$ci_type, "normal")){
-
-                  # Show note on Wald test
-                  paste(
-                    "With the Normal interval, z, p, and the minimal detectable effect come from a Wald test of the observed",
-                    "difference using the bootstrap standard error (assumes a roughly normal sampling distribution;",
-                    "not adjusted across measures)."
-                  )
-
-                }else{
-
-                  # Show note on percentile intervals
-                  "Percentile intervals have no p-value."
-
-                },
-                "For a formal hypothesis test, use the Permutation Analyses tab."
-              )
-
-            }
-          )
-        ),
-        lapply(test_notes(), function(note) div(class = "alert alert-warning", note)),
-        div(
-          class = "alert alert-warning",
-          "The Bootstrap and Permutation Analyses should always be run together. Run the Permutation Analyses as well and report both."
-        )
-      )
+      # Show warnings of test
+      lapply(test_notes(), function(note) div(class = "alert alert-warning", note))
 
     })
 
     # Render test table
-    output$test_table <- renderTable({
+    output$test_table <- renderUI({
 
       # Require test
       req(state$boot_test)
 
-      # Combine tables of conditions
-      do.call(rbind, lapply(names(state$boot_test$results), function(condition){
+      # Show test as it prints in the console
+      console_display_ui(semnet_internal("bootstrap_test_display")(state$boot_test))
 
-        # Combine tables of measures
-        do.call(rbind, lapply(names(state$boot_test$results[[condition]]), function(measure){
-
-          # Get entry
-          entry <- state$boot_test$results[[condition]][[measure]]
-
-          # Add condition and measure
-          cbind(Condition = condition, Measure = measure, entry$table)
-
-        }))
-
-      }))
-
-    }, digits = 4)
+    })
 
     # Render plot selector
     output$plot_selector <- renderUI({
@@ -379,7 +318,7 @@ mod_bootstrap_server <- function(id, state)
       output$boot_plot <- renderPlot({
 
         # Plot bootstrap
-        plot(state$boot_result[[condition]])
+        plot(state$boot_result[[condition]], ci_level = input$ci_level, ci_type = input$ci_type)
 
       })
 
